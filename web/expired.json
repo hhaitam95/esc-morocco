@@ -1,5 +1,59 @@
 {
-  "generated_at": "2026-08-14T19:10:48.794710",
-  "count": 0,
-  "opportunities": []
+  "generated_at": "2026-08-14T20:21:37.107515",
+  "count": 1,
+  "opportunities": [
+    {
+      "id": 36109,
+      "title": "Join Our Team for Disadvantaged Children!",
+      "location": "Cevizlidere Mah. 1233 Sok. 5/4, Çankaya / Ankara, Türkiye",
+      "country": "TR",
+      "town": "Çankaya / Ankara",
+      "activity_type": "Individual volunteering",
+      "start_date": "2026-05-01",
+      "end_date": "2028-06-30",
+      "deadline": null,
+      "eligible_countries": [
+        "Albania",
+        "Armenia",
+        "Belarus",
+        "Bulgaria",
+        "Cyprus",
+        "Czechia",
+        "Estonia",
+        "Finland",
+        "France",
+        "Germany",
+        "Greece",
+        "Iceland",
+        "Ireland",
+        "Kosovo * UN resolution",
+        "Latvia",
+        "Liechtenstein",
+        "Lithuania",
+        "Malta",
+        "Morocco",
+        "Netherlands",
+        "North Macedonia",
+        "Poland",
+        "Portugal",
+        "Romania",
+        "Russia",
+        "Slovakia",
+        "Slovenia",
+        "Spain",
+        "Sweden"
+      ],
+      "topics": [
+        "Reception and integration of refugees and migrants",
+        "Education and training",
+        "Physical education and sport"
+      ],
+      "project_code": "2025-1-TR01-ESC51-VTJ-000346974",
+      "created": "2023-07-06T08:36:59",
+      "image_url": "/modules/custom/eyp_esc/images/esc-logo-en.png",
+      "url": "https://youth.europa.eu/solidarity/opportunity/36109_en",
+      "last_seen": "2026-08-14T20:17:39.857269",
+      "reason": "No longer present in the active opportunity list."
+    }
+  ]
 }

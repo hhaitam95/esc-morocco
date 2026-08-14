@@ -8078,9 +8078,261 @@
       "status": "not_morocco",
       "result": null,
       "checked_at": "2026-08-14T19:09:43.258251"
+    },
+    "53837": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:17:50.035058"
+    },
+    "53838": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:17:55.221968"
+    },
+    "53839": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:00.388157"
+    },
+    "53836": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:05.563499"
+    },
+    "53835": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:10.729691"
+    },
+    "53834": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:15.898591"
+    },
+    "53832": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:21.731737"
+    },
+    "53833": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:26.896063"
+    },
+    "53831": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:32.067381"
+    },
+    "53829": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:37.238290"
+    },
+    "53830": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:42.406601"
+    },
+    "53828": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:47.581514"
+    },
+    "53827": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:52.746980"
+    },
+    "53826": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:18:58.721817"
+    },
+    "52867": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:04.696401"
+    },
+    "52696": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:10.662035"
+    },
+    "50827": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:16.610181"
+    },
+    "11564": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:27.604274"
+    },
+    "11080": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:33.564558"
+    },
+    "10694": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:39.603110"
+    },
+    "10141": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:45.595141"
+    },
+    "10099": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:52.001229"
+    },
+    "9006": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:19:57.942930"
+    },
+    "6350": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:03.941788"
+    },
+    "4288": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:10.069805"
+    },
+    "2996": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:16.063722"
+    },
+    "2756": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:22.049758"
+    },
+    "833": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:28.853824"
+    },
+    "1121": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:34.854631"
+    },
+    "75": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:40.957823"
+    },
+    "1122": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:46.891463"
+    },
+    "464": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:53.061344"
+    },
+    "1726": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:20:58.934277"
+    },
+    "911": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:05.021913"
+    },
+    "3769": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:13.189653"
+    },
+    "1124": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:19.265037"
+    },
+    "465": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:25.224733"
+    },
+    "3622": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:31.096027"
+    },
+    "566": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T20:21:37.080607"
     }
   },
-  "updated_at": "2026-08-14T19:10:48.794906",
-  "history": {},
-  "last_scan_at": "2026-08-14T19:10:48.794900"
+  "updated_at": "2026-08-14T20:21:37.107738",
+  "history": {
+    "36109": {
+      "first_seen": "2023-07-06T08:36:59",
+      "last_seen": "2026-08-14T20:17:39.857269",
+      "result": {
+        "id": 36109,
+        "title": "Join Our Team for Disadvantaged Children!",
+        "location": "Cevizlidere Mah. 1233 Sok. 5/4, Çankaya / Ankara, Türkiye",
+        "country": "TR",
+        "town": "Çankaya / Ankara",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-05-01",
+        "end_date": "2028-06-30",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Armenia",
+          "Belarus",
+          "Bulgaria",
+          "Cyprus",
+          "Czechia",
+          "Estonia",
+          "Finland",
+          "France",
+          "Germany",
+          "Greece",
+          "Iceland",
+          "Ireland",
+          "Kosovo * UN resolution",
+          "Latvia",
+          "Liechtenstein",
+          "Lithuania",
+          "Malta",
+          "Morocco",
+          "Netherlands",
+          "North Macedonia",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Russia",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "Sweden"
+        ],
+        "topics": [
+          "Reception and integration of refugees and migrants",
+          "Education and training",
+          "Physical education and sport"
+        ],
+        "project_code": "2025-1-TR01-ESC51-VTJ-000346974",
+        "created": "2023-07-06T08:36:59",
+        "image_url": "/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/36109_en"
+      },
+      "reason": "No longer present in the active opportunity list."
+    }
+  },
+  "last_scan_at": "2026-08-14T20:21:37.107734"
 }
