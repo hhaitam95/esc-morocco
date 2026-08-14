@@ -18,6 +18,19 @@ let currentActiveData = null;
 
 
 // ============================================================
+// NEW OPPORTUNITY TRACKING
+// ============================================================
+
+const SEEN_OPPORTUNITIES_KEY =
+    "esc_seen_opportunities";
+
+const NEW_OPPORTUNITY_DAYS = 3;
+
+let newOpportunityIds =
+    new Set();
+
+
+// ============================================================
 // DOM ELEMENTS
 // ============================================================
 
@@ -177,6 +190,9 @@ const translations = {
         view:
             "View",
 
+        new:
+            "NEW",
+
         noDeadline:
             "No deadline",
 
@@ -310,6 +326,9 @@ const translations = {
         view:
             "Voir",
 
+        new:
+            "NOUVEAU",
+
         noDeadline:
             "Aucune date limite",
 
@@ -442,6 +461,9 @@ const translations = {
 
         view:
             "عرض",
+
+        new:
+            "جديد",
 
         noDeadline:
             "لا يوجد موعد نهائي",
@@ -593,7 +615,9 @@ if (
     savedLanguage
     && translations[savedLanguage]
 ) {
-    currentLanguage = savedLanguage;
+
+    currentLanguage =
+        savedLanguage;
 }
 
 
@@ -617,6 +641,7 @@ function parseDate(value) {
             date.getTime()
         )
     ) {
+
         return null;
     }
 
@@ -638,6 +663,7 @@ function parseDateTime(value) {
             date.getTime()
         )
     ) {
+
         return null;
     }
 
@@ -723,7 +749,12 @@ function daysFromToday(value) {
 
     return Math.ceil(
         difference
-        / (1000 * 60 * 60 * 24)
+        / (
+            1000
+            * 60
+            * 60
+            * 24
+        )
     );
 }
 
@@ -791,7 +822,12 @@ function daysSince(value) {
         0,
         Math.floor(
             difference
-            / (1000 * 60 * 60 * 24)
+            / (
+                1000
+                * 60
+                * 60
+                * 24
+            )
         )
     );
 }
@@ -824,15 +860,201 @@ function escapeHtml(value) {
         value === null
         || value === undefined
     ) {
+
         return "";
     }
 
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+}
+
+
+// ============================================================
+// NEW OPPORTUNITIES
+// ============================================================
+
+function loadSeenOpportunities() {
+
+    try {
+
+        const stored =
+            localStorage.getItem(
+                SEEN_OPPORTUNITIES_KEY
+            );
+
+        if (!stored) {
+            return {};
+        }
+
+        const parsed =
+            JSON.parse(
+                stored
+            );
+
+        if (
+            !parsed
+            || typeof parsed !== "object"
+            || Array.isArray(parsed)
+        ) {
+
+            return {};
+        }
+
+        return parsed;
+
+    } catch {
+
+        return {};
+    }
+}
+
+
+function saveSeenOpportunities(
+    seen
+) {
+
+    try {
+
+        localStorage.setItem(
+            SEEN_OPPORTUNITIES_KEY,
+            JSON.stringify(
+                seen
+            )
+        );
+
+    } catch {
+
+        // localStorage unavailable.
+    }
+}
+
+
+function calculateNewOpportunities(
+    opportunities
+) {
+
+    const seen =
+        loadSeenOpportunities();
+
+    const now =
+        Date.now();
+
+    const expirationWindow =
+        NEW_OPPORTUNITY_DAYS
+        * 24
+        * 60
+        * 60
+        * 1000;
+
+    const currentIds =
+        new Set();
+
+    const freshIds =
+        new Set();
+
+
+    /*
+     * First visit behavior:
+     *
+     * Existing opportunities are remembered but NOT marked
+     * as NEW. This prevents the first visit from showing
+     * every existing row as new.
+     */
+
+    opportunities.forEach(
+        opportunity => {
+
+            const id =
+                String(
+                    opportunity.id
+                );
+
+            currentIds.add(
+                id
+            );
+
+            const firstSeen =
+                seen[id];
+
+            if (!firstSeen) {
+
+                seen[id] =
+                    now;
+
+                return;
+            }
+
+            const firstSeenTime =
+                Number(
+                    firstSeen
+                );
+
+            if (
+                Number.isFinite(
+                    firstSeenTime
+                )
+                && (
+                    now
+                    - firstSeenTime
+                ) <= expirationWindow
+            ) {
+
+                freshIds.add(
+                    id
+                );
+            }
+        }
+    );
+
+
+    /*
+     * Keep localStorage small.
+     * Remove IDs that no longer exist in the active dataset.
+     */
+
+    Object.keys(
+        seen
+    )
+        .forEach(
+            id => {
+
+                if (
+                    !currentIds.has(
+                        id
+                    )
+                ) {
+
+                    delete seen[id];
+                }
+            }
+        );
+
+
+    saveSeenOpportunities(
+        seen
+    );
+
+    newOpportunityIds =
+        freshIds;
 }
 
 
@@ -857,7 +1079,9 @@ const countryCodeOverrides = {
 };
 
 
-function normalizeCountryCode(code) {
+function normalizeCountryCode(
+    code
+) {
 
     if (!code) {
         return "";
@@ -870,14 +1094,18 @@ function normalizeCountryCode(code) {
 }
 
 
-function getCountryName(code) {
+function getCountryName(
+    code
+) {
 
     if (!code) {
         return "";
     }
 
     const normalizedCode =
-        normalizeCountryCode(code);
+        normalizeCountryCode(
+            code
+        );
 
     try {
 
@@ -895,15 +1123,20 @@ function getCountryName(code) {
 }
 
 
-function getCountryFlag(code) {
+function getCountryFlag(
+    code
+) {
 
     const normalizedCode =
-        normalizeCountryCode(code);
+        normalizeCountryCode(
+            code
+        );
 
     if (
         !normalizedCode
         || normalizedCode.length !== 2
     ) {
+
         return "🌍";
     }
 
@@ -911,7 +1144,9 @@ function getCountryFlag(code) {
         normalizedCode.toUpperCase();
 
     return String.fromCodePoint(
-        ...[...upper].map(
+        ...[
+            ...upper
+        ].map(
             char =>
                 127397
                 + char.charCodeAt(0)
@@ -920,17 +1155,23 @@ function getCountryFlag(code) {
 }
 
 
-function renderCountry(code) {
+function renderCountry(
+    code
+) {
 
     const name =
-        getCountryName(code);
+        getCountryName(
+            code
+        );
 
     if (!name) {
         return "";
     }
 
     const flag =
-        getCountryFlag(code);
+        getCountryFlag(
+            code
+        );
 
     return `
         <span class="country-display">
@@ -965,7 +1206,9 @@ const activityTypeIcons = {
 };
 
 
-function renderActivityType(type) {
+function renderActivityType(
+    type
+) {
 
     if (!type) {
 
@@ -1076,12 +1319,17 @@ const topicIcons = {
 };
 
 
-function renderTopics(topics) {
+function renderTopics(
+    topics
+) {
 
     if (
-        !Array.isArray(topics)
+        !Array.isArray(
+            topics
+        )
         || topics.length === 0
     ) {
+
         return "";
     }
 
@@ -1089,34 +1337,40 @@ function renderTopics(topics) {
     return `
         <div class="topic-tags">
 
-            ${topics.map(topic => {
+            ${
+                topics.map(
+                    topic => {
 
-                const icon =
-                    topicIcons[topic]
-                    || "•";
+                        const icon =
+                            topicIcons[topic]
+                            || "•";
 
+                        return `
+                            <span
+                                class="topic-tag"
+                                title="${escapeHtml(
+                                    topic
+                                )}"
+                            >
 
-                return `
-                    <span
-                        class="topic-tag"
-                        title="${escapeHtml(topic)}"
-                    >
+                                <span
+                                    class="topic-icon"
+                                    aria-hidden="true"
+                                >
+                                    ${icon}
+                                </span>
 
-                        <span
-                            class="topic-icon"
-                            aria-hidden="true"
-                        >
-                            ${icon}
-                        </span>
+                                <span>
+                                    ${escapeHtml(
+                                        topic
+                                    )}
+                                </span>
 
-                        <span>
-                            ${escapeHtml(topic)}
-                        </span>
-
-                    </span>
-                `;
-
-            }).join("")}
+                            </span>
+                        `;
+                    }
+                ).join("")
+            }
 
         </div>
     `;
@@ -1181,23 +1435,26 @@ function populateFilters() {
         </option>`;
 
 
-    countries.forEach(code => {
+    countries.forEach(
+        code => {
 
-        const option =
-            document.createElement(
-                "option"
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                code;
+
+            option.textContent =
+                `${getCountryFlag(code)} `
+                + `${getCountryName(code)}`;
+
+            countryFilter.appendChild(
+                option
             );
-
-        option.value = code;
-
-        option.textContent =
-            `${getCountryFlag(code)} `
-            + `${getCountryName(code)}`;
-
-        countryFilter.appendChild(
-            option
-        );
-    });
+        }
+    );
 
 
     typeFilter.innerHTML =
@@ -1208,22 +1465,26 @@ function populateFilters() {
         </option>`;
 
 
-    types.forEach(type => {
+    types.forEach(
+        type => {
 
-        const option =
-            document.createElement(
-                "option"
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                type;
+
+            option.textContent =
+                `${activityTypeIcons[type] || "🤝"} `
+                + `${type}`;
+
+            typeFilter.appendChild(
+                option
             );
-
-        option.value = type;
-
-        option.textContent =
-            `${activityTypeIcons[type] || "🤝"} ${type}`;
-
-        typeFilter.appendChild(
-            option
-        );
-    });
+        }
+    );
 
 
     if (
@@ -1298,6 +1559,7 @@ function getFilteredActive() {
                     search
                 )
             ) {
+
                 return false;
             }
 
@@ -1307,6 +1569,7 @@ function getFilteredActive() {
                 && opportunity.country
                 !== country
             ) {
+
                 return false;
             }
 
@@ -1316,6 +1579,7 @@ function getFilteredActive() {
                 && opportunity.activity_type
                 !== type
             ) {
+
                 return false;
             }
 
@@ -1330,7 +1594,9 @@ function getFilteredActive() {
 // SORTING
 // ============================================================
 
-function sortOpportunities(items) {
+function sortOpportunities(
+    items
+) {
 
     const sorted =
         [...items];
@@ -1339,7 +1605,9 @@ function sortOpportunities(items) {
         sortSelect.value;
 
 
-    if (sortType === "start") {
+    if (
+        sortType === "start"
+    ) {
 
         sorted.sort(
             (a, b) => {
@@ -1374,7 +1642,9 @@ function sortOpportunities(items) {
     }
 
 
-    if (sortType === "created") {
+    if (
+        sortType === "created"
+    ) {
 
         sorted.sort(
             (a, b) => {
@@ -1423,7 +1693,10 @@ function sortOpportunities(items) {
                 );
 
 
-            if (!dateA && !dateB) {
+            if (
+                !dateA
+                && !dateB
+            ) {
 
                 return a.title.localeCompare(
                     b.title
@@ -1509,6 +1782,14 @@ function renderActive() {
                     );
 
 
+                const isNew =
+                    newOpportunityIds.has(
+                        String(
+                            opportunity.id
+                        )
+                    );
+
+
                 return `
                     <tr>
 
@@ -1516,11 +1797,29 @@ function renderActive() {
 
                             <div class="opportunity-title">
 
-                                ${escapeHtml(
-                                    opportunity.title
-                                )}
+                                ${
+                                    isNew
+                                        ? `
+                                            <span
+                                                class="new-badge"
+                                            >
+                                                ✨
+                                                ${escapeHtml(
+                                                    t("new")
+                                                )}
+                                            </span>
+                                        `
+                                        : ""
+                                }
+
+                                <span>
+                                    ${escapeHtml(
+                                        opportunity.title
+                                    )}
+                                </span>
 
                             </div>
+
 
                             ${
                                 opportunity.topics?.length
@@ -1582,15 +1881,16 @@ function renderActive() {
 
                             </span>
 
+
                             ${
                                 relative
                                     ? `
-                                        <span class="deadline-relative">
-
+                                        <span
+                                            class="deadline-relative"
+                                        >
                                             ${escapeHtml(
                                                 relative
                                             )}
-
                                         </span>
                                     `
                                     : ""
@@ -1618,11 +1918,9 @@ function renderActive() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-
                                 ${escapeHtml(
                                     t("view")
                                 )}
-
                             </a>
 
                         </td>
@@ -1694,7 +1992,9 @@ function renderExpired() {
                                     )}
                                 </div>
 
-                                <div class="location-country">
+                                <div
+                                    class="location-country"
+                                >
 
                                     ${renderCountry(
                                         opportunity.country
@@ -1738,7 +2038,9 @@ function renderExpired() {
 // STATUS HEADER
 // ============================================================
 
-function updateHeader(data) {
+function updateHeader(
+    data
+) {
 
     const count =
         Number.isFinite(
@@ -1754,7 +2056,9 @@ function updateHeader(data) {
             : `${count} ${t("results")}`;
 
 
-    if (data?.generated_at) {
+    if (
+        data?.generated_at
+    ) {
 
         const date =
             parseDateTime(
@@ -1800,7 +2104,9 @@ function updateHeader(data) {
 // DATA FETCHING
 // ============================================================
 
-async function fetchJson(url) {
+async function fetchJson(
+    url
+) {
 
     const response =
         await fetch(
@@ -1811,7 +2117,9 @@ async function fetchJson(url) {
         );
 
 
-    if (!response.ok) {
+    if (
+        !response.ok
+    ) {
 
         throw new Error(
             `HTTP ${response.status}`
@@ -1856,6 +2164,11 @@ async function loadData() {
             )
                 ? activeData.opportunities
                 : [];
+
+
+        calculateNewOpportunities(
+            activeOpportunities
+        );
 
 
         try {
@@ -1991,7 +2304,9 @@ sortSelect.addEventListener(
 // ============================================================
 
 document
-    .getElementById("expired-toggle")
+    .getElementById(
+        "expired-toggle"
+    )
     .addEventListener(
         "click",
         () => {
