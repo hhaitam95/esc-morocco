@@ -2180,9 +2180,8 @@ loadData();
 
 startCountdownRefresh();
 
-
 // ============================================================================
-// Multi-Country Data Engine & Country Selector Integration
+// Multi-Country Data Engine & Participant Country Integration
 // ============================================================================
 const SUPPORTED_COUNTRIES_LIST = [
   {
@@ -2441,14 +2440,52 @@ let currentParticipantCountry = localStorage.getItem('esc_participant_country') 
 let activeCountryFetchController = null;
 let currentCountryRequestId = 0;
 
+// Merge translation keys into app i18n
+(function injectTranslations() {
+    const extraI18n = {
+        en: {
+            participantCountry: "Participant Country",
+            selectParticipantCountry: "Select Participant Country",
+            apply: "Apply"
+        },
+        fr: {
+            participantCountry: "Pays du participant",
+            selectParticipantCountry: "Sélectionner le pays du participant",
+            apply: "Appliquer"
+        },
+        ar: {
+            participantCountry: "بلد المشارك",
+            selectParticipantCountry: "اختر بلد المشارك",
+            apply: "تطبيق"
+        }
+    };
+
+    if (typeof translations !== 'undefined' && translations) {
+        Object.keys(extraI18n).forEach(lang => {
+            if (!translations[lang]) translations[lang] = {};
+            Object.assign(translations[lang], extraI18n[lang]);
+        });
+    } else if (typeof i18n !== 'undefined' && i18n) {
+        Object.keys(extraI18n).forEach(lang => {
+            if (!i18n[lang]) i18n[lang] = {};
+            Object.assign(i18n[lang], extraI18n[lang]);
+        });
+    }
+})();
+
 function populateParticipantCountrySelector() {
     const selector = document.getElementById('participant-country') || 
-                     document.getElementById('participant-country-select') ||
-                     document.querySelector('select[name="participant_country"]');
+                     document.getElementById('participant-country-select');
     if (!selector) return;
 
     const currentVal = selector.value || currentParticipantCountry;
     selector.innerHTML = '';
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.setAttribute('data-i18n', 'selectParticipantCountry');
+    defaultOpt.textContent = 'Select Participant Country';
+    selector.appendChild(defaultOpt);
 
     SUPPORTED_COUNTRIES_LIST.forEach(country => {
         const opt = document.createElement('option');
@@ -2471,7 +2508,7 @@ async function loadOpportunitiesForCountry(countryCode, isUserInitiated = false)
     localStorage.setItem('esc_participant_country', targetCode);
     currentParticipantCountry = targetCode;
 
-    const applyBtn = document.getElementById('apply-btn');
+    const applyBtn = document.getElementById('apply-participant-country') || document.getElementById('apply-btn');
     if (applyBtn) {
         applyBtn.disabled = true;
         applyBtn.classList.add('loading');
@@ -2526,12 +2563,15 @@ async function loadOpportunitiesForCountry(countryCode, isUserInitiated = false)
 
         const finalItems = Array.isArray(data) ? data : (data.opportunities || []);
         
+        // Dynamically invoke table renderer
         if (typeof renderOpportunitiesTable === 'function') {
             renderOpportunitiesTable(finalItems);
         } else if (typeof renderTable === 'function') {
             renderTable(finalItems);
         } else if (typeof updateTable === 'function') {
             updateTable(finalItems);
+        } else if (typeof displayOpportunities === 'function') {
+            displayOpportunities(finalItems);
         }
 
         if (finalItems.length === 0 && tableBody) {
@@ -2559,15 +2599,15 @@ async function loadOpportunitiesForCountry(countryCode, isUserInitiated = false)
 function initMultiCountryEvents() {
     populateParticipantCountrySelector();
 
-    const applyBtn = document.getElementById('apply-btn');
+    const applyBtn = document.getElementById('apply-participant-country') || document.getElementById('apply-btn');
     if (applyBtn) {
         applyBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const selector = document.getElementById('participant-country') || 
-                             document.getElementById('participant-country-select') ||
-                             document.querySelector('select[name="participant_country"]');
+            const selector = document.getElementById('participant-country') || document.getElementById('participant-country-select');
             const selectedCode = selector ? selector.value : 'MA';
-            loadOpportunitiesForCountry(selectedCode, true);
+            if (selectedCode) {
+                loadOpportunitiesForCountry(selectedCode, true);
+            }
         });
     }
 }
