@@ -755,19 +755,19 @@ function deadlineRelative(deadline) {
         daysFromToday(deadline);
 
     if (days === null) {
-        return t("noDeadline");
+        return "";
     }
 
     if (days === 0) {
-        return t("deadlineToday");
+        return `⏰ ${t("deadlineToday")}`;
     }
 
     if (days === 1) {
-        return `1 ${t("dayLeft")}`;
+        return `⏰ 1 ${t("dayLeft")}`;
     }
 
     if (days > 1 && days <= 30) {
-        return `${days} ${t("daysLeft")}`;
+        return `⏰ ${days} ${t("daysLeft")}`;
     }
 
     return "";
@@ -849,15 +849,11 @@ const countryNames =
     );
 
 
-/*
- * The European Youth Portal uses a few country codes that
- * differ from standard ISO 3166-1 alpha-2 codes.
- */
 const countryCodeOverrides = {
 
-    EL: "GR", // Greece
+    EL: "GR",
 
-    UK: "GB"  // United Kingdom
+    UK: "GB"
 };
 
 
@@ -956,6 +952,178 @@ function renderCountry(code) {
 
 
 // ============================================================
+// ACTIVITY TYPE ICONS
+// ============================================================
+
+const activityTypeIcons = {
+
+    "Individual volunteering":
+        "👤",
+
+    "Volunteering teams":
+        "👥"
+};
+
+
+function renderActivityType(type) {
+
+    if (!type) {
+
+        return `
+            <span class="type-label">
+
+                <span
+                    class="type-icon"
+                    aria-hidden="true"
+                >
+                    🤝
+                </span>
+
+                <span>
+                    ${escapeHtml(
+                        t("noType")
+                    )}
+                </span>
+
+            </span>
+        `;
+    }
+
+
+    const icon =
+        activityTypeIcons[type]
+        || "🤝";
+
+
+    return `
+        <span
+            class="type-label"
+            title="${escapeHtml(type)}"
+        >
+
+            <span
+                class="type-icon"
+                aria-hidden="true"
+            >
+                ${icon}
+            </span>
+
+            <span>
+                ${escapeHtml(type)}
+            </span>
+
+        </span>
+    `;
+}
+
+
+// ============================================================
+// TOPIC ICONS
+// ============================================================
+
+const topicIcons = {
+
+    "Education and training":
+        "📚",
+
+    "Creativity and culture":
+        "🎨",
+
+    "Social challenges":
+        "🤝",
+
+    "Citizenship and democratic participation":
+        "🗳️",
+
+    "Environment and natural protection":
+        "🌱",
+
+    "Health and wellbeing":
+        "❤️",
+
+    "Employment and entrepreneurship":
+        "💼",
+
+    "Physical education and sport":
+        "⚽",
+
+    "Working against discrimination (including gender discrimination)":
+        "🫱🏻‍🫲🏽",
+
+    "Reception and integration of refugees and migrants":
+        "🏠",
+
+    "Support to local Small and Medium Enterprises":
+        "🏢",
+
+    "Nutrition and subsistence agriculture":
+        "🌾",
+
+    "Shelter":
+        "🏠",
+
+    "Disaster prevention and recovery":
+        "🛟",
+
+    "Disaster Preparedness":
+        "🚨",
+
+    "Post Disaster relief":
+        "🆘",
+
+    "WASH (Water, sanitation and hygiene)":
+        "🚿"
+};
+
+
+function renderTopics(topics) {
+
+    if (
+        !Array.isArray(topics)
+        || topics.length === 0
+    ) {
+        return "";
+    }
+
+
+    return `
+        <div class="topic-tags">
+
+            ${topics.map(topic => {
+
+                const icon =
+                    topicIcons[topic]
+                    || "•";
+
+
+                return `
+                    <span
+                        class="topic-tag"
+                        title="${escapeHtml(topic)}"
+                    >
+
+                        <span
+                            class="topic-icon"
+                            aria-hidden="true"
+                        >
+                            ${icon}
+                        </span>
+
+                        <span>
+                            ${escapeHtml(topic)}
+                        </span>
+
+                    </span>
+                `;
+
+            }).join("")}
+
+        </div>
+    `;
+}
+
+
+// ============================================================
 // FILTER OPTIONS
 // ============================================================
 
@@ -1049,7 +1217,8 @@ function populateFilters() {
 
         option.value = type;
 
-        option.textContent = type;
+        option.textContent =
+            `${activityTypeIcons[type] || "🤝"} ${type}`;
 
         typeFilter.appendChild(
             option
@@ -1057,55 +1226,25 @@ function populateFilters() {
     });
 
 
-    /*
-     * Preserve selected filters when the language changes.
-     */
     if (
         countries.includes(
             selectedCountry
         )
     ) {
+
         countryFilter.value =
             selectedCountry;
     }
+
 
     if (
         types.includes(
             selectedType
         )
     ) {
+
         typeFilter.value =
             selectedType;
-    }
-}
-
-
-function updateCountryFilterLabels() {
-
-    const first =
-        countryFilter.querySelector(
-            "option:first-child"
-        );
-
-    if (first) {
-
-        first.textContent =
-            t("allCountries");
-    }
-}
-
-
-function updateTypeFilterLabels() {
-
-    const first =
-        typeFilter.querySelector(
-            "option:first-child"
-        );
-
-    if (first) {
-
-        first.textContent =
-            t("allTypes");
     }
 }
 
@@ -1191,9 +1330,7 @@ function getFilteredActive() {
 // SORTING
 // ============================================================
 
-function sortOpportunities(
-    items
-) {
+function sortOpportunities(items) {
 
     const sorted =
         [...items];
@@ -1272,7 +1409,6 @@ function sortOpportunities(
     }
 
 
-    // Default: deadline
     sorted.sort(
         (a, b) => {
 
@@ -1286,7 +1422,7 @@ function sortOpportunities(
                     b.deadline
                 );
 
-            // No deadline → last.
+
             if (!dateA && !dateB) {
 
                 return a.title.localeCompare(
@@ -1307,35 +1443,6 @@ function sortOpportunities(
     );
 
     return sorted;
-}
-
-
-// ============================================================
-// TOPICS
-// ============================================================
-
-function renderTopics(topics) {
-
-    if (
-        !Array.isArray(topics)
-        || topics.length === 0
-    ) {
-        return "";
-    }
-
-    return `
-        <div class="topic-tags">
-
-            ${topics.map(
-                topic => `
-                    <span class="topic-tag">
-                        ${escapeHtml(topic)}
-                    </span>
-                `
-            ).join("")}
-
-        </div>
-    `;
 }
 
 
@@ -1408,9 +1515,11 @@ function renderActive() {
                         <td class="title-cell">
 
                             <div class="opportunity-title">
+
                                 ${escapeHtml(
                                     opportunity.title
                                 )}
+
                             </div>
 
                             ${
@@ -1427,9 +1536,11 @@ function renderActive() {
                         <td class="location-cell">
 
                             <div class="location-main">
+
                                 ${escapeHtml(
                                     location
                                 )}
+
                             </div>
 
                             <div class="location-country">
@@ -1490,14 +1601,9 @@ function renderActive() {
 
                         <td class="type-cell">
 
-                            <span class="type-label">
-
-                                ${escapeHtml(
-                                    opportunity.activity_type
-                                    || t("noType")
-                                )}
-
-                            </span>
+                            ${renderActivityType(
+                                opportunity.activity_type
+                            )}
 
                         </td>
 
@@ -1752,7 +1858,6 @@ async function loadData() {
                 : [];
 
 
-        // Expired data is optional.
         try {
 
             const expiredData =
