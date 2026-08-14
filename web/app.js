@@ -6,7 +6,6 @@
 const DATA_URL = "opportunities.json";
 const EXPIRED_DATA_URL = "expired.json";
 
-
 // ============================================================
 // STATE
 // ============================================================
@@ -16,1135 +15,698 @@ let expiredOpportunities = [];
 let currentLanguage = "en";
 let currentActiveData = null;
 
-
-// ============================================================
-// NEW OPPORTUNITY TRACKING
-// ============================================================
-
-const SEEN_OPPORTUNITIES_KEY =
-    "esc_seen_opportunities";
-
-const NEW_OPPORTUNITY_DAYS = 3;
-
-let newOpportunityIds =
-    new Set();
-
-
 // ============================================================
 // DOM ELEMENTS
 // ============================================================
 
-const opportunityCount =
-    document.getElementById("opportunity-count");
+const opportunityCount = document.getElementById("opportunity-count");
 
-const lastUpdated =
-    document.getElementById("last-updated");
+const lastUpdated = document.getElementById("last-updated");
 
-const activeResultCount =
-    document.getElementById("active-result-count");
+const activeResultCount = document.getElementById("active-result-count");
 
-const opportunitiesBody =
-    document.getElementById("opportunities-body");
+const opportunitiesBody = document.getElementById("opportunities-body");
 
-const expiredBody =
-    document.getElementById("expired-body");
+const expiredBody = document.getElementById("expired-body");
 
-const expiredSection =
-    document.getElementById("expired-section");
+const expiredSection = document.getElementById("expired-section");
 
-const expiredContent =
-    document.getElementById("expired-content");
+const expiredContent = document.getElementById("expired-content");
 
-const expiredCount =
-    document.getElementById("expired-count");
+const expiredCount = document.getElementById("expired-count");
 
-const expiredArrow =
-    document.getElementById("expired-arrow");
+const expiredArrow = document.getElementById("expired-arrow");
 
-const loadingMessage =
-    document.getElementById("loading-message");
+const loadingMessage = document.getElementById("loading-message");
 
-const errorMessage =
-    document.getElementById("error-message");
+const errorMessage = document.getElementById("error-message");
 
-const emptyMessage =
-    document.getElementById("empty-message");
+const emptyMessage = document.getElementById("empty-message");
 
-const searchInput =
-    document.getElementById("search-input");
+const searchInput = document.getElementById("search-input");
 
-const countryFilter =
-    document.getElementById("country-filter");
+const countryFilter = document.getElementById("country-filter");
 
-const typeFilter =
-    document.getElementById("type-filter");
+const typeFilter = document.getElementById("type-filter");
 
-const sortSelect =
-    document.getElementById("sort-select");
+const sortSelect = document.getElementById("sort-select");
 
-const refreshButton =
-    document.getElementById("refresh-button");
-
+const refreshButton = document.getElementById("refresh-button");
 
 // ============================================================
 // TRANSLATIONS
 // ============================================================
 
 const translations = {
+  en: {
+    title: "European Solidarity Corps",
 
-    en: {
+    subtitle: "Volunteering opportunities for applicants from Morocco",
 
-        title:
-            "European Solidarity Corps",
+    activeOpportunities: "Active opportunities",
 
-        subtitle:
-            "Volunteering opportunities for applicants from Morocco",
+    lastUpdated: "Last updated",
 
-        activeOpportunities:
-            "Active opportunities",
+    intro:
+      "These are active European Solidarity Corps volunteering opportunities that accept participants from Morocco.",
 
-        lastUpdated:
-            "Last updated",
+    introNote:
+      "The list is automatically refreshed from the European Youth Portal.",
 
-        intro:
-            "These are active European Solidarity Corps volunteering opportunities that accept participants from Morocco.",
+    search: "Search",
 
-        introNote:
-            "The list is automatically refreshed from the European Youth Portal.",
+    searchPlaceholder: "Search opportunities...",
 
-        search:
-            "Search",
+    country: "Country",
 
-        searchPlaceholder:
-            "Search opportunities...",
+    allCountries: "All countries",
 
-        country:
-            "Country",
+    type: "Type",
 
-        allCountries:
-            "All countries",
+    allTypes: "All types",
 
-        type:
-            "Type",
+    sortBy: "Sort by",
 
-        allTypes:
-            "All types",
+    sortDeadline: "Application deadline",
 
-        sortBy:
-            "Sort by",
+    sortStart: "Activity start date",
 
-        sortDeadline:
-            "Application deadline",
+    sortCreated: "Recently added",
 
-        sortStart:
-            "Activity start date",
+    refresh: "Refresh",
 
-        sortCreated:
-            "Recently added",
+    loading: "Loading opportunities...",
 
-        refresh:
-            "Refresh",
+    errorTitle: "We couldn't load the opportunities.",
 
-        loading:
-            "Loading opportunities...",
+    errorText: "Please try again later.",
 
-        errorTitle:
-            "We couldn't load the opportunities.",
+    availableNow: "Available now",
 
-        errorText:
-            "Please try again later.",
+    opportunity: "Opportunity",
 
-        availableNow:
-            "Available now",
+    location: "Location",
 
-        opportunity:
-            "Opportunity",
+    activity: "Activity",
 
-        location:
-            "Location",
+    deadline: "Deadline",
 
-        activity:
-            "Activity",
+    expired: "Expired",
 
-        deadline:
-            "Deadline",
+    noResultsTitle: "No opportunities found.",
 
-        expired:
-            "Expired",
+    noResultsText: "Try changing your search or filters.",
 
-        noResultsTitle:
-            "No opportunities found.",
+    recentlyExpired: "Recently expired",
 
-        noResultsText:
-            "Try changing your search or filters.",
+    source: "Data sourced from",
 
-        recentlyExpired:
-            "Recently expired",
+    footerNote: "Always check the official opportunity page before applying.",
 
-        source:
-            "Data sourced from",
+    view: "View",
 
-        footerNote:
-            "Always check the official opportunity page before applying.",
+    new: "NEW",
 
-        view:
-            "View",
+    noDeadline: "No deadline",
 
-        new:
-            "NEW",
+    deadlineToday: "Deadline today",
 
-        noDeadline:
-            "No deadline",
+    dayLeft: "day left",
 
-        deadlineToday:
-            "Deadline today",
+    daysLeft: "days left",
 
-        dayLeft:
-            "day left",
+    expiredToday: "Expired today",
 
-        daysLeft:
-            "days left",
+    expiredAgo: "days ago",
 
-        expiredToday:
-            "Expired today",
+    noLocation: "Location unavailable",
 
-        expiredAgo:
-            "days ago",
+    noDates: "Dates unavailable",
 
-        noLocation:
-            "Location unavailable",
+    noType: "Not specified",
 
-        noDates:
-            "Dates unavailable",
+    results: "results",
 
-        noType:
-            "Not specified",
+    result: "result",
+  },
 
-        results:
-            "results",
+  fr: {
+    title: "Corps européen de solidarité",
 
-        result:
-            "result"
-    },
+    subtitle: "Opportunités de volontariat pour les candidats du Maroc",
 
+    activeOpportunities: "Opportunités actives",
 
-    fr: {
+    lastUpdated: "Dernière mise à jour",
 
-        title:
-            "Corps européen de solidarité",
+    intro:
+      "Voici les opportunités de volontariat du Corps européen de solidarité qui acceptent les participants du Maroc.",
 
-        subtitle:
-            "Opportunités de volontariat pour les candidats du Maroc",
+    introNote:
+      "La liste est automatiquement actualisée depuis le Portail européen de la jeunesse.",
 
-        activeOpportunities:
-            "Opportunités actives",
+    search: "Rechercher",
 
-        lastUpdated:
-            "Dernière mise à jour",
+    searchPlaceholder: "Rechercher une opportunité...",
 
-        intro:
-            "Voici les opportunités de volontariat du Corps européen de solidarité qui acceptent les participants du Maroc.",
+    country: "Pays",
 
-        introNote:
-            "La liste est automatiquement actualisée depuis le Portail européen de la jeunesse.",
+    allCountries: "Tous les pays",
 
-        search:
-            "Rechercher",
+    type: "Type",
 
-        searchPlaceholder:
-            "Rechercher une opportunité...",
+    allTypes: "Tous les types",
 
-        country:
-            "Pays",
+    sortBy: "Trier par",
 
-        allCountries:
-            "Tous les pays",
+    sortDeadline: "Date limite de candidature",
 
-        type:
-            "Type",
+    sortStart: "Date de début",
 
-        allTypes:
-            "Tous les types",
+    sortCreated: "Ajoutées récemment",
 
-        sortBy:
-            "Trier par",
+    refresh: "Actualiser",
 
-        sortDeadline:
-            "Date limite de candidature",
+    loading: "Chargement des opportunités...",
 
-        sortStart:
-            "Date de début",
+    errorTitle: "Impossible de charger les opportunités.",
 
-        sortCreated:
-            "Ajoutées récemment",
+    errorText: "Veuillez réessayer plus tard.",
 
-        refresh:
-            "Actualiser",
+    availableNow: "Disponibles actuellement",
 
-        loading:
-            "Chargement des opportunités...",
+    opportunity: "Opportunité",
 
-        errorTitle:
-            "Impossible de charger les opportunités.",
+    location: "Lieu",
 
-        errorText:
-            "Veuillez réessayer plus tard.",
+    activity: "Activité",
 
-        availableNow:
-            "Disponibles actuellement",
+    deadline: "Date limite",
 
-        opportunity:
-            "Opportunité",
+    expired: "Expirée",
 
-        location:
-            "Lieu",
+    noResultsTitle: "Aucune opportunité trouvée.",
 
-        activity:
-            "Activité",
+    noResultsText: "Essayez de modifier votre recherche ou vos filtres.",
 
-        deadline:
-            "Date limite",
+    recentlyExpired: "Récemment expirées",
 
-        expired:
-            "Expirée",
+    source: "Données provenant du",
 
-        noResultsTitle:
-            "Aucune opportunité trouvée.",
+    footerNote:
+      "Consultez toujours la page officielle de l'opportunité avant de postuler.",
 
-        noResultsText:
-            "Essayez de modifier votre recherche ou vos filtres.",
+    view: "Voir",
 
-        recentlyExpired:
-            "Récemment expirées",
+    new: "NOUVEAU",
 
-        source:
-            "Données provenant du",
+    noDeadline: "Aucune date limite",
 
-        footerNote:
-            "Consultez toujours la page officielle de l'opportunité avant de postuler.",
+    deadlineToday: "Date limite aujourd'hui",
 
-        view:
-            "Voir",
+    dayLeft: "jour restant",
 
-        new:
-            "NOUVEAU",
+    daysLeft: "jours restants",
 
-        noDeadline:
-            "Aucune date limite",
+    expiredToday: "Expirée aujourd'hui",
 
-        deadlineToday:
-            "Date limite aujourd'hui",
+    expiredAgo: "jours",
 
-        dayLeft:
-            "jour restant",
+    noLocation: "Lieu indisponible",
 
-        daysLeft:
-            "jours restants",
+    noDates: "Dates indisponibles",
 
-        expiredToday:
-            "Expirée aujourd'hui",
+    noType: "Non précisé",
 
-        expiredAgo:
-            "jours",
+    results: "résultats",
 
-        noLocation:
-            "Lieu indisponible",
+    result: "résultat",
+  },
 
-        noDates:
-            "Dates indisponibles",
+  ar: {
+    title: "الفيلق الأوروبي للتضامن",
 
-        noType:
-            "Non précisé",
+    subtitle: "فرص التطوع للمتقدمين من المغرب",
 
-        results:
-            "résultats",
+    activeOpportunities: "الفرص المتاحة",
 
-        result:
-            "résultat"
-    },
+    lastUpdated: "آخر تحديث",
 
+    intro:
+      "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن التي تقبل مشاركين من المغرب.",
 
-    ar: {
+    introNote: "يتم تحديث القائمة تلقائياً من بوابة الشباب الأوروبية.",
 
-        title:
-            "الفيلق الأوروبي للتضامن",
+    search: "بحث",
 
-        subtitle:
-            "فرص التطوع للمتقدمين من المغرب",
+    searchPlaceholder: "ابحث عن فرصة...",
 
-        activeOpportunities:
-            "الفرص المتاحة",
+    country: "الدولة",
 
-        lastUpdated:
-            "آخر تحديث",
+    allCountries: "جميع الدول",
 
-        intro:
-            "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن التي تقبل مشاركين من المغرب.",
+    type: "النوع",
 
-        introNote:
-            "يتم تحديث القائمة تلقائياً من بوابة الشباب الأوروبية.",
+    allTypes: "جميع الأنواع",
 
-        search:
-            "بحث",
+    sortBy: "ترتيب حسب",
 
-        searchPlaceholder:
-            "ابحث عن فرصة...",
+    sortDeadline: "آخر موعد للتقديم",
 
-        country:
-            "الدولة",
+    sortStart: "تاريخ بداية النشاط",
 
-        allCountries:
-            "جميع الدول",
+    sortCreated: "الأحدث",
 
-        type:
-            "النوع",
+    refresh: "تحديث",
 
-        allTypes:
-            "جميع الأنواع",
+    loading: "جارٍ تحميل الفرص...",
 
-        sortBy:
-            "ترتيب حسب",
+    errorTitle: "تعذر تحميل الفرص.",
 
-        sortDeadline:
-            "آخر موعد للتقديم",
+    errorText: "يرجى المحاولة مرة أخرى لاحقاً.",
 
-        sortStart:
-            "تاريخ بداية النشاط",
+    availableNow: "الفرص المتاحة الآن",
 
-        sortCreated:
-            "الأحدث",
+    opportunity: "الفرصة",
 
-        refresh:
-            "تحديث",
+    location: "الموقع",
 
-        loading:
-            "جارٍ تحميل الفرص...",
+    activity: "النشاط",
 
-        errorTitle:
-            "تعذر تحميل الفرص.",
+    deadline: "الموعد النهائي",
 
-        errorText:
-            "يرجى المحاولة مرة أخرى لاحقاً.",
+    expired: "منتهية",
 
-        availableNow:
-            "الفرص المتاحة الآن",
+    noResultsTitle: "لم يتم العثور على فرص.",
 
-        opportunity:
-            "الفرصة",
+    noResultsText: "حاول تغيير البحث أو عوامل التصفية.",
 
-        location:
-            "الموقع",
+    recentlyExpired: "الفرص المنتهية مؤخراً",
 
-        activity:
-            "النشاط",
+    source: "البيانات من",
 
-        deadline:
-            "الموعد النهائي",
+    footerNote: "تحقق دائماً من صفحة الفرصة الرسمية قبل التقديم.",
 
-        expired:
-            "منتهية",
+    view: "عرض",
 
-        noResultsTitle:
-            "لم يتم العثور على فرص.",
+    new: "جديد",
 
-        noResultsText:
-            "حاول تغيير البحث أو عوامل التصفية.",
+    noDeadline: "لا يوجد موعد نهائي",
 
-        recentlyExpired:
-            "الفرص المنتهية مؤخراً",
+    deadlineToday: "الموعد النهائي اليوم",
 
-        source:
-            "البيانات من",
+    dayLeft: "يوم متبقٍ",
 
-        footerNote:
-            "تحقق دائماً من صفحة الفرصة الرسمية قبل التقديم.",
+    daysLeft: "أيام متبقية",
 
-        view:
-            "عرض",
+    expiredToday: "انتهت اليوم",
 
-        new:
-            "جديد",
+    expiredAgo: "يوماً مضت",
 
-        noDeadline:
-            "لا يوجد موعد نهائي",
+    noLocation: "الموقع غير متوفر",
 
-        deadlineToday:
-            "الموعد النهائي اليوم",
+    noDates: "التواريخ غير متوفرة",
 
-        dayLeft:
-            "يوم متبقٍ",
+    noType: "غير محدد",
 
-        daysLeft:
-            "أيام متبقية",
+    results: "نتائج",
 
-        expiredToday:
-            "انتهت اليوم",
-
-        expiredAgo:
-            "يوماً مضت",
-
-        noLocation:
-            "الموقع غير متوفر",
-
-        noDates:
-            "التواريخ غير متوفرة",
-
-        noType:
-            "غير محدد",
-
-        results:
-            "نتائج",
-
-        result:
-            "نتيجة"
-    }
+    result: "نتيجة",
+  },
 };
-
 
 // ============================================================
 // TRANSLATION HELPERS
 // ============================================================
 
 function t(key) {
-
-    return (
-        translations[currentLanguage]?.[key]
-        ??
-        translations.en[key]
-        ??
-        key
-    );
+  return translations[currentLanguage]?.[key] ?? translations.en[key] ?? key;
 }
-
 
 function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
 
-    document.documentElement.lang =
-        currentLanguage;
+  document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
 
-    document.documentElement.dir =
-        currentLanguage === "ar"
-            ? "rtl"
-            : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n;
 
+    element.textContent = t(key);
+  });
 
-    document
-        .querySelectorAll("[data-i18n]")
-        .forEach(element => {
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    const key = element.dataset.i18nPlaceholder;
 
-            const key =
-                element.dataset.i18n;
+    element.placeholder = t(key);
+  });
 
-            element.textContent =
-                t(key);
-        });
+  document.querySelectorAll(".language-button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.language === currentLanguage,
+    );
+  });
 
+  populateFilters();
 
-    document
-        .querySelectorAll("[data-i18n-placeholder]")
-        .forEach(element => {
+  renderActive();
 
-            const key =
-                element.dataset.i18nPlaceholder;
+  renderExpired();
 
-            element.placeholder =
-                t(key);
-        });
-
-
-    document
-        .querySelectorAll(".language-button")
-        .forEach(button => {
-
-            button.classList.toggle(
-                "active",
-                button.dataset.language
-                === currentLanguage
-            );
-        });
-
-
-    populateFilters();
-
-    renderActive();
-
-    renderExpired();
-
-
-    if (currentActiveData) {
-
-        updateHeader(
-            currentActiveData
-        );
-    }
+  if (currentActiveData) {
+    updateHeader(currentActiveData);
+  }
 }
-
 
 // ============================================================
 // LANGUAGE SWITCHING
 // ============================================================
 
-document
-    .querySelectorAll(".language-button")
-    .forEach(button => {
+document.querySelectorAll(".language-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    currentLanguage = button.dataset.language;
 
-        button.addEventListener(
-            "click",
-            () => {
+    localStorage.setItem("esc_language", currentLanguage);
 
-                currentLanguage =
-                    button.dataset.language;
+    applyTranslations();
+  });
+});
 
-                localStorage.setItem(
-                    "esc_language",
-                    currentLanguage
-                );
+const savedLanguage = localStorage.getItem("esc_language");
 
-                applyTranslations();
-            }
-        );
-    });
-
-
-const savedLanguage =
-    localStorage.getItem(
-        "esc_language"
-    );
-
-if (
-    savedLanguage
-    && translations[savedLanguage]
-) {
-
-    currentLanguage =
-        savedLanguage;
+if (savedLanguage && translations[savedLanguage]) {
+  currentLanguage = savedLanguage;
 }
-
 
 // ============================================================
 // DATE HELPERS
 // ============================================================
 
 function parseDate(value) {
+  if (!value) {
+    return null;
+  }
 
-    if (!value) {
-        return null;
-    }
+  const date = new Date(`${value}T00:00:00`);
 
-    const date =
-        new Date(
-            `${value}T00:00:00`
-        );
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
 
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
-        return null;
-    }
-
-    return date;
+  return date;
 }
-
 
 function parseDateTime(value) {
+  if (!value) {
+    return null;
+  }
 
-    if (!value) {
-        return null;
-    }
+  const date = new Date(value);
 
-    const date =
-        new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
 
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
-        return null;
-    }
-
-    return date;
+  return date;
 }
-
 
 function formatDate(value) {
+  const date = parseDate(value);
 
-    const date =
-        parseDate(value);
+  if (!date) {
+    return t("noDeadline");
+  }
 
-    if (!date) {
-        return t("noDeadline");
-    }
-
-    return new Intl.DateTimeFormat(
-        currentLanguage === "ar"
-            ? "ar-MA"
-            : currentLanguage === "fr"
-                ? "fr-FR"
-                : "en-GB",
-        {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        }
-    ).format(date);
+  return new Intl.DateTimeFormat(
+    currentLanguage === "ar"
+      ? "ar-MA"
+      : currentLanguage === "fr"
+        ? "fr-FR"
+        : "en-GB",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    },
+  ).format(date);
 }
 
+function formatActivityDates(start, end) {
+  if (!start && !end) {
+    return t("noDates");
+  }
 
-function formatActivityDates(
-    start,
-    end
-) {
+  if (!start) {
+    return `→ ${formatDate(end)}`;
+  }
 
-    if (!start && !end) {
-        return t("noDates");
-    }
+  if (!end) {
+    return `${formatDate(start)} →`;
+  }
 
-    if (!start) {
-        return `→ ${formatDate(end)}`;
-    }
-
-    if (!end) {
-        return `${formatDate(start)} →`;
-    }
-
-    return (
-        `${formatDate(start)} → `
-        + `${formatDate(end)}`
-    );
+  return `${formatDate(start)} → ` + `${formatDate(end)}`;
 }
-
 
 function startOfToday() {
+  const date = new Date();
 
-    const date = new Date();
+  date.setHours(0, 0, 0, 0);
 
-    date.setHours(
-        0,
-        0,
-        0,
-        0
-    );
-
-    return date;
+  return date;
 }
-
 
 function daysFromToday(value) {
+  const date = parseDate(value);
 
-    const date =
-        parseDate(value);
+  if (!date) {
+    return null;
+  }
 
-    if (!date) {
-        return null;
-    }
+  const difference = date.getTime() - startOfToday().getTime();
 
-    const difference =
-        date.getTime()
-        - startOfToday().getTime();
-
-    return Math.ceil(
-        difference
-        / (
-            1000
-            * 60
-            * 60
-            * 24
-        )
-    );
+  return Math.ceil(difference / (1000 * 60 * 60 * 24));
 }
-
 
 function deadlineClass(deadline) {
+  const days = daysFromToday(deadline);
 
-    const days =
-        daysFromToday(deadline);
+  if (days === null) {
+    return "deadline-none";
+  }
 
-    if (days === null) {
-        return "deadline-none";
-    }
+  if (days <= 3) {
+    return "deadline-urgent";
+  }
 
-    if (days <= 3) {
-        return "deadline-urgent";
-    }
+  if (days <= 7) {
+    return "deadline-soon";
+  }
 
-    if (days <= 7) {
-        return "deadline-soon";
-    }
-
-    return "deadline-normal";
+  return "deadline-normal";
 }
-
 
 function deadlineRelative(deadline) {
+  const days = daysFromToday(deadline);
 
-    const days =
-        daysFromToday(deadline);
-
-    if (days === null) {
-        return "";
-    }
-
-    if (days === 0) {
-        return `⏰ ${t("deadlineToday")}`;
-    }
-
-    if (days === 1) {
-        return `⏰ 1 ${t("dayLeft")}`;
-    }
-
-    if (days > 1 && days <= 30) {
-        return `⏰ ${days} ${t("daysLeft")}`;
-    }
-
+  if (days === null) {
     return "";
-}
+  }
 
+  if (days === 0) {
+    return `⏰ ${t("deadlineToday")}`;
+  }
+
+  if (days === 1) {
+    return `⏰ 1 ${t("dayLeft")}`;
+  }
+
+  if (days > 1 && days <= 30) {
+    return `⏰ ${days} ${t("daysLeft")}`;
+  }
+
+  return "";
+}
 
 function daysSince(value) {
+  const date = parseDate(value);
 
-    const date =
-        parseDate(value);
+  if (!date) {
+    return null;
+  }
 
-    if (!date) {
-        return null;
-    }
+  const difference = startOfToday().getTime() - date.getTime();
 
-    const difference =
-        startOfToday().getTime()
-        - date.getTime();
-
-    return Math.max(
-        0,
-        Math.floor(
-            difference
-            / (
-                1000
-                * 60
-                * 60
-                * 24
-            )
-        )
-    );
+  return Math.max(0, Math.floor(difference / (1000 * 60 * 60 * 24)));
 }
-
 
 function expiredRelative(deadline) {
+  const days = daysSince(deadline);
 
-    const days =
-        daysSince(deadline);
+  if (days === null) {
+    return "";
+  }
 
-    if (days === null) {
-        return "";
-    }
+  if (days === 0) {
+    return t("expiredToday");
+  }
 
-    if (days === 0) {
-        return t("expiredToday");
-    }
-
-    return `${days} ${t("expiredAgo")}`;
+  return `${days} ${t("expiredAgo")}`;
 }
-
 
 // ============================================================
 // HTML ESCAPING
 // ============================================================
 
 function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
 
-    if (
-        value === null
-        || value === undefined
-    ) {
-
-        return "";
-    }
-
-    return String(value)
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
-
 
 // ============================================================
 // NEW OPPORTUNITIES
 // ============================================================
 
-const SEEN_OPPORTUNITIES_KEY =
-    "esc_seen_opportunities";
+const SEEN_OPPORTUNITIES_KEY = "esc_seen_opportunities";
 
-let newOpportunityIds =
-    new Set();
-
+let newOpportunityIds = new Set();
 
 function loadSeenOpportunities() {
+  try {
+    const stored = localStorage.getItem(SEEN_OPPORTUNITIES_KEY);
 
-    try {
-
-        const stored =
-            localStorage.getItem(
-                SEEN_OPPORTUNITIES_KEY
-            );
-
-        if (!stored) {
-            return null;
-        }
-
-        const parsed =
-            JSON.parse(
-                stored
-            );
-
-        if (
-            !Array.isArray(parsed)
-        ) {
-
-            return null;
-        }
-
-        return new Set(
-            parsed.map(
-                id => String(id)
-            )
-        );
-
-    } catch {
-
-        return null;
+    if (!stored) {
+      return null;
     }
+
+    const parsed = JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return new Set(parsed.map((id) => String(id)));
+  } catch {
+    return null;
+  }
 }
 
+function saveSeenOpportunities(opportunities) {
+  try {
+    const ids = opportunities.map((opportunity) => String(opportunity.id));
 
-function saveSeenOpportunities(
+    localStorage.setItem(SEEN_OPPORTUNITIES_KEY, JSON.stringify(ids));
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
+
+function calculateNewOpportunities(opportunities) {
+  const previousIds = loadSeenOpportunities();
+
+  /*
+   * First visit:
+   *
+   * There is no previous dataset, so we cannot know
+   * which opportunities are genuinely new.
+   *
+   * Remember the current dataset but show NO NEW badges.
+   */
+
+  if (!previousIds) {
+    saveSeenOpportunities(opportunities);
+
+    newOpportunityIds = new Set();
+
+    return;
+  }
+
+  /*
+   * Every opportunity currently visible that wasn't present
+   * in the previous dataset is genuinely new.
+   */
+
+  newOpportunityIds = new Set(
     opportunities
-) {
+      .map((opportunity) => String(opportunity.id))
+      .filter((id) => !previousIds.has(id)),
+  );
 
-    try {
+  /*
+   * Save the current dataset so the next refresh compares
+   * against this one.
+   */
 
-        const ids =
-            opportunities.map(
-                opportunity =>
-                    String(
-                        opportunity.id
-                    )
-            );
-
-        localStorage.setItem(
-            SEEN_OPPORTUNITIES_KEY,
-            JSON.stringify(
-                ids
-            )
-        );
-
-    } catch {
-
-        // Ignore localStorage failures.
-    }
+  saveSeenOpportunities(opportunities);
 }
-
-
-function calculateNewOpportunities(
-    opportunities
-) {
-
-    const previousIds =
-        loadSeenOpportunities();
-
-
-    /*
-     * First visit:
-     *
-     * There is no previous dataset, so we cannot know
-     * which opportunities are genuinely new.
-     *
-     * Remember the current dataset but show NO NEW badges.
-     */
-
-    if (!previousIds) {
-
-        saveSeenOpportunities(
-            opportunities
-        );
-
-        newOpportunityIds =
-            new Set();
-
-        return;
-    }
-
-
-    /*
-     * Every opportunity currently visible that wasn't present
-     * in the previous dataset is genuinely new.
-     */
-
-    newOpportunityIds =
-        new Set(
-            opportunities
-                .map(
-                    opportunity =>
-                        String(
-                            opportunity.id
-                        )
-                )
-                .filter(
-                    id =>
-                        !previousIds.has(
-                            id
-                        )
-                )
-        );
-
-
-    /*
-     * Save the current dataset so the next refresh compares
-     * against this one.
-     */
-
-    saveSeenOpportunities(
-        opportunities
-    );
-}
-
 
 // ============================================================
 // COUNTRY NAMES
 // ============================================================
 
-const countryNames =
-    new Intl.DisplayNames(
-        ["en"],
-        {
-            type: "region"
-        }
-    );
-
+const countryNames = new Intl.DisplayNames(["en"], {
+  type: "region",
+});
 
 const countryCodeOverrides = {
+  EL: "GR",
 
-    EL: "GR",
-
-    UK: "GB"
+  UK: "GB",
 };
 
+function normalizeCountryCode(code) {
+  if (!code) {
+    return "";
+  }
 
-function normalizeCountryCode(
-    code
-) {
-
-    if (!code) {
-        return "";
-    }
-
-    return (
-        countryCodeOverrides[code]
-        || code
-    );
+  return countryCodeOverrides[code] || code;
 }
 
+function getCountryName(code) {
+  if (!code) {
+    return "";
+  }
 
-function getCountryName(
-    code
-) {
+  const normalizedCode = normalizeCountryCode(code);
 
-    if (!code) {
-        return "";
-    }
-
-    const normalizedCode =
-        normalizeCountryCode(
-            code
-        );
-
-    try {
-
-        return (
-            countryNames.of(
-                normalizedCode
-            )
-            || code
-        );
-
-    } catch {
-
-        return code;
-    }
+  try {
+    return countryNames.of(normalizedCode) || code;
+  } catch {
+    return code;
+  }
 }
 
+function getCountryFlag(code) {
+  const normalizedCode = normalizeCountryCode(code);
 
-function getCountryFlag(
-    code
-) {
+  if (!normalizedCode || normalizedCode.length !== 2) {
+    return "🌍";
+  }
 
-    const normalizedCode =
-        normalizeCountryCode(
-            code
-        );
+  const upper = normalizedCode.toUpperCase();
 
-    if (
-        !normalizedCode
-        || normalizedCode.length !== 2
-    ) {
-
-        return "🌍";
-    }
-
-    const upper =
-        normalizedCode.toUpperCase();
-
-    return String.fromCodePoint(
-        ...[
-            ...upper
-        ].map(
-            char =>
-                127397
-                + char.charCodeAt(0)
-        )
-    );
+  return String.fromCodePoint(
+    ...[...upper].map((char) => 127397 + char.charCodeAt(0)),
+  );
 }
 
+function renderCountry(code) {
+  const name = getCountryName(code);
 
-function renderCountry(
-    code
-) {
+  if (!name) {
+    return "";
+  }
 
-    const name =
-        getCountryName(
-            code
-        );
+  const flag = getCountryFlag(code);
 
-    if (!name) {
-        return "";
-    }
-
-    const flag =
-        getCountryFlag(
-            code
-        );
-
-    return `
+  return `
         <span class="country-display">
 
             <span
@@ -1162,28 +724,19 @@ function renderCountry(
     `;
 }
 
-
 // ============================================================
 // ACTIVITY TYPE ICONS
 // ============================================================
 
 const activityTypeIcons = {
+  "Individual volunteering": "👤",
 
-    "Individual volunteering":
-        "👤",
-
-    "Volunteering teams":
-        "👥"
+  "Volunteering teams": "👥",
 };
 
-
-function renderActivityType(
-    type
-) {
-
-    if (!type) {
-
-        return `
+function renderActivityType(type) {
+  if (!type) {
+    return `
             <span class="type-label">
 
                 <span
@@ -1194,22 +747,16 @@ function renderActivityType(
                 </span>
 
                 <span>
-                    ${escapeHtml(
-                        t("noType")
-                    )}
+                    ${escapeHtml(t("noType"))}
                 </span>
 
             </span>
         `;
-    }
+  }
 
+  const icon = activityTypeIcons[type] || "🤝";
 
-    const icon =
-        activityTypeIcons[type]
-        || "🤝";
-
-
-    return `
+  return `
         <span
             class="type-label"
             title="${escapeHtml(type)}"
@@ -1230,98 +777,62 @@ function renderActivityType(
     `;
 }
 
-
 // ============================================================
 // TOPIC ICONS
 // ============================================================
 
 const topicIcons = {
+  "Education and training": "📚",
 
-    "Education and training":
-        "📚",
+  "Creativity and culture": "🎨",
 
-    "Creativity and culture":
-        "🎨",
+  "Social challenges": "🤝",
 
-    "Social challenges":
-        "🤝",
+  "Citizenship and democratic participation": "🗳️",
 
-    "Citizenship and democratic participation":
-        "🗳️",
+  "Environment and natural protection": "🌱",
 
-    "Environment and natural protection":
-        "🌱",
+  "Health and wellbeing": "❤️",
 
-    "Health and wellbeing":
-        "❤️",
+  "Employment and entrepreneurship": "💼",
 
-    "Employment and entrepreneurship":
-        "💼",
+  "Physical education and sport": "⚽",
 
-    "Physical education and sport":
-        "⚽",
+  "Working against discrimination (including gender discrimination)": "🫱🏻‍🫲🏽",
 
-    "Working against discrimination (including gender discrimination)":
-        "🫱🏻‍🫲🏽",
+  "Reception and integration of refugees and migrants": "🏠",
 
-    "Reception and integration of refugees and migrants":
-        "🏠",
+  "Support to local Small and Medium Enterprises": "🏢",
 
-    "Support to local Small and Medium Enterprises":
-        "🏢",
+  "Nutrition and subsistence agriculture": "🌾",
 
-    "Nutrition and subsistence agriculture":
-        "🌾",
+  Shelter: "🏠",
 
-    "Shelter":
-        "🏠",
+  "Disaster prevention and recovery": "🛟",
 
-    "Disaster prevention and recovery":
-        "🛟",
+  "Disaster Preparedness": "🚨",
 
-    "Disaster Preparedness":
-        "🚨",
+  "Post Disaster relief": "🆘",
 
-    "Post Disaster relief":
-        "🆘",
-
-    "WASH (Water, sanitation and hygiene)":
-        "🚿"
+  "WASH (Water, sanitation and hygiene)": "🚿",
 };
 
+function renderTopics(topics) {
+  if (!Array.isArray(topics) || topics.length === 0) {
+    return "";
+  }
 
-function renderTopics(
-    topics
-) {
-
-    if (
-        !Array.isArray(
-            topics
-        )
-        || topics.length === 0
-    ) {
-
-        return "";
-    }
-
-
-    return `
+  return `
         <div class="topic-tags">
 
-            ${
-                topics.map(
-                    topic => {
+            ${topics
+              .map((topic) => {
+                const icon = topicIcons[topic] || "•";
 
-                        const icon =
-                            topicIcons[topic]
-                            || "•";
-
-                        return `
+                return `
                             <span
                                 class="topic-tag"
-                                title="${escapeHtml(
-                                    topic
-                                )}"
+                                title="${escapeHtml(topic)}"
                             >
 
                                 <span
@@ -1332,436 +843,232 @@ function renderTopics(
                                 </span>
 
                                 <span>
-                                    ${escapeHtml(
-                                        topic
-                                    )}
+                                    ${escapeHtml(topic)}
                                 </span>
 
                             </span>
                         `;
-                    }
-                ).join("")
-            }
+              })
+              .join("")}
 
         </div>
     `;
 }
 
-
 // ============================================================
 // FILTER OPTIONS
 // ============================================================
 
-function uniqueSortedValues(
-    items,
-    property
-) {
-
-    return [
-        ...new Set(
-            items
-                .map(
-                    item =>
-                        item[property]
-                )
-                .filter(Boolean)
-        )
-    ].sort(
-        (a, b) =>
-            String(a)
-                .localeCompare(
-                    String(b)
-                )
-    );
+function uniqueSortedValues(items, property) {
+  return [...new Set(items.map((item) => item[property]).filter(Boolean))].sort(
+    (a, b) => String(a).localeCompare(String(b)),
+  );
 }
-
 
 function populateFilters() {
+  const countries = uniqueSortedValues(activeOpportunities, "country");
 
-    const countries =
-        uniqueSortedValues(
-            activeOpportunities,
-            "country"
-        );
+  const types = uniqueSortedValues(activeOpportunities, "activity_type");
 
-    const types =
-        uniqueSortedValues(
-            activeOpportunities,
-            "activity_type"
-        );
+  const selectedCountry = countryFilter.value;
 
+  const selectedType = typeFilter.value;
 
-    const selectedCountry =
-        countryFilter.value;
-
-    const selectedType =
-        typeFilter.value;
-
-
-    countryFilter.innerHTML =
-        `<option value="">
-            ${escapeHtml(
-                t("allCountries")
-            )}
+  countryFilter.innerHTML = `<option value="">
+            ${escapeHtml(t("allCountries"))}
         </option>`;
 
+  countries.forEach((code) => {
+    const option = document.createElement("option");
 
-    countries.forEach(
-        code => {
+    option.value = code;
 
-            const option =
-                document.createElement(
-                    "option"
-                );
+    option.textContent = `${getCountryFlag(code)} ` + `${getCountryName(code)}`;
 
-            option.value =
-                code;
+    countryFilter.appendChild(option);
+  });
 
-            option.textContent =
-                `${getCountryFlag(code)} `
-                + `${getCountryName(code)}`;
-
-            countryFilter.appendChild(
-                option
-            );
-        }
-    );
-
-
-    typeFilter.innerHTML =
-        `<option value="">
-            ${escapeHtml(
-                t("allTypes")
-            )}
+  typeFilter.innerHTML = `<option value="">
+            ${escapeHtml(t("allTypes"))}
         </option>`;
 
+  types.forEach((type) => {
+    const option = document.createElement("option");
 
-    types.forEach(
-        type => {
+    option.value = type;
 
-            const option =
-                document.createElement(
-                    "option"
-                );
+    option.textContent = `${activityTypeIcons[type] || "🤝"} ` + `${type}`;
 
-            option.value =
-                type;
+    typeFilter.appendChild(option);
+  });
 
-            option.textContent =
-                `${activityTypeIcons[type] || "🤝"} `
-                + `${type}`;
+  if (countries.includes(selectedCountry)) {
+    countryFilter.value = selectedCountry;
+  }
 
-            typeFilter.appendChild(
-                option
-            );
-        }
-    );
-
-
-    if (
-        countries.includes(
-            selectedCountry
-        )
-    ) {
-
-        countryFilter.value =
-            selectedCountry;
-    }
-
-
-    if (
-        types.includes(
-            selectedType
-        )
-    ) {
-
-        typeFilter.value =
-            selectedType;
-    }
+  if (types.includes(selectedType)) {
+    typeFilter.value = selectedType;
+  }
 }
-
 
 // ============================================================
 // FILTERING
 // ============================================================
 
 function getFilteredActive() {
+  const search = searchInput.value.trim().toLowerCase();
 
-    const search =
-        searchInput.value
-            .trim()
-            .toLowerCase();
+  const country = countryFilter.value;
 
-    const country =
-        countryFilter.value;
+  const type = typeFilter.value;
 
-    const type =
-        typeFilter.value;
+  return activeOpportunities.filter((opportunity) => {
+    const searchable = [
+      opportunity.title,
 
+      opportunity.location,
 
-    return activeOpportunities.filter(
-        opportunity => {
+      opportunity.town,
 
-            const searchable = [
+      getCountryName(opportunity.country),
 
-                opportunity.title,
+      opportunity.activity_type,
 
-                opportunity.location,
+      ...(opportunity.topics || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-                opportunity.town,
+    if (search && !searchable.includes(search)) {
+      return false;
+    }
 
-                getCountryName(
-                    opportunity.country
-                ),
+    if (country && opportunity.country !== country) {
+      return false;
+    }
 
-                opportunity.activity_type,
+    if (type && opportunity.activity_type !== type) {
+      return false;
+    }
 
-                ...(opportunity.topics || [])
-
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-
-
-            if (
-                search
-                && !searchable.includes(
-                    search
-                )
-            ) {
-
-                return false;
-            }
-
-
-            if (
-                country
-                && opportunity.country
-                !== country
-            ) {
-
-                return false;
-            }
-
-
-            if (
-                type
-                && opportunity.activity_type
-                !== type
-            ) {
-
-                return false;
-            }
-
-
-            return true;
-        }
-    );
+    return true;
+  });
 }
-
 
 // ============================================================
 // SORTING
 // ============================================================
 
-function sortOpportunities(
-    items
-) {
+function sortOpportunities(items) {
+  const sorted = [...items];
 
-    const sorted =
-        [...items];
+  const sortType = sortSelect.value;
 
-    const sortType =
-        sortSelect.value;
+  if (sortType === "start") {
+    sorted.sort((a, b) => {
+      const dateA = parseDate(a.start_date);
 
+      const dateB = parseDate(b.start_date);
 
-    if (
-        sortType === "start"
-    ) {
+      if (!dateA && !dateB) {
+        return 0;
+      }
 
-        sorted.sort(
-            (a, b) => {
+      if (!dateA) {
+        return 1;
+      }
 
-                const dateA =
-                    parseDate(
-                        a.start_date
-                    );
+      if (!dateB) {
+        return -1;
+      }
 
-                const dateB =
-                    parseDate(
-                        b.start_date
-                    );
-
-                if (!dateA && !dateB) {
-                    return 0;
-                }
-
-                if (!dateA) {
-                    return 1;
-                }
-
-                if (!dateB) {
-                    return -1;
-                }
-
-                return dateA - dateB;
-            }
-        );
-
-        return sorted;
-    }
-
-
-    if (
-        sortType === "created"
-    ) {
-
-        sorted.sort(
-            (a, b) => {
-
-                const dateA =
-                    parseDateTime(
-                        a.created
-                    );
-
-                const dateB =
-                    parseDateTime(
-                        b.created
-                    );
-
-                if (!dateA && !dateB) {
-                    return 0;
-                }
-
-                if (!dateA) {
-                    return 1;
-                }
-
-                if (!dateB) {
-                    return -1;
-                }
-
-                return dateB - dateA;
-            }
-        );
-
-        return sorted;
-    }
-
-
-    sorted.sort(
-        (a, b) => {
-
-            const dateA =
-                parseDate(
-                    a.deadline
-                );
-
-            const dateB =
-                parseDate(
-                    b.deadline
-                );
-
-
-            if (
-                !dateA
-                && !dateB
-            ) {
-
-                return a.title.localeCompare(
-                    b.title
-                );
-            }
-
-            if (!dateA) {
-                return 1;
-            }
-
-            if (!dateB) {
-                return -1;
-            }
-
-            return dateA - dateB;
-        }
-    );
+      return dateA - dateB;
+    });
 
     return sorted;
-}
+  }
 
+  if (sortType === "created") {
+    sorted.sort((a, b) => {
+      const dateA = parseDateTime(a.created);
+
+      const dateB = parseDateTime(b.created);
+
+      if (!dateA && !dateB) {
+        return 0;
+      }
+
+      if (!dateA) {
+        return 1;
+      }
+
+      if (!dateB) {
+        return -1;
+      }
+
+      return dateB - dateA;
+    });
+
+    return sorted;
+  }
+
+  sorted.sort((a, b) => {
+    const dateA = parseDate(a.deadline);
+
+    const dateB = parseDate(b.deadline);
+
+    if (!dateA && !dateB) {
+      return a.title.localeCompare(b.title);
+    }
+
+    if (!dateA) {
+      return 1;
+    }
+
+    if (!dateB) {
+      return -1;
+    }
+
+    return dateA - dateB;
+  });
+
+  return sorted;
+}
 
 // ============================================================
 // ACTIVE TABLE
 // ============================================================
 
 function renderActive() {
+  const filtered = sortOpportunities(getFilteredActive());
 
-    const filtered =
-        sortOpportunities(
-            getFilteredActive()
-        );
+  activeResultCount.textContent =
+    `${filtered.length} ` +
+    (filtered.length === 1 ? t("result") : t("results"));
 
+  if (filtered.length === 0) {
+    opportunitiesBody.innerHTML = "";
 
-    activeResultCount.textContent =
-        `${filtered.length} `
-        + (
-            filtered.length === 1
-                ? t("result")
-                : t("results")
-        );
+    emptyMessage.classList.remove("hidden");
 
+    return;
+  }
 
-    if (
-        filtered.length === 0
-    ) {
+  emptyMessage.classList.add("hidden");
 
-        opportunitiesBody.innerHTML =
-            "";
+  opportunitiesBody.innerHTML = filtered
+    .map((opportunity) => {
+      const location =
+        opportunity.town || opportunity.location || t("noLocation");
 
-        emptyMessage.classList.remove(
-            "hidden"
-        );
+      const deadlineClassName = deadlineClass(opportunity.deadline);
 
-        return;
-    }
+      const relative = deadlineRelative(opportunity.deadline);
 
+      const isNew = newOpportunityIds.has(String(opportunity.id));
 
-    emptyMessage.classList.add(
-        "hidden"
-    );
-
-
-    opportunitiesBody.innerHTML =
-        filtered.map(
-            opportunity => {
-
-                const location =
-                    opportunity.town
-                    || opportunity.location
-                    || t("noLocation");
-
-
-                const deadlineClassName =
-                    deadlineClass(
-                        opportunity.deadline
-                    );
-
-
-                const relative =
-                    deadlineRelative(
-                        opportunity.deadline
-                    );
-
-
-                const isNew =
-                    newOpportunityIds.has(
-                        String(
-                            opportunity.id
-                        )
-                    );
-
-
-                return `
+      return `
                     <tr>
 
                         <td class="title-cell">
@@ -1769,35 +1076,29 @@ function renderActive() {
                             <div class="opportunity-title">
 
                                 ${
-                                    isNew
-                                        ? `
+                                  isNew
+                                    ? `
                                             <span
                                                 class="new-badge"
                                             >
                                                 ✨
-                                                ${escapeHtml(
-                                                    t("new")
-                                                )}
+                                                ${escapeHtml(t("new"))}
                                             </span>
                                         `
-                                        : ""
+                                    : ""
                                 }
 
                                 <span>
-                                    ${escapeHtml(
-                                        opportunity.title
-                                    )}
+                                    ${escapeHtml(opportunity.title)}
                                 </span>
 
                             </div>
 
 
                             ${
-                                opportunity.topics?.length
-                                    ? renderTopics(
-                                        opportunity.topics
-                                    )
-                                    : ""
+                              opportunity.topics?.length
+                                ? renderTopics(opportunity.topics)
+                                : ""
                             }
 
                         </td>
@@ -1807,17 +1108,13 @@ function renderActive() {
 
                             <div class="location-main">
 
-                                ${escapeHtml(
-                                    location
-                                )}
+                                ${escapeHtml(location)}
 
                             </div>
 
                             <div class="location-country">
 
-                                ${renderCountry(
-                                    opportunity.country
-                                )}
+                                ${renderCountry(opportunity.country)}
 
                             </div>
 
@@ -1827,10 +1124,10 @@ function renderActive() {
                         <td class="activity-cell">
 
                             ${escapeHtml(
-                                formatActivityDates(
-                                    opportunity.start_date,
-                                    opportunity.end_date
-                                )
+                              formatActivityDates(
+                                opportunity.start_date,
+                                opportunity.end_date,
+                              ),
                             )}
 
                         </td>
@@ -1843,28 +1140,24 @@ function renderActive() {
                             >
 
                                 ${escapeHtml(
-                                    opportunity.deadline
-                                        ? formatDate(
-                                            opportunity.deadline
-                                        )
-                                        : t("noDeadline")
+                                  opportunity.deadline
+                                    ? formatDate(opportunity.deadline)
+                                    : t("noDeadline"),
                                 )}
 
                             </span>
 
 
                             ${
-                                relative
-                                    ? `
+                              relative
+                                ? `
                                         <span
                                             class="deadline-relative"
                                         >
-                                            ${escapeHtml(
-                                                relative
-                                            )}
+                                            ${escapeHtml(relative)}
                                         </span>
                                     `
-                                    : ""
+                                : ""
                             }
 
                         </td>
@@ -1872,9 +1165,7 @@ function renderActive() {
 
                         <td class="type-cell">
 
-                            ${renderActivityType(
-                                opportunity.activity_type
-                            )}
+                            ${renderActivityType(opportunity.activity_type)}
 
                         </td>
 
@@ -1883,73 +1174,48 @@ function renderActive() {
 
                             <a
                                 class="apply-button"
-                                href="${escapeHtml(
-                                    opportunity.url
-                                )}"
+                                href="${escapeHtml(opportunity.url)}"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                ${escapeHtml(
-                                    t("view")
-                                )}
+                                ${escapeHtml(t("view"))}
                             </a>
 
                         </td>
 
                     </tr>
                 `;
-            }
-        ).join("");
+    })
+    .join("");
 }
-
 
 // ============================================================
 // EXPIRED TABLE
 // ============================================================
 
 function renderExpired() {
+  if (!expiredOpportunities.length) {
+    expiredSection.classList.add("hidden");
 
-    if (
-        !expiredOpportunities.length
-    ) {
+    return;
+  }
 
-        expiredSection.classList.add(
-            "hidden"
-        );
+  expiredSection.classList.remove("hidden");
 
-        return;
-    }
+  expiredCount.textContent = expiredOpportunities.length;
 
+  expiredBody.innerHTML = expiredOpportunities
+    .map((opportunity) => {
+      const location =
+        opportunity.town || opportunity.location || t("noLocation");
 
-    expiredSection.classList.remove(
-        "hidden"
-    );
-
-
-    expiredCount.textContent =
-        expiredOpportunities.length;
-
-
-    expiredBody.innerHTML =
-        expiredOpportunities
-            .map(
-                opportunity => {
-
-                    const location =
-                        opportunity.town
-                        || opportunity.location
-                        || t("noLocation");
-
-
-                    return `
+      return `
                         <tr>
 
                             <td>
 
                                 <strong>
-                                    ${escapeHtml(
-                                        opportunity.title
-                                    )}
+                                    ${escapeHtml(opportunity.title)}
                                 </strong>
 
                             </td>
@@ -1958,18 +1224,14 @@ function renderExpired() {
                             <td>
 
                                 <div>
-                                    ${escapeHtml(
-                                        location
-                                    )}
+                                    ${escapeHtml(location)}
                                 </div>
 
                                 <div
                                     class="location-country"
                                 >
 
-                                    ${renderCountry(
-                                        opportunity.country
-                                    )}
+                                    ${renderCountry(opportunity.country)}
 
                                 </div>
 
@@ -1978,11 +1240,7 @@ function renderExpired() {
 
                             <td>
 
-                                ${escapeHtml(
-                                    formatDate(
-                                        opportunity.deadline
-                                    )
-                                )}
+                                ${escapeHtml(formatDate(opportunity.deadline))}
 
                             </td>
 
@@ -1990,316 +1248,166 @@ function renderExpired() {
                             <td>
 
                                 ${escapeHtml(
-                                    expiredRelative(
-                                        opportunity.deadline
-                                    )
+                                  expiredRelative(opportunity.deadline),
                                 )}
 
                             </td>
 
                         </tr>
                     `;
-                }
-            )
-            .join("");
+    })
+    .join("");
 }
-
 
 // ============================================================
 // STATUS HEADER
 // ============================================================
 
-function updateHeader(
-    data
-) {
+function updateHeader(data) {
+  const count = Number.isFinite(data?.count)
+    ? data.count
+    : activeOpportunities.length;
 
-    const count =
-        Number.isFinite(
-            data?.count
-        )
-            ? data.count
-            : activeOpportunities.length;
+  opportunityCount.textContent =
+    count === 1 ? `1 ${t("result")}` : `${count} ${t("results")}`;
 
+  if (data?.generated_at) {
+    const date = parseDateTime(data.generated_at);
 
-    opportunityCount.textContent =
-        count === 1
-            ? `1 ${t("result")}`
-            : `${count} ${t("results")}`;
-
-
-    if (
-        data?.generated_at
-    ) {
-
-        const date =
-            parseDateTime(
-                data.generated_at
-            );
-
-
-        if (date) {
-
-            lastUpdated.textContent =
-                new Intl.DateTimeFormat(
-                    currentLanguage === "ar"
-                        ? "ar-MA"
-                        : currentLanguage === "fr"
-                            ? "fr-FR"
-                            : "en-GB",
-                    {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                    }
-                ).format(
-                    date
-                );
-
-        } else {
-
-            lastUpdated.textContent =
-                "—";
-        }
-
+    if (date) {
+      lastUpdated.textContent = new Intl.DateTimeFormat(
+        currentLanguage === "ar"
+          ? "ar-MA"
+          : currentLanguage === "fr"
+            ? "fr-FR"
+            : "en-GB",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      ).format(date);
     } else {
-
-        lastUpdated.textContent =
-            "—";
+      lastUpdated.textContent = "—";
     }
+  } else {
+    lastUpdated.textContent = "—";
+  }
 }
-
 
 // ============================================================
 // DATA FETCHING
 // ============================================================
 
-async function fetchJson(
-    url
-) {
+async function fetchJson(url) {
+  const response = await fetch(`${url}?t=${Date.now()}`, {
+    cache: "no-store",
+  });
 
-    const response =
-        await fetch(
-            `${url}?t=${Date.now()}`,
-            {
-                cache: "no-store"
-            }
-        );
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
 
-
-    if (
-        !response.ok
-    ) {
-
-        throw new Error(
-            `HTTP ${response.status}`
-        );
-    }
-
-
-    return response.json();
+  return response.json();
 }
-
 
 // ============================================================
 // LOAD DATA
 // ============================================================
 
 async function loadData() {
+  loadingMessage.classList.remove("hidden");
 
-    loadingMessage.classList.remove(
-        "hidden"
-    );
+  errorMessage.classList.add("hidden");
 
-    errorMessage.classList.add(
-        "hidden"
-    );
+  try {
+    const activeData = await fetchJson(DATA_URL);
 
+    currentActiveData = activeData;
+
+    activeOpportunities = Array.isArray(activeData?.opportunities)
+      ? activeData.opportunities
+      : [];
+
+    calculateNewOpportunities(activeOpportunities);
 
     try {
+      const expiredData = await fetchJson(EXPIRED_DATA_URL);
 
-        const activeData =
-            await fetchJson(
-                DATA_URL
-            );
-
-
-        currentActiveData =
-            activeData;
-
-
-        activeOpportunities =
-            Array.isArray(
-                activeData?.opportunities
-            )
-                ? activeData.opportunities
-                : [];
-
-
-        calculateNewOpportunities(
-            activeOpportunities
-        );
-
-
-        try {
-
-            const expiredData =
-                await fetchJson(
-                    EXPIRED_DATA_URL
-                );
-
-
-            expiredOpportunities =
-                Array.isArray(
-                    expiredData?.opportunities
-                )
-                    ? expiredData.opportunities
-                    : [];
-
-        } catch {
-
-            expiredOpportunities =
-                [];
-        }
-
-
-        populateFilters();
-
-        updateHeader(
-            currentActiveData
-        );
-
-        renderActive();
-
-        renderExpired();
-
-
-    } catch (error) {
-
-        console.error(
-            "Could not load opportunities:",
-            error
-        );
-
-
-        activeOpportunities =
-            [];
-
-        currentActiveData =
-            null;
-
-        opportunityCount.textContent =
-            "—";
-
-        lastUpdated.textContent =
-            "—";
-
-
-        errorMessage.classList.remove(
-            "hidden"
-        );
-
-    } finally {
-
-        loadingMessage.classList.add(
-            "hidden"
-        );
+      expiredOpportunities = Array.isArray(expiredData?.opportunities)
+        ? expiredData.opportunities
+        : [];
+    } catch {
+      expiredOpportunities = [];
     }
-}
 
+    populateFilters();
+
+    updateHeader(currentActiveData);
+
+    renderActive();
+
+    renderExpired();
+  } catch (error) {
+    console.error("Could not load opportunities:", error);
+
+    activeOpportunities = [];
+
+    currentActiveData = null;
+
+    opportunityCount.textContent = "—";
+
+    lastUpdated.textContent = "—";
+
+    errorMessage.classList.remove("hidden");
+  } finally {
+    loadingMessage.classList.add("hidden");
+  }
+}
 
 // ============================================================
 // REFRESH BUTTON
 // ============================================================
 
-refreshButton.addEventListener(
-    "click",
-    async () => {
+refreshButton.addEventListener("click", async () => {
+  refreshButton.disabled = true;
 
-        refreshButton.disabled =
-            true;
+  refreshButton.innerHTML = `↻ <span>${escapeHtml(t("loading"))}</span>`;
 
+  try {
+    await loadData();
+  } finally {
+    refreshButton.disabled = false;
 
-        refreshButton.innerHTML =
-            `↻ <span>${escapeHtml(
-                t("loading")
-            )}</span>`;
-
-
-        try {
-
-            await loadData();
-
-        } finally {
-
-            refreshButton.disabled =
-                false;
-
-            refreshButton.innerHTML =
-                `↻ <span>${escapeHtml(
-                    t("refresh")
-                )}</span>`;
-        }
-    }
-);
-
+    refreshButton.innerHTML = `↻ <span>${escapeHtml(t("refresh"))}</span>`;
+  }
+});
 
 // ============================================================
 // FILTER EVENTS
 // ============================================================
 
-searchInput.addEventListener(
-    "input",
-    renderActive
-);
+searchInput.addEventListener("input", renderActive);
 
-countryFilter.addEventListener(
-    "change",
-    renderActive
-);
+countryFilter.addEventListener("change", renderActive);
 
-typeFilter.addEventListener(
-    "change",
-    renderActive
-);
+typeFilter.addEventListener("change", renderActive);
 
-sortSelect.addEventListener(
-    "change",
-    renderActive
-);
-
+sortSelect.addEventListener("change", renderActive);
 
 // ============================================================
 // EXPIRED TOGGLE
 // ============================================================
 
-document
-    .getElementById(
-        "expired-toggle"
-    )
-    .addEventListener(
-        "click",
-        () => {
+document.getElementById("expired-toggle").addEventListener("click", () => {
+  const isHidden = expiredContent.classList.contains("hidden");
 
-            const isHidden =
-                expiredContent.classList.contains(
-                    "hidden"
-                );
+  expiredContent.classList.toggle("hidden");
 
-
-            expiredContent.classList.toggle(
-                "hidden"
-            );
-
-
-            expiredArrow.classList.toggle(
-                "open",
-                isHidden
-            );
-        }
-    );
-
+  expiredArrow.classList.toggle("open", isHidden);
+});
 
 // ============================================================
 // INITIAL LOAD
