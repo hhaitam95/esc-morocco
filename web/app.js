@@ -3,8 +3,8 @@
 // Frontend logic
 // ============================================================
 
-const DATA_URL = "../data/opportunities.json";
-const EXPIRED_DATA_URL = "../data/expired.json";
+const DATA_URL = "opportunities.json";
+const EXPIRED_DATA_URL = "expired.json";
 
 
 // ============================================================

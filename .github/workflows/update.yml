@@ -15,20 +15,36 @@ jobs:
 
     steps:
 
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # ------------------------------------------------------
+      # Python
+      # ------------------------------------------------------
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+      # ------------------------------------------------------
+      # Dependencies
+      # ------------------------------------------------------
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
+
+      # ------------------------------------------------------
+      # Run several bounded scraper batches
+      # ------------------------------------------------------
 
       - name: Run scraper batches
         id: scraper
@@ -58,31 +74,52 @@ jobs:
             echo "Batch $BATCH exit code: $EXIT_CODE"
             echo ""
 
-            # Commit everything completed by this batch.
+            # ------------------------------------------------
+            # Copy the latest public data into the website.
+            # ------------------------------------------------
+
+            if [ -f data/opportunities.json ]; then
+              cp data/opportunities.json web/opportunities.json
+            fi
+
+            if [ -f data/expired.json ]; then
+              cp data/expired.json web/expired.json
+            fi
+
+            # ------------------------------------------------
+            # Commit this batch immediately.
+            # ------------------------------------------------
+
             if [ -n "$(git status --porcelain)" ]; then
 
               git add data/opportunities.json
               git add data/expired.json
               git add data/checkpoint.json
+              git add web/opportunities.json
+              git add web/expired.json
 
               git commit -m "Update ESC Morocco opportunities"
 
               git push
 
             else
-
-              echo "No changes to commit after this batch."
-
+              echo "No changes to commit."
             fi
 
-            # Genuine error.
+            # ------------------------------------------------
+            # Genuine scraper error.
+            # ------------------------------------------------
+
             if [ "$EXIT_CODE" -eq 1 ]; then
               echo "Genuine scraper error."
               OVERALL_EXIT_CODE=1
               break
             fi
 
+            # ------------------------------------------------
             # Rate limit.
+            # ------------------------------------------------
+
             if [ "$EXIT_CODE" -eq 2 ]; then
               echo "Rate limit detected."
               echo "Stopping further batches."
@@ -90,7 +127,6 @@ jobs:
               break
             fi
 
-            # Successful batch.
             BATCH=$((BATCH + 1))
 
           done
@@ -99,6 +135,10 @@ jobs:
 
           exit "$OVERALL_EXIT_CODE"
 
+      # ------------------------------------------------------
+      # Final status
+      # ------------------------------------------------------
+
       - name: Check scraper result
         if: always()
         run: |
@@ -106,18 +146,14 @@ jobs:
           EXIT_CODE="${{ steps.scraper.outputs.exit_code }}"
 
           if [ "$EXIT_CODE" = "1" ]; then
-
             echo "Scraper encountered a genuine error."
             exit 1
 
           elif [ "$EXIT_CODE" = "2" ]; then
-
             echo "Scraper was rate-limited."
             echo "Completed batches were committed."
             exit 0
 
           else
-
             echo "All scraper batches completed successfully."
-
           fi
