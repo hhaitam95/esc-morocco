@@ -678,59 +678,45 @@ def get_topics(
 def get_image_url(
     soup: BeautifulSoup,
 ) -> str | None:
-    """Extract the opportunity image URL from the detail page."""
+    """Extract the association logo from the organisation card."""
 
     if soup is None:
         return None
 
-    # Try to find image in various common locations
-    # 1. Try img tag in header area
-    for img in soup.find_all("img"):
-        src = img.get("src", "")
-        alt = img.get("alt", "").lower()
+    # The European Youth Portal places the association logo in:
+    #
+    #   <img class="org-logo responsive-img" ...>
+    #
+    # This is much more reliable than searching arbitrary images for
+    # the word "opportunity".
 
-        if src and "opportunity" in alt or "opportunity" in src:
-            return src
+    logo = soup.find(
+        "img",
+        class_=lambda classes: (
+            classes
+            and "org-logo" in classes
+        ),
+    )
 
-    # 2. Try background-image style in header
-    for div in soup.find_all("div"):
-        style = div.get("style", "")
+    if logo is None:
+        return None
 
-        if "background-image" in style:
-            match = re.search(
-                r"url\(['\"]?([^'\"()]+)['\"]?\)",
-                style,
-            )
+    src = logo.get("src")
 
-            if match:
-                image_url = match.group(1)
+    if not src:
+        return None
 
-                if image_url and "opportunity" in image_url:
-                    return image_url
+    # The portal normally returns a root-relative URL such as:
+    #
+    #   /sites/default/files/styles/medium/public/...
+    #
+    # Convert it into an absolute URL so the published JSON can be
+    # consumed directly by the GitHub Pages frontend.
+    if src.startswith("/"):
+        return f"{BASE_URL}{src}"
 
-    # 3. Try common opportunity image classes
-    for div in soup.find_all(
-        "div",
-        class_=re.compile(r"opportunity|hero|banner|image"),
-    ):
-        for img in div.find_all("img"):
-            src = img.get("src")
+    return src
 
-            if src:
-                return src
-
-        style = div.get("style", "")
-
-        if "background-image" in style:
-            match = re.search(
-                r"url\(['\"]?([^'\"()]+)['\"]?\)",
-                style,
-            )
-
-            if match:
-                return match.group(1)
-
-    return None
 
 
 def parse_dates(

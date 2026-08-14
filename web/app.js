@@ -1254,6 +1254,12 @@ function renderActive() {
 
       const isNew = newOpportunityIds.has(String(opportunity.id));
 
+      const imageSrc = opportunity.image_url
+        ? opportunity.image_url.startsWith("/")
+          ? `https://youth.europa.eu${opportunity.image_url}`
+          : opportunity.image_url
+        : "";
+
       return `
                     <tr>
 
@@ -1262,11 +1268,11 @@ function renderActive() {
                             <div class="opportunity-title">
 
                                 ${
-                                  opportunity.image_url
+                                  imageSrc
                                     ? `
                                             <img
                                                 class="opportunity-image"
-                                                src="${escapeHtml(opportunity.image_url)}"
+                                                src="${escapeHtml(imageSrc)}"
                                                 alt="${escapeHtml(opportunity.title)}"
                                                 loading="lazy"
                                                 onerror="this.style.display='none'"
