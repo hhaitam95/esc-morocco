@@ -5168,9 +5168,499 @@
       "status": "not_morocco",
       "result": null,
       "checked_at": "2026-08-14T15:50:05.468128"
+    },
+    "49172": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:22.093155"
+    },
+    "49170": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:27.881614"
+    },
+    "49169": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:33.726249"
+    },
+    "49166": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:38.827811"
+    },
+    "49162": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:44.634133"
+    },
+    "49137": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:50.460078"
+    },
+    "49111": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:50:57.056782"
+    },
+    "49110": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:02.966209"
+    },
+    "49101": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:08.851858"
+    },
+    "49081": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:15.025344"
+    },
+    "49069": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:21.028737"
+    },
+    "49064": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:26.881758"
+    },
+    "49049": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:32.710264"
+    },
+    "49024": {
+      "status": "match",
+      "result": {
+        "id": 49024,
+        "title": "Volunteering in SYnergia 2026",
+        "location": "Praça Dr. Francisco Araujo Malheiro, Braga, Portugal",
+        "country": "PT",
+        "town": "Braga",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-01-05",
+        "end_date": "2026-12-20",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Algeria",
+          "Armenia",
+          "Aruba",
+          "Austria",
+          "Azerbaijan",
+          "Belarus",
+          "Belgium",
+          "Bonaire Sint Eustatius and Saba",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Curaçao",
+          "Cyprus",
+          "Czechia",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "French Polynesia",
+          "French Southern and Antarctic Territories",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Greenland",
+          "Hungary",
+          "Iceland",
+          "Ireland",
+          "Israel",
+          "Italy",
+          "Jordan",
+          "Kosovo * UN resolution",
+          "Latvia",
+          "Lebanon",
+          "Libya",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "New Caledonia",
+          "North Macedonia",
+          "Norway",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Russia",
+          "Saint Barthélemy",
+          "Serbia",
+          "Sint Maarten (dutch part)",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "St Pierre and Miquelon",
+          "Sweden",
+          "Syria",
+          "Tunisia",
+          "Türkiye",
+          "Ukraine",
+          "Wallis and Futuna"
+        ],
+        "topics": [
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-PT02-ESC51-VTJ-000348343",
+        "created": "2025-11-17T12:18:32",
+        "url": "https://youth.europa.eu/solidarity/opportunity/49024_en"
+      },
+      "checked_at": "2026-08-14T15:51:38.545262"
+    },
+    "49013": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:44.589302"
+    },
+    "48983": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:50.753877"
+    },
+    "48960": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:51:56.690474"
+    },
+    "48936": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:01.792213"
+    },
+    "48927": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:07.930362"
+    },
+    "48897": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:13.695731"
+    },
+    "48858": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:18.798406"
+    },
+    "48857": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:24.929203"
+    },
+    "48678": {
+      "status": "match",
+      "result": {
+        "id": 48678,
+        "title": "2025-1-RO01-ESC51-VTJ-000346797",
+        "location": "Str. Mihai Bravu, nr.172, ap.2, Braila, Romania",
+        "country": "RO",
+        "town": "Braila",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-01",
+        "end_date": "2026-09-30",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Algeria",
+          "Armenia",
+          "Aruba",
+          "Austria",
+          "Azerbaijan",
+          "Belarus",
+          "Belgium",
+          "Bonaire Sint Eustatius and Saba",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Curaçao",
+          "Cyprus",
+          "Czechia",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "French Polynesia",
+          "French Southern and Antarctic Territories",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Greenland",
+          "Hungary",
+          "Iceland",
+          "Ireland",
+          "Israel",
+          "Italy",
+          "Jordan",
+          "Kosovo * UN resolution",
+          "Latvia",
+          "Lebanon",
+          "Libya",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "New Caledonia",
+          "North Macedonia",
+          "Norway",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Russia",
+          "Saint Barthélemy",
+          "Serbia",
+          "Sint Maarten (dutch part)",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "St Pierre and Miquelon",
+          "Sweden",
+          "Syria",
+          "Tunisia",
+          "Türkiye",
+          "Ukraine",
+          "Wallis and Futuna"
+        ],
+        "topics": [
+          "Social challenges",
+          "Health and wellbeing",
+          "Education and training"
+        ],
+        "project_code": "2025-1-RO01-ESC51-VTJ-000346797",
+        "created": "2025-10-15T20:01:35",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48678_en"
+      },
+      "checked_at": "2026-08-14T15:52:30.932107"
+    },
+    "48664": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:36.882011"
+    },
+    "48662": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:41.982550"
+    },
+    "48661": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:48.088776"
+    },
+    "48657": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:52:53.944174"
+    },
+    "48631": {
+      "status": "match",
+      "result": {
+        "id": 48631,
+        "title": "VOLUNTEERING WITH S&G 2026 LT",
+        "location": "KIZILAY MAHALLESI NECATIBEY CADDESI 19/17, ANKARA, Türkiye",
+        "country": "TR",
+        "town": "ANKARA",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-12-01",
+        "end_date": "2027-12-01",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Austria",
+          "Azerbaijan",
+          "Belarus",
+          "Belgium",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Czechia",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Hungary",
+          "Italy",
+          "Jordan",
+          "Latvia",
+          "Lebanon",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "Norway",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Russia",
+          "Serbia",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "Sweden",
+          "Tunisia",
+          "Ukraine"
+        ],
+        "topics": [
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Education and training"
+        ],
+        "project_code": "2025-1-TR01-ESC51-VTJ-000345981",
+        "created": "2025-10-11T00:16:22",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48631_en"
+      },
+      "checked_at": "2026-08-14T15:52:59.046247"
+    },
+    "48617": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:04.879139"
+    },
+    "48611": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:10.747359"
+    },
+    "48601": {
+      "status": "match",
+      "result": {
+        "id": 48601,
+        "title": "VOLUNTEERING WITH S&G 2026 ST",
+        "location": "KIZILAY MAHALLESI NECATIBEY CADDESI 19/17, ANKARA, Türkiye",
+        "country": "TR",
+        "town": "ANKARA",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-12-01",
+        "end_date": "2027-12-01",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Austria",
+          "Azerbaijan",
+          "Belgium",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Czechia",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Hungary",
+          "Ireland",
+          "Italy",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "Norway",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Russia",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "Sweden",
+          "Tunisia",
+          "Ukraine"
+        ],
+        "topics": [
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Education and training"
+        ],
+        "project_code": "2025-1-TR01-ESC51-VTJ-000345981",
+        "created": "2025-10-09T16:02:56",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48601_en"
+      },
+      "checked_at": "2026-08-14T15:53:16.603376"
+    },
+    "48596": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:22.664819"
+    },
+    "48593": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:28.554391"
+    },
+    "48566": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:34.384432"
+    },
+    "48557": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:40.275359"
+    },
+    "48494": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:46.076372"
+    },
+    "48477": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:52.239191"
+    },
+    "48469": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:53:58.621387"
+    },
+    "48454": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:54:04.547747"
+    },
+    "48437": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T15:54:10.515419"
     }
   },
-  "updated_at": "2026-08-14T15:50:05.488633",
+  "updated_at": "2026-08-14T15:54:10.536325",
   "history": {},
-  "last_scan_at": "2026-08-14T15:50:05.488629"
+  "last_scan_at": "2026-08-14T15:54:10.536321"
 }
