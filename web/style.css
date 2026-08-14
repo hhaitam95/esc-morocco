@@ -29,6 +29,35 @@
   --radius: 14px;
 }
 
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #111827;
+  --surface: #1b2433;
+  --surface-soft: #222d3e;
+
+  --text: #f1f5f9;
+  --text-muted: #aab5c5;
+
+  --border: #344054;
+
+  --primary: #6d8cff;
+  --primary-dark: #8ca4ff;
+
+  --success: #54d69a;
+  --success-bg: #173b2b;
+
+  --warning: #f3c35b;
+  --warning-bg: #403317;
+
+  --danger: #ff7a70;
+  --danger-bg: #42211f;
+
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+}
+
+
 /* ============================================================
    RESET
    ============================================================ */
@@ -1169,4 +1198,72 @@ html[dir="rtl"] .expired-count {
   font-weight: 600;
 
   white-space: nowrap;
+}
+
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+.theme-toggle {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  padding: 0;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: 1rem;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid rgba(40, 85, 217, 0.3);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .theme-toggle:focus-visible {
+  outline-color: rgba(109, 140, 255, 0.45);
+}
+
+html[data-theme="dark"] .opportunity-table tbody tr:hover {
+  background: #202a3a;
+}
+
+html[data-theme="dark"] .topic-tag {
+  background: #273244;
+}
+
+html[data-theme="dark"] .opportunity-image {
+  background: #202938;
+  border-color: #3a4659;
+}
+
+html[data-theme="dark"] .expired-table th {
+  background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .new-badge {
+  background: #423617;
+  color: #f3c35b;
 }

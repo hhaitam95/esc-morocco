@@ -154,6 +154,10 @@ const translations = {
     results: "results",
 
     result: "result",
+
+     lightMode: "Light mode",
+
+     darkMode: "Dark mode",
   },
 
   fr: {
@@ -253,6 +257,10 @@ const translations = {
     results: "résultats",
 
     result: "résultat",
+
+     lightMode: "Mode clair",
+
+     darkMode: "Mode sombre",
   },
 
   ar: {
@@ -350,6 +358,10 @@ const translations = {
     results: "نتائج",
 
     result: "نتيجة",
+
+     lightMode: "الوضع الفاتح",
+
+     darkMode: "الوضع الداكن",
   },
 };
 
@@ -394,6 +406,8 @@ function applyTranslations() {
   if (currentActiveData) {
     updateHeader(currentActiveData);
   }
+
+  updateThemeToggleLabel();
 }
 
 // ============================================================
@@ -406,7 +420,81 @@ document.querySelectorAll(".language-button").forEach((button) => {
 
     localStorage.setItem("esc_language", currentLanguage);
 
-    applyTranslations();
+
+// ============================================================
+// DARK MODE
+// ============================================================
+
+const themeToggle = document.getElementById("theme-toggle");
+const themeIcon = document.getElementById("theme-icon");
+
+function updateThemeToggleLabel() {
+  if (!themeToggle || !themeIcon) {
+    return;
+  }
+
+  const isDark =
+    document.documentElement.dataset.theme === "dark";
+
+  themeIcon.textContent =
+    isDark
+      ? "☀️"
+      : "🌙";
+
+  const label =
+    isDark
+      ? t("lightMode")
+      : t("darkMode");
+
+  themeToggle.setAttribute(
+    "aria-label",
+    label,
+  );
+
+  themeToggle.setAttribute(
+    "title",
+    label,
+  );
+}
+
+function applyTheme(theme) {
+  const normalizedTheme =
+    theme === "dark"
+      ? "dark"
+      : "light";
+
+  document.documentElement.dataset.theme =
+    normalizedTheme;
+
+  localStorage.setItem(
+    "esc_theme",
+    normalizedTheme,
+  );
+
+  updateThemeToggleLabel();
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener(
+    "click",
+    () => {
+      const current =
+        document.documentElement.dataset.theme === "dark"
+          ? "dark"
+          : "light";
+
+      applyTheme(
+        current === "dark"
+          ? "light"
+          : "dark",
+      );
+    },
+  );
+
+  updateThemeToggleLabel();
+}
+
+applyTranslations();
   });
 });
 
