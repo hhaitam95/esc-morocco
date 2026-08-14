@@ -652,6 +652,12 @@ a:hover {
    ============================================================ */
 
 .opportunity-title {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 12px;
+
   max-width: 420px;
 
   margin: 0;
@@ -661,6 +667,24 @@ a:hover {
   line-height: 1.35;
 
   font-weight: 700;
+}
+
+.opportunity-image {
+  flex-shrink: 0;
+
+  width: 60px;
+
+  height: 60px;
+
+  border-radius: 6px;
+
+  object-fit: cover;
+
+  object-position: center;
+
+  background: #f5f5f5;
+
+  border: 1px solid #e0e0e0;
 }
 
 /* ============================================================

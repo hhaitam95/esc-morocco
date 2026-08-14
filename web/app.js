@@ -1262,6 +1262,20 @@ function renderActive() {
                             <div class="opportunity-title">
 
                                 ${
+                                  opportunity.image_url
+                                    ? `
+                                            <img
+                                                class="opportunity-image"
+                                                src="${escapeHtml(opportunity.image_url)}"
+                                                alt="${escapeHtml(opportunity.title)}"
+                                                loading="lazy"
+                                                onerror="this.style.display='none'"
+                                            />
+                                        `
+                                    : ""
+                                }
+
+                                ${
                                   isNew
                                     ? `
                                             <span
