@@ -104,6 +104,14 @@ html[dir="rtl"] .expired-arrow.open {
     transform: rotate(0);
 }
 
+html[dir="rtl"] .intro {
+    border-left: 0;
+
+    border-right: 4px solid var(--primary);
+
+    border-radius: 12px 0 0 12px;
+}
+
 
 /* ============================================================
    LINKS
@@ -211,9 +219,18 @@ a:hover {
     border-radius: 10px;
 
     background: var(--surface);
+
+    box-shadow: 0 2px 10px rgba(20, 30, 50, 0.03);
 }
 
 .language-button {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
     padding: 7px 10px;
 
     border: 0;
@@ -231,6 +248,10 @@ a:hover {
     font-weight: 700;
 
     cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
 .language-button:hover {
@@ -241,6 +262,12 @@ a:hover {
     background: var(--primary);
 
     color: white;
+}
+
+.language-flag {
+    font-size: 1rem;
+
+    line-height: 1;
 }
 
 
@@ -313,14 +340,6 @@ a:hover {
     background: var(--surface);
 
     box-shadow: var(--shadow);
-}
-
-html[dir="rtl"] .intro {
-    border-left: 0;
-
-    border-right: 4px solid var(--primary);
-
-    border-radius: 12px 0 0 12px;
 }
 
 .intro p {
@@ -602,12 +621,17 @@ html[dir="rtl"] .intro {
     text-align: left;
 }
 
+.opportunity-table tbody tr {
+    transition:
+        background 0.12s ease;
+}
+
 .opportunity-table tbody tr:last-child td {
     border-bottom: 0;
 }
 
 .opportunity-table tbody tr:hover {
-    background: #fafbfe;
+    background: #f7f9fd;
 }
 
 
@@ -649,6 +673,8 @@ html[dir="rtl"] .intro {
    ============================================================ */
 
 .opportunity-title {
+    max-width: 420px;
+
     margin: 0;
 
     font-size: 0.92rem;
@@ -658,29 +684,45 @@ html[dir="rtl"] .intro {
     font-weight: 700;
 }
 
-.opportunity-id {
-    margin-top: 3px;
-
-    color: var(--text-muted);
-
-    font-size: 0.72rem;
-}
-
 
 /* ============================================================
-   LOCATION
+   COUNTRY / LOCATION
    ============================================================ */
 
 .location-main {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
     font-weight: 600;
 }
 
 .location-country {
-    margin-top: 2px;
+    margin-top: 4px;
 
     color: var(--text-muted);
 
     font-size: 0.78rem;
+}
+
+.country-display {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    font-weight: 600;
+}
+
+.country-flag {
+    flex-shrink: 0;
+
+    font-size: 1rem;
+
+    line-height: 1;
 }
 
 
@@ -739,6 +781,45 @@ html[dir="rtl"] .intro {
     font-size: 0.74rem;
 
     font-weight: 600;
+
+    transition:
+        background 0.12s ease,
+        color 0.12s ease;
+}
+
+.opportunity-table tbody tr:hover .type-label {
+    background: #eaf0ff;
+
+    color: var(--primary);
+}
+
+
+/* ============================================================
+   TOPICS
+   ============================================================ */
+
+.topic-tags {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 4px;
+
+    margin-top: 7px;
+}
+
+.topic-tag {
+    display: inline-block;
+
+    padding: 3px 6px;
+
+    border-radius: 5px;
+
+    background: #f1f4f8;
+
+    color: var(--text-muted);
+
+    font-size: 0.68rem;
 }
 
 
@@ -785,35 +866,6 @@ html[dir="rtl"] .intro {
     outline: 2px solid rgba(40, 85, 217, 0.3);
 
     outline-offset: 2px;
-}
-
-
-/* ============================================================
-   TOPIC TAGS
-   ============================================================ */
-
-.topic-tags {
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 4px;
-
-    margin-top: 7px;
-}
-
-.topic-tag {
-    display: inline-block;
-
-    padding: 3px 6px;
-
-    border-radius: 5px;
-
-    background: #f1f4f8;
-
-    color: var(--text-muted);
-
-    font-size: 0.68rem;
 }
 
 
@@ -882,6 +934,7 @@ html[dir="rtl"] .intro {
 
 html[dir="rtl"] .expired-count {
     margin-left: 0;
+
     margin-right: 6px;
 }
 
@@ -983,12 +1036,6 @@ html[dir="rtl"] .expired-count {
     .controls {
         grid-template-columns: 1fr;
     }
-
-    /*
-       Keep the table horizontally scrollable on phones.
-       This is much easier to use than trying to squeeze
-       six columns into a tiny screen.
-    */
 
     .table-wrapper {
         border-radius: 11px;

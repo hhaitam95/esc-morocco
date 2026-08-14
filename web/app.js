@@ -14,6 +14,7 @@ const EXPIRED_DATA_URL = "expired.json";
 let activeOpportunities = [];
 let expiredOpportunities = [];
 let currentLanguage = "en";
+let currentActiveData = null;
 
 
 // ============================================================
@@ -79,7 +80,9 @@ const refreshButton =
 const translations = {
 
     en: {
-        title: "European Solidarity Corps",
+
+        title:
+            "European Solidarity Corps",
 
         subtitle:
             "Volunteering opportunities for applicants from Morocco",
@@ -210,6 +213,7 @@ const translations = {
 
 
     fr: {
+
         title:
             "Corps européen de solidarité",
 
@@ -342,6 +346,7 @@ const translations = {
 
 
     ar: {
+
         title:
             "الفيلق الأوروبي للتضامن",
 
@@ -479,6 +484,7 @@ const translations = {
 // ============================================================
 
 function t(key) {
+
     return (
         translations[currentLanguage]?.[key]
         ??
@@ -498,6 +504,7 @@ function applyTranslations() {
         currentLanguage === "ar"
             ? "rtl"
             : "ltr";
+
 
     document
         .querySelectorAll("[data-i18n]")
@@ -535,11 +542,19 @@ function applyTranslations() {
         });
 
 
-    updateCountryFilterLabels();
-    updateTypeFilterLabels();
+    populateFilters();
 
     renderActive();
+
     renderExpired();
+
+
+    if (currentActiveData) {
+
+        updateHeader(
+            currentActiveData
+        );
+    }
 }
 
 
@@ -693,9 +708,7 @@ function startOfToday() {
 }
 
 
-function daysFromToday(
-    value
-) {
+function daysFromToday(value) {
 
     const date =
         parseDate(value);
@@ -715,9 +728,7 @@ function daysFromToday(
 }
 
 
-function deadlineClass(
-    deadline
-) {
+function deadlineClass(deadline) {
 
     const days =
         daysFromToday(deadline);
@@ -738,9 +749,7 @@ function deadlineClass(
 }
 
 
-function deadlineRelative(
-    deadline
-) {
+function deadlineRelative(deadline) {
 
     const days =
         daysFromToday(deadline);
@@ -765,9 +774,7 @@ function deadlineRelative(
 }
 
 
-function daysSince(
-    value
-) {
+function daysSince(value) {
 
     const date =
         parseDate(value);
@@ -790,9 +797,7 @@ function daysSince(
 }
 
 
-function expiredRelative(
-    deadline
-) {
+function expiredRelative(deadline) {
 
     const days =
         daysSince(deadline);
@@ -803,10 +808,6 @@ function expiredRelative(
 
     if (days === 0) {
         return t("expiredToday");
-    }
-
-    if (currentLanguage === "ar") {
-        return `${days} ${t("expiredAgo")}`;
     }
 
     return `${days} ${t("expiredAgo")}`;
@@ -848,12 +849,29 @@ const countryNames =
     );
 
 
-// The European Youth Portal uses some country codes
-// that differ from standard ISO 3166-1 alpha-2 codes.
+/*
+ * The European Youth Portal uses a few country codes that
+ * differ from standard ISO 3166-1 alpha-2 codes.
+ */
 const countryCodeOverrides = {
+
     EL: "GR", // Greece
+
     UK: "GB"  // United Kingdom
 };
+
+
+function normalizeCountryCode(code) {
+
+    if (!code) {
+        return "";
+    }
+
+    return (
+        countryCodeOverrides[code]
+        || code
+    );
+}
 
 
 function getCountryName(code) {
@@ -863,19 +881,77 @@ function getCountryName(code) {
     }
 
     const normalizedCode =
-        countryCodeOverrides[code]
-        || code;
+        normalizeCountryCode(code);
 
     try {
+
         return (
             countryNames.of(
                 normalizedCode
             )
             || code
         );
+
     } catch {
+
         return code;
     }
+}
+
+
+function getCountryFlag(code) {
+
+    const normalizedCode =
+        normalizeCountryCode(code);
+
+    if (
+        !normalizedCode
+        || normalizedCode.length !== 2
+    ) {
+        return "🌍";
+    }
+
+    const upper =
+        normalizedCode.toUpperCase();
+
+    return String.fromCodePoint(
+        ...[...upper].map(
+            char =>
+                127397
+                + char.charCodeAt(0)
+        )
+    );
+}
+
+
+function renderCountry(code) {
+
+    const name =
+        getCountryName(code);
+
+    if (!name) {
+        return "";
+    }
+
+    const flag =
+        getCountryFlag(code);
+
+    return `
+        <span class="country-display">
+
+            <span
+                class="country-flag"
+                aria-hidden="true"
+            >
+                ${flag}
+            </span>
+
+            <span>
+                ${escapeHtml(name)}
+            </span>
+
+        </span>
+    `;
 }
 
 
@@ -891,7 +967,10 @@ function uniqueSortedValues(
     return [
         ...new Set(
             items
-                .map(item => item[property])
+                .map(
+                    item =>
+                        item[property]
+                )
                 .filter(Boolean)
         )
     ].sort(
@@ -919,6 +998,13 @@ function populateFilters() {
         );
 
 
+    const selectedCountry =
+        countryFilter.value;
+
+    const selectedType =
+        typeFilter.value;
+
+
     countryFilter.innerHTML =
         `<option value="">
             ${escapeHtml(
@@ -937,7 +1023,8 @@ function populateFilters() {
         option.value = code;
 
         option.textContent =
-            getCountryName(code);
+            `${getCountryFlag(code)} `
+            + `${getCountryName(code)}`;
 
         countryFilter.appendChild(
             option
@@ -970,15 +1057,30 @@ function populateFilters() {
     });
 
 
-    updateCountryFilterLabels();
-    updateTypeFilterLabels();
+    /*
+     * Preserve selected filters when the language changes.
+     */
+    if (
+        countries.includes(
+            selectedCountry
+        )
+    ) {
+        countryFilter.value =
+            selectedCountry;
+    }
+
+    if (
+        types.includes(
+            selectedType
+        )
+    ) {
+        typeFilter.value =
+            selectedType;
+    }
 }
 
 
 function updateCountryFilterLabels() {
-
-    const current =
-        countryFilter.value;
 
     const first =
         countryFilter.querySelector(
@@ -986,19 +1088,14 @@ function updateCountryFilterLabels() {
         );
 
     if (first) {
+
         first.textContent =
             t("allCountries");
     }
-
-    countryFilter.value =
-        current;
 }
 
 
 function updateTypeFilterLabels() {
-
-    const current =
-        typeFilter.value;
 
     const first =
         typeFilter.querySelector(
@@ -1006,12 +1103,10 @@ function updateTypeFilterLabels() {
         );
 
     if (first) {
+
         first.textContent =
             t("allTypes");
     }
-
-    typeFilter.value =
-        current;
 }
 
 
@@ -1107,9 +1202,7 @@ function sortOpportunities(
         sortSelect.value;
 
 
-    if (
-        sortType === "start"
-    ) {
+    if (sortType === "start") {
 
         sorted.sort(
             (a, b) => {
@@ -1144,9 +1237,7 @@ function sortOpportunities(
     }
 
 
-    if (
-        sortType === "created"
-    ) {
+    if (sortType === "created") {
 
         sorted.sort(
             (a, b) => {
@@ -1195,8 +1286,9 @@ function sortOpportunities(
                     b.deadline
                 );
 
-            // No deadline → last
+            // No deadline → last.
             if (!dateA && !dateB) {
+
                 return a.title.localeCompare(
                     b.title
                 );
@@ -1222,9 +1314,7 @@ function sortOpportunities(
 // TOPICS
 // ============================================================
 
-function renderTopics(
-    topics
-) {
+function renderTopics(topics) {
 
     if (
         !Array.isArray(topics)
@@ -1235,11 +1325,15 @@ function renderTopics(
 
     return `
         <div class="topic-tags">
-            ${topics.map(topic => `
-                <span class="topic-tag">
-                    ${escapeHtml(topic)}
-                </span>
-            `).join("")}
+
+            ${topics.map(
+                topic => `
+                    <span class="topic-tag">
+                        ${escapeHtml(topic)}
+                    </span>
+                `
+            ).join("")}
+
         </div>
     `;
 }
@@ -1290,19 +1384,10 @@ function renderActive() {
         filtered.map(
             opportunity => {
 
-                const locationCountry =
-                    getCountryName(
-                        opportunity.country
-                    );
-
-
                 const location =
                     opportunity.town
-                        ? opportunity.town
-                        : (
-                            opportunity.location
-                            || t("noLocation")
-                        );
+                    || opportunity.location
+                    || t("noLocation");
 
 
                 const deadlineClassName =
@@ -1348,9 +1433,11 @@ function renderActive() {
                             </div>
 
                             <div class="location-country">
-                                ${escapeHtml(
-                                    locationCountry
+
+                                ${renderCountry(
+                                    opportunity.country
                                 )}
+
                             </div>
 
                         </td>
@@ -1373,6 +1460,7 @@ function renderActive() {
                             <span
                                 class="deadline-date ${deadlineClassName}"
                             >
+
                                 ${escapeHtml(
                                     opportunity.deadline
                                         ? formatDate(
@@ -1380,15 +1468,18 @@ function renderActive() {
                                         )
                                         : t("noDeadline")
                                 )}
+
                             </span>
 
                             ${
                                 relative
                                     ? `
                                         <span class="deadline-relative">
+
                                             ${escapeHtml(
                                                 relative
                                             )}
+
                                         </span>
                                     `
                                     : ""
@@ -1400,10 +1491,12 @@ function renderActive() {
                         <td class="type-cell">
 
                             <span class="type-label">
+
                                 ${escapeHtml(
                                     opportunity.activity_type
                                     || t("noType")
                                 )}
+
                             </span>
 
                         </td>
@@ -1419,9 +1512,11 @@ function renderActive() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
+
                                 ${escapeHtml(
                                     t("view")
                                 )}
+
                             </a>
 
                         </td>
@@ -1475,49 +1570,54 @@ function renderExpired() {
                         <tr>
 
                             <td>
+
                                 <strong>
                                     ${escapeHtml(
                                         opportunity.title
                                     )}
                                 </strong>
-                            </td>
-
-                            <td>
-
-                                ${escapeHtml(
-                                    location
-                                )}
-
-                                ${
-                                    opportunity.country
-                                        ? `
-                                            <div class="location-country">
-                                                ${escapeHtml(
-                                                    getCountryName(
-                                                        opportunity.country
-                                                    )
-                                                )}
-                                            </div>
-                                        `
-                                        : ""
-                                }
 
                             </td>
 
+
                             <td>
+
+                                <div>
+                                    ${escapeHtml(
+                                        location
+                                    )}
+                                </div>
+
+                                <div class="location-country">
+
+                                    ${renderCountry(
+                                        opportunity.country
+                                    )}
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
                                 ${escapeHtml(
                                     formatDate(
                                         opportunity.deadline
                                     )
                                 )}
+
                             </td>
 
+
                             <td>
+
                                 ${escapeHtml(
                                     expiredRelative(
                                         opportunity.deadline
                                     )
                                 )}
+
                             </td>
 
                         </tr>
@@ -1532,12 +1632,14 @@ function renderExpired() {
 // STATUS HEADER
 // ============================================================
 
-function updateHeader(
-    data
-) {
+function updateHeader(data) {
 
     const count =
-        activeOpportunities.length;
+        Number.isFinite(
+            data?.count
+        )
+            ? data.count
+            : activeOpportunities.length;
 
 
     opportunityCount.textContent =
@@ -1546,9 +1648,7 @@ function updateHeader(
             : `${count} ${t("results")}`;
 
 
-    if (
-        data.generated_at
-    ) {
+    if (data?.generated_at) {
 
         const date =
             parseDateTime(
@@ -1594,9 +1694,7 @@ function updateHeader(
 // DATA FETCHING
 // ============================================================
 
-async function fetchJson(
-    url
-) {
+async function fetchJson(url) {
 
     const response =
         await fetch(
@@ -1607,9 +1705,7 @@ async function fetchJson(
         );
 
 
-    if (
-        !response.ok
-    ) {
+    if (!response.ok) {
 
         throw new Error(
             `HTTP ${response.status}`
@@ -1642,6 +1738,10 @@ async function loadData() {
             await fetchJson(
                 DATA_URL
             );
+
+
+        currentActiveData =
+            activeData;
 
 
         activeOpportunities =
@@ -1678,7 +1778,7 @@ async function loadData() {
         populateFilters();
 
         updateHeader(
-            activeData
+            currentActiveData
         );
 
         renderActive();
@@ -1696,6 +1796,9 @@ async function loadData() {
 
         activeOpportunities =
             [];
+
+        currentActiveData =
+            null;
 
         opportunityCount.textContent =
             "—";
@@ -1727,6 +1830,7 @@ refreshButton.addEventListener(
 
         refreshButton.disabled =
             true;
+
 
         refreshButton.innerHTML =
             `↻ <span>${escapeHtml(

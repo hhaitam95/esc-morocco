@@ -8,7 +8,9 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>ESC Morocco Opportunities</title>
+    <title>
+        ESC Morocco Opportunities
+    </title>
 
     <meta
         name="description"
@@ -52,27 +54,44 @@
 
         </div>
 
+
+        <!-- =================================================
+             LANGUAGE SWITCHER
+        ================================================== -->
+
         <div class="language-switcher">
 
             <button
                 class="language-button active"
                 data-language="en"
+                type="button"
+                title="English"
+                aria-label="English"
             >
-                EN
+                <span class="language-flag">🇬🇧</span>
+                <span>EN</span>
             </button>
 
             <button
                 class="language-button"
                 data-language="fr"
+                type="button"
+                title="Français"
+                aria-label="Français"
             >
-                FR
+                <span class="language-flag">🇫🇷</span>
+                <span>FR</span>
             </button>
 
             <button
                 class="language-button"
                 data-language="ar"
+                type="button"
+                title="العربية"
+                aria-label="العربية"
             >
-                العربية
+                <span class="language-flag">🇲🇦</span>
+                <span>AR</span>
             </button>
 
         </div>
@@ -103,6 +122,7 @@
             </strong>
 
         </div>
+
 
         <div class="status-item">
 
@@ -181,12 +201,14 @@
             </label>
 
             <select id="country-filter">
+
                 <option
                     value=""
                     data-i18n="allCountries"
                 >
                     All countries
                 </option>
+
             </select>
 
         </div>
@@ -309,6 +331,7 @@
         <div class="section-header">
 
             <div>
+
                 <h2 data-i18n="availableNow">
                     Available now
                 </h2>
@@ -319,6 +342,7 @@
                 >
                     —
                 </p>
+
             </div>
 
         </div>
@@ -393,7 +417,7 @@
 
 
     <!-- =====================================================
-         EXPIRED
+         RECENTLY EXPIRED
     ====================================================== -->
 
     <section
@@ -408,6 +432,7 @@
         >
 
             <span>
+
                 <span data-i18n="recentlyExpired">
                     Recently expired
                 </span>
@@ -418,6 +443,7 @@
                 >
                     0
                 </span>
+
             </span>
 
             <span
@@ -502,7 +528,7 @@
 </main>
 
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 
 </body>
 </html>
