@@ -59,16 +59,16 @@ const refreshButton = document.getElementById("refresh-button");
 
 const translations = {
   en: {
-    title: "European Solidarity Corps",
+    title: "ESC Opportunity Finder",
 
-    subtitle: "Volunteering opportunities for applicants from Morocco",
+    subtitle: "Find European Solidarity Corps volunteering opportunities open to participants from your country",
 
     activeOpportunities: "Active opportunities",
 
     lastUpdated: "Last updated",
 
     intro:
-      "These are active European Solidarity Corps volunteering opportunities that accept participants from Morocco.",
+      "Find active European Solidarity Corps volunteering opportunities open to participants from your country.",
 
     introNote:
       "The list is automatically refreshed from the European Youth Portal.",
@@ -161,16 +161,16 @@ const translations = {
   },
 
   fr: {
-    title: "Corps européen de solidarité",
+    title: "Outil de recherche d’opportunités du CES",
 
-    subtitle: "Opportunités de volontariat pour les candidats du Maroc",
+    subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
 
     activeOpportunities: "Opportunités actives",
 
     lastUpdated: "Dernière mise à jour",
 
     intro:
-      "Voici les opportunités de volontariat du Corps européen de solidarité qui acceptent les participants du Maroc.",
+      "Voici les opportunités de volontariat actives du Corps européen de solidarité ouvertes aux participants de votre pays.",
 
     introNote:
       "La liste est automatiquement actualisée depuis le Portail européen de la jeunesse.",
@@ -264,16 +264,16 @@ const translations = {
   },
 
   ar: {
-    title: "الفيلق الأوروبي للتضامن",
+    title: "البحث عن فرص الفيلق الأوروبي للتضامن",
 
-    subtitle: "فرص التطوع للمتقدمين من المغرب",
+    subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
 
     activeOpportunities: "الفرص المتاحة",
 
     lastUpdated: "آخر تحديث",
 
     intro:
-      "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن التي تقبل مشاركين من المغرب.",
+      "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك.",
 
     introNote: "يتم تحديث القائمة تلقائياً من بوابة الشباب الأوروبية.",
 
