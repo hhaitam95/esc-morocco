@@ -2180,10 +2180,12 @@ loadData();
 
 startCountdownRefresh();
 
+
 // ============================================================================
-// Multi-Country Data Engine & Participant Country Integration
+// Definitive Participant Country & Multi-Country Engine
 // ============================================================================
-const SUPPORTED_COUNTRIES_LIST = [
+(function() {
+    const COUNTRIES = [
   {
     "code": "MA",
     "name": "Morocco",
@@ -2435,185 +2437,134 @@ const SUPPORTED_COUNTRIES_LIST = [
     "flag": "🇬🇧"
   }
 ];
+    let currentCode = localStorage.getItem('esc_participant_country') || 'MA';
+    let fetchController = null;
+    let reqSequence = 0;
 
-let currentParticipantCountry = localStorage.getItem('esc_participant_country') || 'MA';
-let activeCountryFetchController = null;
-let currentCountryRequestId = 0;
+    function patchTranslations() {
+        const dicts = [];
+        if (typeof translations !== 'undefined') dicts.push(translations);
+        if (typeof i18n !== 'undefined') dicts.push(i18n);
 
-// Merge translation keys into app i18n
-(function injectTranslations() {
-    const extraI18n = {
-        en: {
-            participantCountry: "Participant Country",
-            selectParticipantCountry: "Select Participant Country",
-            apply: "Apply"
-        },
-        fr: {
-            participantCountry: "Pays du participant",
-            selectParticipantCountry: "Sélectionner le pays du participant",
-            apply: "Appliquer"
-        },
-        ar: {
-            participantCountry: "بلد المشارك",
-            selectParticipantCountry: "اختر بلد المشارك",
-            apply: "تطبيق"
+        const newKeys = {
+            en: { participantCountry: "Participant Country", selectParticipantCountry: "Select Participant Country", apply: "Apply" },
+            fr: { participantCountry: "Pays du participant", selectParticipantCountry: "Sélectionner le pays du participant", apply: "Appliquer" },
+            ar: { participantCountry: "بلد المشارك", selectParticipantCountry: "اختر بلد المشارك", apply: "تطبيق" }
+        };
+
+        dicts.forEach(dict => {
+            Object.keys(newKeys).forEach(lang => {
+                if (!dict[lang]) dict[lang] = {};
+                Object.assign(dict[lang], newKeys[lang]);
+            });
+        });
+    }
+
+    async function executeCountryFetch(code) {
+        if (!code) return;
+        const targetCode = code.toUpperCase();
+        const seq = ++reqSequence;
+
+        if (fetchController) fetchController.abort();
+        fetchController = new AbortController();
+
+        localStorage.setItem('esc_participant_country', targetCode);
+        currentCode = targetCode;
+
+        const applyBtn = document.getElementById('apply-participant-country');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.classList.add('loading');
         }
-    };
 
-    if (typeof translations !== 'undefined' && translations) {
-        Object.keys(extraI18n).forEach(lang => {
-            if (!translations[lang]) translations[lang] = {};
-            Object.assign(translations[lang], extraI18n[lang]);
-        });
-    } else if (typeof i18n !== 'undefined' && i18n) {
-        Object.keys(extraI18n).forEach(lang => {
-            if (!i18n[lang]) i18n[lang] = {};
-            Object.assign(i18n[lang], extraI18n[lang]);
-        });
+        const tableBody = document.querySelector('#opportunities-table tbody') || document.querySelector('tbody');
+        const countryObj = COUNTRIES.find(c => c.code === targetCode) || { name: targetCode, flag: '' };
+
+        if (tableBody) {
+            tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">Loading opportunities for ${countryObj.flag} ${countryObj.name}...</td></tr>`;
+        }
+
+        try {
+            let data = null;
+            const countryFile = `data/${targetCode.toLowerCase()}.json`;
+
+            try {
+                const res = await fetch(countryFile, { signal: fetchController.signal });
+                if (res.ok) data = await res.json();
+            } catch (e) {
+                if (e.name === 'AbortError') return;
+            }
+
+            if (!data) {
+                const res = await fetch('opportunities.json', { signal: fetchController.signal });
+                if (!res.ok) throw new Error('Failed to load dataset');
+                const fullData = await res.json();
+                const opps = Array.isArray(fullData) ? fullData : (fullData.opportunities || []);
+
+                const filtered = opps.filter(opp => {
+                    if (targetCode === 'MA' && !opp.eligible_countries) return true;
+                    if (!opp.eligible_countries) return true;
+                    if (Array.isArray(opp.eligible_countries)) {
+                        return opp.eligible_countries.includes(targetCode) ||
+                               opp.eligible_countries.includes(targetCode.toLowerCase()) ||
+                               (targetCode === 'EL' && opp.eligible_countries.includes('GR')) ||
+                               (targetCode === 'GR' && opp.eligible_countries.includes('EL'));
+                    }
+                    return true;
+                });
+
+                data = Array.isArray(fullData) ? filtered : { ...fullData, opportunities: filtered };
+            }
+
+            if (seq !== reqSequence) return;
+
+            const finalItems = Array.isArray(data) ? data : (data.opportunities || []);
+
+            if (typeof renderOpportunitiesTable === 'function') renderOpportunitiesTable(finalItems);
+            else if (typeof renderTable === 'function') renderTable(finalItems);
+            else if (typeof updateTable === 'function') updateTable(finalItems);
+            else if (typeof displayOpportunities === 'function') displayOpportunities(finalItems);
+
+            if (finalItems.length === 0 && tableBody) {
+                tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">No active opportunities found for ${countryObj.flag} ${countryObj.name}.</td></tr>`;
+            }
+
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.error(err);
+            if (seq === reqSequence && tableBody) {
+                tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger p-4">Unable to load opportunities for ${countryObj.name}. Please try again.</td></tr>`;
+            }
+        } finally {
+            if (seq === reqSequence && applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.classList.remove('loading');
+            }
+        }
+    }
+
+    function initHandlers() {
+        patchTranslations();
+
+        const selector = document.getElementById('participant-country');
+        if (selector && currentCode) {
+            selector.value = currentCode;
+        }
+
+        const applyBtn = document.getElementById('apply-participant-country');
+        if (applyBtn) {
+            applyBtn.onclick = function(e) {
+                e.preventDefault();
+                const sel = document.getElementById('participant-country');
+                const selectedVal = sel ? sel.value : 'MA';
+                executeCountryFetch(selectedVal);
+            };
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHandlers);
+    } else {
+        initHandlers();
     }
 })();
-
-function populateParticipantCountrySelector() {
-    const selector = document.getElementById('participant-country') || 
-                     document.getElementById('participant-country-select');
-    if (!selector) return;
-
-    const currentVal = selector.value || currentParticipantCountry;
-    selector.innerHTML = '';
-
-    const defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.setAttribute('data-i18n', 'selectParticipantCountry');
-    defaultOpt.textContent = 'Select Participant Country';
-    selector.appendChild(defaultOpt);
-
-    SUPPORTED_COUNTRIES_LIST.forEach(country => {
-        const opt = document.createElement('option');
-        opt.value = country.code;
-        opt.textContent = `${country.flag} ${country.name}`;
-        if (country.code === currentVal) opt.selected = true;
-        selector.appendChild(opt);
-    });
-}
-
-async function loadOpportunitiesForCountry(countryCode, isUserInitiated = false) {
-    const targetCode = (countryCode || 'MA').toUpperCase();
-    const requestId = ++currentCountryRequestId;
-
-    if (activeCountryFetchController) {
-        activeCountryFetchController.abort();
-    }
-    activeCountryFetchController = new AbortController();
-
-    localStorage.setItem('esc_participant_country', targetCode);
-    currentParticipantCountry = targetCode;
-
-    const applyBtn = document.getElementById('apply-participant-country') || document.getElementById('apply-btn');
-    if (applyBtn) {
-        applyBtn.disabled = true;
-        applyBtn.classList.add('loading');
-    }
-
-    const tableBody = document.querySelector('#opportunities-table tbody') || document.querySelector('tbody');
-    const countryObj = SUPPORTED_COUNTRIES_LIST.find(c => c.code === targetCode) || { name: targetCode, flag: '' };
-    
-    if (tableBody) {
-        tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">
-            <div class="spinner"></div> Loading opportunities for ${countryObj.flag} ${countryObj.name}...
-        </td></tr>`;
-    }
-
-    try {
-        let data = null;
-        
-        // 1. Check for dedicated country JSON file
-        const countryFile = `data/${targetCode.toLowerCase()}.json`;
-        try {
-            const res = await fetch(countryFile, { signal: activeCountryFetchController.signal });
-            if (res.ok) {
-                data = await res.json();
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') return;
-        }
-
-        // 2. Fallback to main opportunities dataset with client-side filtering
-        if (!data) {
-            const res = await fetch('opportunities.json', { signal: activeCountryFetchController.signal });
-            if (!res.ok) throw new Error('Failed to load opportunities dataset');
-            const fullData = await res.json();
-
-            const opps = Array.isArray(fullData) ? fullData : (fullData.opportunities || []);
-            const filteredOpps = opps.filter(opp => {
-                if (targetCode === 'MA' && !opp.eligible_countries) return true;
-                if (!opp.eligible_countries) return true;
-                if (Array.isArray(opp.eligible_countries)) {
-                    return opp.eligible_countries.includes(targetCode) || 
-                           opp.eligible_countries.includes(targetCode.toLowerCase()) ||
-                           (targetCode === 'EL' && opp.eligible_countries.includes('GR')) ||
-                           (targetCode === 'GR' && opp.eligible_countries.includes('EL'));
-                }
-                return true;
-            });
-
-            data = Array.isArray(fullData) ? filteredOpps : { ...fullData, opportunities: filteredOpps };
-        }
-
-        if (requestId !== currentCountryRequestId) return;
-
-        const finalItems = Array.isArray(data) ? data : (data.opportunities || []);
-        
-        // Dynamically invoke table renderer
-        if (typeof renderOpportunitiesTable === 'function') {
-            renderOpportunitiesTable(finalItems);
-        } else if (typeof renderTable === 'function') {
-            renderTable(finalItems);
-        } else if (typeof updateTable === 'function') {
-            updateTable(finalItems);
-        } else if (typeof displayOpportunities === 'function') {
-            displayOpportunities(finalItems);
-        }
-
-        if (finalItems.length === 0 && tableBody) {
-            tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">
-                No active opportunities found for ${countryObj.flag} ${countryObj.name}.
-            </td></tr>`;
-        }
-
-    } catch (err) {
-        if (err.name === 'AbortError') return;
-        console.error('Failed to load country opportunities:', err);
-        if (requestId === currentCountryRequestId && tableBody) {
-            tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger p-4">
-                Unable to load opportunities for ${countryObj.name}. Please try again.
-            </td></tr>`;
-        }
-    } finally {
-        if (requestId === currentCountryRequestId && applyBtn) {
-            applyBtn.disabled = false;
-            applyBtn.classList.remove('loading');
-        }
-    }
-}
-
-function initMultiCountryEvents() {
-    populateParticipantCountrySelector();
-
-    const applyBtn = document.getElementById('apply-participant-country') || document.getElementById('apply-btn');
-    if (applyBtn) {
-        applyBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const selector = document.getElementById('participant-country') || document.getElementById('participant-country-select');
-            const selectedCode = selector ? selector.value : 'MA';
-            if (selectedCode) {
-                loadOpportunitiesForCountry(selectedCode, true);
-            }
-        });
-    }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMultiCountryEvents);
-} else {
-    initMultiCountryEvents();
-}
