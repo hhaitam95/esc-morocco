@@ -56,39 +56,96 @@
              LANGUAGE SWITCHER
         ================================================== -->
 
-        <div class="language-switcher">
+        <div class="language-dropdown">
           <button
-            class="language-button active"
-            data-language="en"
+            id="language-dropdown-toggle"
+            class="language-dropdown-toggle"
             type="button"
-            title="English"
-            aria-label="English"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="Language"
+            aria-label="Language"
           >
-            <span class="language-flag">🇬🇧</span>
-            <span>EN</span>
+            <span
+              id="language-dropdown-flag"
+              class="language-flag"
+              aria-hidden="true"
+            >
+              🇬🇧
+            </span>
+
+            <span id="language-dropdown-label">
+              EN
+            </span>
+
+            <span
+              class="language-dropdown-arrow"
+              aria-hidden="true"
+            >
+              ▾
+            </span>
           </button>
 
-          <button
-            class="language-button"
-            data-language="fr"
-            type="button"
-            title="Français"
-            aria-label="Français"
+          <div
+            id="language-dropdown-menu"
+            class="language-dropdown-menu"
+            role="menu"
+            hidden
           >
-            <span class="language-flag">🇫🇷</span>
-            <span>FR</span>
-          </button>
+            <button
+              class="language-option"
+              data-language="en"
+              type="button"
+              role="menuitem"
+            >
+              <span
+                class="language-flag"
+                aria-hidden="true"
+              >
+                🇬🇧
+              </span>
 
-          <button
-            class="language-button"
-            data-language="ar"
-            type="button"
-            title="العربية"
-            aria-label="العربية"
-          >
-            <span class="language-flag">🇲🇦</span>
-            <span>AR</span>
-          </button>
+              <span>
+                English
+              </span>
+            </button>
+
+            <button
+              class="language-option"
+              data-language="fr"
+              type="button"
+              role="menuitem"
+            >
+              <span
+                class="language-flag"
+                aria-hidden="true"
+              >
+                🇫🇷
+              </span>
+
+              <span>
+                Français
+              </span>
+            </button>
+
+            <button
+              class="language-option"
+              data-language="ar"
+              type="button"
+              role="menuitem"
+            >
+              <span
+                class="language-flag"
+                aria-hidden="true"
+              >
+                🇲🇦
+              </span>
+
+              <span>
+                العربية
+              </span>
+            </button>
+          </div>
         </div>
 
         <button

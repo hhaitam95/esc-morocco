@@ -222,13 +222,19 @@ a:hover {
    ============================================================ */
 
 .language-switcher {
-  display: flex;
+  position: relative;
+
+  display: inline-block;
+}
+
+.language-toggle {
+  display: inline-flex;
 
   align-items: center;
 
-  gap: 4px;
+  gap: 6px;
 
-  padding: 4px;
+  padding: 8px 10px;
 
   border: 1px solid var(--border);
 
@@ -236,19 +242,99 @@ a:hover {
 
   background: var(--surface);
 
+  color: var(--text);
+
+  font: inherit;
+
+  font-size: 0.8rem;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
   box-shadow: 0 2px 10px rgba(20, 30, 50, 0.03);
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.language-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.language-toggle:focus-visible {
+  outline: 2px solid rgba(40, 85, 217, 0.3);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .language-toggle:focus-visible {
+  outline-color: rgba(109, 140, 255, 0.45);
+}
+
+.language-caret {
+  font-size: 0.65rem;
+
+  color: var(--text-muted);
+
+  transition: transform 0.15s ease;
+}
+
+.language-switcher.open .language-caret {
+  transform: rotate(180deg);
+}
+
+.language-menu {
+  position: absolute;
+
+  top: calc(100% + 6px);
+
+  right: 0;
+
+  z-index: 20;
+
+  display: none;
+
+  flex-direction: column;
+
+  min-width: 160px;
+
+  margin: 0;
+  padding: 4px;
+
+  list-style: none;
+
+  border: 1px solid var(--border);
+
+  border-radius: 10px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+}
+
+html[dir="rtl"] .language-menu {
+  right: auto;
+
+  left: 0;
+}
+
+.language-switcher.open .language-menu {
+  display: flex;
 }
 
 .language-button {
-  display: inline-flex;
+  display: flex;
 
   align-items: center;
 
-  justify-content: center;
+  justify-content: flex-start;
 
-  gap: 5px;
+  width: 100%;
 
-  padding: 7px 10px;
+  gap: 8px;
+
+  padding: 8px 10px;
 
   border: 0;
 
@@ -260,15 +346,21 @@ a:hover {
 
   font: inherit;
 
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 
-  font-weight: 700;
+  font-weight: 600;
+
+  text-align: left;
 
   cursor: pointer;
 
   transition:
     background 0.15s ease,
     color 0.15s ease;
+}
+
+html[dir="rtl"] .language-button {
+  text-align: right;
 }
 
 .language-button:hover {
@@ -1266,4 +1358,124 @@ html[data-theme="dark"] .expired-table th {
 html[data-theme="dark"] .new-badge {
   background: #423617;
   color: #f3c35b;
+}
+
+
+/* ============================================================
+   LANGUAGE DROPDOWN
+   ============================================================ */
+
+.language-dropdown {
+  position: relative;
+}
+
+.language-dropdown-toggle {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  min-width: 76px;
+
+  padding: 8px 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.language-dropdown-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.language-dropdown-toggle:focus-visible {
+  outline: 2px solid rgba(40, 85, 217, 0.3);
+  outline-offset: 2px;
+}
+
+.language-dropdown-arrow {
+  font-size: 0.75rem;
+}
+
+.language-dropdown-menu {
+  position: absolute;
+
+  top: calc(100% + 8px);
+  right: 0;
+
+  z-index: 100;
+
+  min-width: 160px;
+
+  padding: 5px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: var(--surface);
+
+  box-shadow:
+    0 12px 30px rgba(20, 30, 50, 0.12);
+}
+
+.language-option {
+  display: flex;
+
+  align-items: center;
+
+  width: 100%;
+
+  gap: 9px;
+
+  padding: 9px 10px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  font-size: 0.85rem;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.language-option:hover {
+  background: var(--surface-soft);
+}
+
+.language-option.active {
+  background: var(--primary);
+  color: white;
+}
+
+.language-option.active:hover {
+  background: var(--primary-dark);
+}
+
+html[dir="rtl"] .language-dropdown-menu {
+  right: auto;
+  left: 0;
+}
+
+html[dir="rtl"] .language-option {
+  text-align: right;
 }
