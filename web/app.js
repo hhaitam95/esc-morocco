@@ -451,20 +451,148 @@ function formatDate(value) {
   ).format(date);
 }
 
+function calculateActivityDuration(start, end) {
+  const startDate = parseDate(start);
+
+  const endDate = parseDate(end);
+
+  if (!startDate || !endDate || endDate < startDate) {
+    return null;
+  }
+
+  let months =
+    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+    (endDate.getMonth() - startDate.getMonth());
+
+  let anchor = new Date(startDate);
+
+  anchor.setMonth(anchor.getMonth() + months);
+
+  if (anchor > endDate) {
+    months--;
+
+    anchor = new Date(startDate);
+
+    anchor.setMonth(anchor.getMonth() + months);
+  }
+
+  const remainingDays = Math.floor(
+    (endDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  return {
+    months,
+    days: remainingDays,
+  };
+}
+
+function formatActivityDuration(start, end) {
+  const duration = calculateActivityDuration(start, end);
+
+  if (!duration) {
+    return "";
+  }
+
+  const months = duration.months;
+
+  const days = duration.days;
+
+  if (months === 0 && days === 0) {
+    return currentLanguage === "fr"
+      ? "1 jour"
+      : currentLanguage === "ar"
+        ? "يوم واحد"
+        : "1 day";
+  }
+
+  if (currentLanguage === "fr") {
+    const parts = [];
+
+    if (months > 0) {
+      parts.push(`${months} ` + (months === 1 ? "mois" : "mois"));
+    }
+
+    if (days > 0) {
+      parts.push(`${days} ` + (days === 1 ? "jour" : "jours"));
+    }
+
+    return parts.join(" ");
+  }
+
+  if (currentLanguage === "ar") {
+    const parts = [];
+
+    if (months > 0) {
+      parts.push(months === 1 ? "شهر واحد" : `${months} أشهر`);
+    }
+
+    if (days > 0) {
+      parts.push(days === 1 ? "يوم واحد" : `${days} أيام`);
+    }
+
+    return parts.join(" و ");
+  }
+
+  const parts = [];
+
+  if (months > 0) {
+    parts.push(`${months} ` + (months === 1 ? "month" : "months"));
+  }
+
+  if (days > 0) {
+    parts.push(`${days} ` + (days === 1 ? "day" : "days"));
+  }
+
+  return parts.join(" ");
+}
+
 function formatActivityDates(start, end) {
   if (!start && !end) {
-    return t("noDates");
+    return `
+            <span class="activity-dates">
+                ${escapeHtml(t("noDates"))}
+            </span>
+        `;
   }
+
+  let datesHtml = "";
 
   if (!start) {
-    return `→ ${formatDate(end)}`;
+    datesHtml = `
+            <span class="activity-dates">
+                → ${escapeHtml(formatDate(end))}
+            </span>
+        `;
+  } else if (!end) {
+    datesHtml = `
+            <span class="activity-dates">
+                ${escapeHtml(formatDate(start))} →
+            </span>
+        `;
+  } else {
+    datesHtml = `
+            <span class="activity-dates">
+                ${escapeHtml(formatDate(start))}
+                →
+                ${escapeHtml(formatDate(end))}
+            </span>
+        `;
   }
 
-  if (!end) {
-    return `${formatDate(start)} →`;
+  const duration = formatActivityDuration(start, end);
+
+  if (!duration) {
+    return datesHtml;
   }
 
-  return `${formatDate(start)} → ` + `${formatDate(end)}`;
+  return `
+        ${datesHtml}
+
+        <span class="activity-duration">
+            📅
+            ${escapeHtml(duration)}
+        </span>
+    `;
 }
 
 function startOfToday() {
@@ -1123,12 +1251,7 @@ function renderActive() {
 
                         <td class="activity-cell">
 
-                            ${escapeHtml(
-                              formatActivityDates(
-                                opportunity.start_date,
-                                opportunity.end_date,
-                              ),
-                            )}
+${formatActivityDates(opportunity.start_date, opportunity.end_date)}
 
                         </td>
 
