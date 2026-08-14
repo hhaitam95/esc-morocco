@@ -170,6 +170,14 @@ a:hover {
   margin-bottom: 28px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+
 .brand {
   display: flex;
 
