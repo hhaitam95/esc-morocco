@@ -1255,9 +1255,10 @@ function renderActive() {
       const isNew = newOpportunityIds.has(String(opportunity.id));
 
       const imageSrc = opportunity.image_url
-        ? opportunity.image_url.startsWith("/")
-          ? `https://youth.europa.eu${opportunity.image_url}`
-          : opportunity.image_url
+        ? new URL(
+            opportunity.image_url,
+            "https://youth.europa.eu",
+          ).href
         : "";
 
       return `
