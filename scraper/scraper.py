@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import sys
 import time
@@ -21,11 +20,16 @@ TARGET_COUNTRY = "Morocco"
 
 API_PAGE_SIZE = 100
 
-# Conservative rate for detail pages.
-# The portal has previously returned 429 after sustained traffic.
+# Maximum number of detail pages handled by ONE invocation.
+BATCH_SIZE = 150
+
+# Delay between successful detail requests.
 DETAIL_REQUEST_DELAY = 2.0
 
+# Hard timeout for every individual HTTP request.
 REQUEST_TIMEOUT = 20
+
+# Retries for temporary network/server errors.
 MAX_RETRIES = 2
 
 
@@ -34,13 +38,11 @@ MAX_RETRIES = 2
 # ============================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
 DATA_DIR = PROJECT_ROOT / "data"
 
 CHECKPOINT_FILE = DATA_DIR / "checkpoint.json"
 OPPORTUNITIES_FILE = DATA_DIR / "opportunities.json"
 EXPIRED_FILE = DATA_DIR / "expired.json"
-
 
 DATA_DIR.mkdir(
     parents=True,
@@ -65,7 +67,7 @@ TODAY_API = TODAY.strftime(
 
 
 # ============================================================
-# HTTP
+# HTTP HEADERS
 # ============================================================
 
 HEADERS = {
@@ -84,16 +86,13 @@ HEADERS = {
 # ============================================================
 
 def build_api_params(offset: int) -> dict:
-    """
-    Build the same search request used by the portal.
-    """
 
     return {
         "type": "Opportunity",
         "size": API_PAGE_SIZE,
         "from": offset,
 
-        # Only open opportunities.
+        # Open opportunities.
         "filters[status]": "open",
 
         # Activity has not ended.
@@ -117,12 +116,12 @@ def build_api_params(offset: int) -> dict:
         "filters[date_application_end][type]": "must",
         "filters[date_application_end][group]": "deadline",
 
-        # Include opportunities without deadlines.
+        # Include opportunities without a deadline.
         "filters[has_no_deadline][value]": "true",
         "filters[has_no_deadline][type]": "must",
         "filters[has_no_deadline][group]": "deadline",
 
-        # Fields required by the application.
+        # Fields.
         "fields[0]": "opid",
         "fields[1]": "title",
         "fields[2]": "town",
@@ -141,7 +140,7 @@ def build_api_params(offset: int) -> dict:
 
 
 # ============================================================
-# FETCH API
+# API RETRIEVAL
 # ============================================================
 
 def fetch_api_page(
@@ -158,6 +157,13 @@ def fetch_api_page(
 
         try:
 
+            print(
+                f"API request: "
+                f"from={offset}, "
+                f"size={API_PAGE_SIZE}",
+                flush=True,
+            )
+
             response = session.get(
                 API_URL,
                 params=params,
@@ -171,8 +177,8 @@ def fetch_api_page(
             if response.status_code == 429:
 
                 print(
-                    "\n[API 429] "
-                    "The portal is rate-limiting us."
+                    "API rate limit: HTTP 429",
+                    flush=True,
                 )
 
                 return None
@@ -184,8 +190,10 @@ def fetch_api_page(
                     wait = 2 ** attempt
 
                     print(
-                        f"[API {response.status_code}] "
-                        f"Retrying in {wait}s..."
+                        f"API HTTP "
+                        f"{response.status_code}; "
+                        f"retrying in {wait}s",
+                        flush=True,
                     )
 
                     time.sleep(wait)
@@ -194,8 +202,31 @@ def fetch_api_page(
                 return None
 
             print(
-                f"[API ERROR] "
-                f"HTTP {response.status_code}"
+                f"API error: "
+                f"HTTP {response.status_code}",
+                flush=True,
+            )
+
+            return None
+
+        except requests.Timeout:
+
+            if attempt < MAX_RETRIES:
+
+                wait = 2 ** attempt
+
+                print(
+                    f"API timeout; "
+                    f"retrying in {wait}s",
+                    flush=True,
+                )
+
+                time.sleep(wait)
+                continue
+
+            print(
+                "API timeout: giving up.",
+                flush=True,
             )
 
             return None
@@ -207,18 +238,17 @@ def fetch_api_page(
                 wait = 2 ** attempt
 
                 print(
-                    f"[API ERROR] {exc}"
-                )
-
-                print(
-                    f"Retrying in {wait}s..."
+                    f"API request error: {exc}; "
+                    f"retrying in {wait}s",
+                    flush=True,
                 )
 
                 time.sleep(wait)
                 continue
 
             print(
-                f"[API FAILED] {exc}"
+                f"API request failed: {exc}",
+                flush=True,
             )
 
             return None
@@ -227,11 +257,6 @@ def fetch_api_page(
 
 
 def fetch_current_opportunities() -> list[dict]:
-    """
-    Always retrieve a fresh opportunity list.
-
-    There is intentionally NO permanent API cache.
-    """
 
     print("=" * 70)
     print("FETCHING CURRENT OPPORTUNITIES")
@@ -247,11 +272,6 @@ def fetch_current_opportunities() -> list[dict]:
     try:
 
         while True:
-
-            print(
-                f"API: from={offset}, "
-                f"size={API_PAGE_SIZE}"
-            )
 
             data = fetch_api_page(
                 session,
@@ -292,7 +312,8 @@ def fetch_current_opportunities() -> list[dict]:
 
                 print(
                     f"API reports "
-                    f"{total} opportunities."
+                    f"{total} opportunities.",
+                    flush=True,
                 )
 
             page_hits = hits.get(
@@ -315,9 +336,7 @@ def fetch_current_opportunities() -> list[dict]:
                 )
 
                 if opid is None:
-                    opid = hit.get(
-                        "_id"
-                    )
+                    opid = hit.get("_id")
 
                 if opid is None:
                     continue
@@ -334,8 +353,8 @@ def fetch_current_opportunities() -> list[dict]:
 
             print(
                 f"Retrieved "
-                f"{len(opportunities)}"
-                f"/{total}"
+                f"{len(opportunities)}/{total}",
+                flush=True,
             )
 
             if (
@@ -348,6 +367,7 @@ def fetch_current_opportunities() -> list[dict]:
                 break
 
     finally:
+
         session.close()
 
     if (
@@ -383,29 +403,25 @@ def load_checkpoint() -> dict:
             encoding="utf-8",
         ) as file:
 
-            data = json.load(
-                file
-            )
+            data = json.load(file)
 
         if not isinstance(
             data,
             dict,
         ):
             raise ValueError(
-                "Checkpoint is not an object."
+                "Invalid checkpoint."
             )
 
-        if not isinstance(
-            data.get("processed"),
-            dict,
-        ):
-            data["processed"] = {}
+        data.setdefault(
+            "processed",
+            {},
+        )
 
-        if not isinstance(
-            data.get("history"),
-            dict,
-        ):
-            data["history"] = {}
+        data.setdefault(
+            "history",
+            {},
+        )
 
         return data
 
@@ -416,7 +432,8 @@ def load_checkpoint() -> dict:
     ) as exc:
 
         print(
-            f"Could not read checkpoint: {exc}"
+            f"Could not read checkpoint: {exc}",
+            flush=True,
         )
 
         return {
@@ -455,12 +472,10 @@ def save_checkpoint(
 
 
 # ============================================================
-# DETAIL PAGE PARSING
+# DETAIL PAGE HELPERS
 # ============================================================
 
-def find_detail_card(
-    soup: BeautifulSoup,
-):
+def find_detail_card(soup):
 
     for card in soup.find_all(
         "div",
@@ -472,7 +487,8 @@ def find_detail_card(
                 " ",
                 strip=True,
             ).lower()
-            for heading in card.find_all("h6")
+            for heading
+            in card.find_all("h6")
         ]
 
         if "activity dates" in headings:
@@ -526,9 +542,7 @@ def get_section(
     return None
 
 
-def get_topics(
-    card,
-) -> list[str]:
+def get_topics(card) -> list[str]:
 
     if card is None:
         return []
@@ -553,7 +567,6 @@ def get_topics(
                 "name",
                 None,
             ) == "h6":
-
                 break
 
             if getattr(
@@ -568,9 +581,7 @@ def get_topics(
                 )
 
                 if text:
-                    topics.append(
-                        text
-                    )
+                    topics.append(text)
 
         return topics
 
@@ -609,7 +620,7 @@ def parse_dates(
 
 
 # ============================================================
-# DETAIL PAGE REQUEST
+# DETAIL PAGE FETCH
 # ============================================================
 
 def fetch_detail_page(
@@ -624,6 +635,11 @@ def fetch_detail_page(
     url = (
         f"{BASE_URL}/solidarity/"
         f"opportunity/{opid}_en"
+    )
+
+    print(
+        f"  → Requesting {opid}",
+        flush=True,
     )
 
     for attempt in range(
@@ -641,12 +657,22 @@ def fetch_detail_page(
 
             if response.status_code == 200:
 
+                print(
+                    f"  ← {opid}: HTTP 200",
+                    flush=True,
+                )
+
                 return (
                     "200",
                     response.text,
                 )
 
             if response.status_code == 404:
+
+                print(
+                    f"  ← {opid}: HTTP 404",
+                    flush=True,
+                )
 
                 return (
                     "404",
@@ -655,6 +681,11 @@ def fetch_detail_page(
 
             if response.status_code == 429:
 
+                print(
+                    f"  ← {opid}: HTTP 429",
+                    flush=True,
+                )
+
                 return (
                     "429",
                     None,
@@ -662,26 +693,34 @@ def fetch_detail_page(
 
             if response.status_code >= 500:
 
+                print(
+                    f"  ← {opid}: "
+                    f"HTTP {response.status_code}",
+                    flush=True,
+                )
+
                 if attempt < MAX_RETRIES:
 
                     wait = 2 ** attempt
 
                     print(
-                        f"HTTP {response.status_code} "
-                        f"for {opid}; "
-                        f"retrying in {wait}s..."
+                        f"  retrying in {wait}s",
+                        flush=True,
                     )
 
-                    time.sleep(
-                        wait
-                    )
-
+                    time.sleep(wait)
                     continue
 
                 return (
                     f"HTTP_{response.status_code}",
                     None,
                 )
+
+            print(
+                f"  ← {opid}: "
+                f"HTTP {response.status_code}",
+                flush=True,
+            )
 
             return (
                 f"HTTP_{response.status_code}",
@@ -690,19 +729,23 @@ def fetch_detail_page(
 
         except requests.Timeout:
 
+            print(
+                f"  ← {opid}: TIMEOUT",
+                flush=True,
+            )
+
             if attempt < MAX_RETRIES:
 
                 wait = 2 ** attempt
 
                 print(
-                    f"Timeout for {opid}; "
-                    f"retrying in {wait}s..."
+                    f"  retry "
+                    f"{attempt}/{MAX_RETRIES - 1} "
+                    f"in {wait}s",
+                    flush=True,
                 )
 
-                time.sleep(
-                    wait
-                )
-
+                time.sleep(wait)
                 continue
 
             return (
@@ -712,19 +755,17 @@ def fetch_detail_page(
 
         except requests.RequestException as exc:
 
+            print(
+                f"  ← {opid}: "
+                f"REQUEST ERROR: {exc}",
+                flush=True,
+            )
+
             if attempt < MAX_RETRIES:
 
                 wait = 2 ** attempt
 
-                print(
-                    f"Request error for {opid}: "
-                    f"{exc}"
-                )
-
-                time.sleep(
-                    wait
-                )
-
+                time.sleep(wait)
                 continue
 
             return (
@@ -739,7 +780,7 @@ def fetch_detail_page(
 
 
 # ============================================================
-# PARSE DETAIL PAGE
+# DETAIL PAGE PARSER
 # ============================================================
 
 def parse_detail_page(
@@ -781,22 +822,16 @@ def parse_detail_page(
         in participant_text.split(",")
     ]
 
-    morocco_eligible = any(
+    if not any(
         country.lower()
         == TARGET_COUNTRY.lower()
         for country in countries
-    )
-
-    if not morocco_eligible:
+    ):
 
         return {
             "status": "not_morocco",
             "result": None,
         }
-
-    # --------------------------------------------------------
-    # Other fields
-    # --------------------------------------------------------
 
     activity_text = get_section(
         card,
@@ -850,7 +885,7 @@ def parse_detail_page(
     )
 
     # --------------------------------------------------------
-    # Defensive filtering
+    # Defensive filters
     # --------------------------------------------------------
 
     if (
@@ -872,10 +907,6 @@ def parse_detail_page(
             "status": "activity_finished",
             "result": None,
         }
-
-    # --------------------------------------------------------
-    # Result
-    # --------------------------------------------------------
 
     result = {
         "id": int(
@@ -1040,18 +1071,17 @@ def save_expired_output(
     expired: list[dict],
 ) -> None:
 
-    # Newest expiration first.
     expired.sort(
         key=lambda item: (
             item.get(
                 "last_seen",
                 "",
-            ),
+            )
         ),
         reverse=True,
     )
 
-    # Keep only the 30 most recent.
+    # Keep the last 30.
     expired = expired[:30]
 
     output = {
@@ -1082,6 +1112,83 @@ def save_expired_output(
 
 
 # ============================================================
+# BUILD WORK QUEUE
+# ============================================================
+
+def build_work_queue(
+    current_opportunities: list[dict],
+    checkpoint: dict,
+) -> list[str]:
+
+    processed = checkpoint.get(
+        "processed",
+        {},
+    )
+
+    current_ids = {
+        str(
+            opportunity["opid"]
+        )
+        for opportunity
+        in current_opportunities
+    }
+
+    # New opportunities first.
+    new_ids = [
+        opid
+        for opid in current_ids
+        if opid not in processed
+    ]
+
+    # Re-check existing Morocco matches.
+    existing_match_ids = [
+        opid
+        for opid in current_ids
+        if (
+            opid in processed
+            and processed[opid].get("status")
+            == "match"
+        )
+    ]
+
+    # Retry previous technical failures.
+    retry_ids = [
+        opid
+        for opid in current_ids
+        if (
+            opid in processed
+            and processed[opid].get("status")
+            in {
+                "error",
+                "parse_error",
+                "timeout",
+            }
+        )
+    ]
+
+    # Maintain deterministic order using API order.
+    ordered_ids = [
+        str(
+            opportunity["opid"]
+        )
+        for opportunity
+        in current_opportunities
+    ]
+
+    priority = (
+        set(new_ids)
+        | set(existing_match_ids)
+        | set(retry_ids)
+    )
+
+    return [
+        opid
+        for opid in ordered_ids
+        if opid in priority
+    ]
+
+
+# ============================================================
 # MAIN
 # ============================================================
 
@@ -1096,11 +1203,18 @@ def main() -> int:
 
     print(
         f"Date: "
-        f"{TODAY.strftime('%d/%m/%Y')}"
+        f"{TODAY.strftime('%d/%m/%Y')}",
+        flush=True,
+    )
+
+    print(
+        f"Batch size: "
+        f"{BATCH_SIZE}",
+        flush=True,
     )
 
     # --------------------------------------------------------
-    # 1. Fresh API data
+    # Current API dataset
     # --------------------------------------------------------
 
     current_opportunities = (
@@ -1130,7 +1244,7 @@ def main() -> int:
     }
 
     # --------------------------------------------------------
-    # 2. Load checkpoint
+    # Checkpoint
     # --------------------------------------------------------
 
     checkpoint = load_checkpoint()
@@ -1144,90 +1258,57 @@ def main() -> int:
     ]
 
     # --------------------------------------------------------
-    # 3. Identify what needs checking
+    # Work queue
     # --------------------------------------------------------
 
-    new_ids = [
-        opid
-        for opid in current_ids
-        if opid not in processed
-    ]
-
-    # Existing Morocco matches need periodic revalidation
-    # because their deadlines/eligibility can change.
-    existing_match_ids = [
-        opid
-        for opid in current_ids
-        if (
-            opid in processed
-            and processed[opid].get(
-                "status"
-            ) == "match"
-        )
-    ]
-
-    # Errors/parse errors should be retried.
-    retry_ids = [
-        opid
-        for opid in current_ids
-        if (
-            opid in processed
-            and processed[opid].get(
-                "status"
-            ) in {
-                "error",
-                "parse_error",
-                "timeout",
-            }
-        )
-    ]
-
-    ids_to_check = list(
-        dict.fromkeys(
-            new_ids
-            + existing_match_ids
-            + retry_ids
-        )
+    queue = build_work_queue(
+        current_opportunities,
+        checkpoint,
     )
+
+    total_current = len(
+        current_opportunities
+    )
+
+    already_processed = sum(
+        1
+        for opid in current_ids
+        if opid in processed
+    )
+
+    batch = queue[
+        :BATCH_SIZE
+    ]
 
     print("\n")
     print("=" * 70)
-    print("SCAN PLAN")
+    print("BATCH PLAN")
     print("=" * 70)
 
     print(
         f"Current opportunities: "
-        f"{len(current_opportunities)}"
+        f"{total_current}"
     )
 
     print(
-        f"New opportunities:     "
-        f"{len(new_ids)}"
+        f"Already processed: "
+        f"{already_processed}"
     )
 
     print(
-        f"Existing matches:      "
-        f"{len(existing_match_ids)}"
+        f"Work remaining: "
+        f"{len(queue)}"
     )
 
     print(
-        f"Retry errors:           "
-        f"{len(retry_ids)}"
-    )
-
-    print(
-        f"Pages to check:        "
-        f"{len(ids_to_check)}"
+        f"This batch: "
+        f"{len(batch)}"
     )
 
     print("=" * 70)
 
     # --------------------------------------------------------
-    # 4. Detect previously matched opportunities that
-    #    disappeared from the active API list.
-    #
-    #    We don't claim they definitely expired; we label
-    #    them as no longer active on the portal.
+    # Detect old matches that disappeared from active list.
     # --------------------------------------------------------
 
     for opid, entry in processed.items():
@@ -1254,8 +1335,10 @@ def main() -> int:
                 "first_seen": result.get(
                     "created"
                 ),
-                "last_seen": checkpoint.get(
-                    "updated_at"
+                "last_seen": (
+                    checkpoint.get(
+                        "updated_at"
+                    )
                 ),
                 "result": result,
                 "reason": (
@@ -1265,30 +1348,88 @@ def main() -> int:
             }
 
     # --------------------------------------------------------
-    # 5. Detail scanning
+    # If there's nothing to process
+    # --------------------------------------------------------
+
+    if not batch:
+
+        current_matches = (
+            get_current_matches(
+                checkpoint,
+                current_ids,
+            )
+        )
+
+        save_public_output(
+            current_matches
+        )
+
+        expired = [
+            {
+                **entry["result"],
+                "last_seen": entry.get(
+                    "last_seen"
+                ),
+                "reason": entry.get(
+                    "reason"
+                ),
+            }
+            for entry
+            in history.values()
+            if entry.get("result")
+        ]
+
+        save_expired_output(
+            expired
+        )
+
+        save_checkpoint(
+            checkpoint
+        )
+
+        print("\n")
+        print("=" * 70)
+        print("NOTHING NEW TO PROCESS")
+        print("=" * 70)
+
+        print(
+            f"Current Morocco matches: "
+            f"{len(current_matches)}"
+        )
+
+        return 0
+
+    # --------------------------------------------------------
+    # Detail scan
     # --------------------------------------------------------
 
     session = requests.Session()
 
-    processed_this_run = 0
-    matches_found_this_run = 0
-
+    processed_this_batch = 0
+    matches_this_batch = 0
     rate_limited = False
 
     try:
 
-        for opid in ids_to_check:
+        for index, opid in enumerate(
+            batch,
+            start=1,
+        ):
 
             opportunity = (
                 opportunities_by_id[opid]
             )
 
-            processed_this_run += 1
+            print(
+                "\n"
+                + "=" * 60,
+                flush=True,
+            )
 
             print(
-                f"\n[{processed_this_run}/"
-                f"{len(ids_to_check)}] "
-                f"Checking ID {opid}..."
+                f"[{index}/{len(batch)}] "
+                f"Checking ID {opid}",
+                flush=True,
             )
 
             status, html = (
@@ -1298,39 +1439,25 @@ def main() -> int:
                 )
             )
 
-            # ------------------------------------------------
-            # RATE LIMIT
-            # ------------------------------------------------
-
             if status == "429":
 
                 print(
-                    "\n"
-                    + "=" * 70
+                    "\nRATE LIMIT DETECTED.",
+                    flush=True,
                 )
 
                 print(
-                    "RATE LIMIT DETECTED"
+                    "Stopping this batch safely.",
+                    flush=True,
                 )
-
-                print(
-                    f"Stopped before "
-                    f"completing ID {opid}."
-                )
-
-                print(
-                    "All completed progress "
-                    "has been saved."
-                )
-
-                print("=" * 70)
 
                 rate_limited = True
-
                 break
 
+            processed_this_batch += 1
+
             # ------------------------------------------------
-            # Result handling
+            # Save result
             # ------------------------------------------------
 
             if status == "404":
@@ -1367,45 +1494,64 @@ def main() -> int:
                     == "match"
                 ):
 
-                    matches_found_this_run += 1
+                    matches_this_batch += 1
 
                     result = parsed[
                         "result"
                     ]
 
                     print(
-                        "\n✅ MATCH"
+                        "\n✅ MOROCCO MATCH",
+                        flush=True,
                     )
 
                     print(
                         f"{result['id']} — "
-                        f"{result['title']}"
+                        f"{result['title']}",
+                        flush=True,
                     )
 
                     print(
-                        f"   "
-                        f"{result['start_date']} "
-                        f"→ "
-                        f"{result['end_date']}"
+                        f"Activity: "
+                        f"{result['start_date']} → "
+                        f"{result['end_date']}",
+                        flush=True,
                     )
 
                     print(
-                        f"   Deadline: "
-                        f"{result['deadline'] or 'None'}"
+                        f"Deadline: "
+                        f"{result['deadline'] or 'No deadline'}",
+                        flush=True,
                     )
 
             # ------------------------------------------------
-            # Save checkpoint after EVERY successful request
+            # Save after EVERY opportunity.
             # ------------------------------------------------
 
-            checkpoint["processed"] = processed
-            checkpoint["history"] = history
+            checkpoint["processed"] = (
+                processed
+            )
+
+            checkpoint["history"] = (
+                history
+            )
 
             save_checkpoint(
                 checkpoint
             )
 
-            # Small delay
+            # Update public JSON too.
+            current_matches = (
+                get_current_matches(
+                    checkpoint,
+                    current_ids,
+                )
+            )
+
+            save_public_output(
+                current_matches
+            )
+
             time.sleep(
                 DETAIL_REQUEST_DELAY
             )
@@ -1415,74 +1561,70 @@ def main() -> int:
         session.close()
 
     # --------------------------------------------------------
-    # 6. Build current public matches
+    # Finalize outputs
     # --------------------------------------------------------
 
-    current_matches = get_current_matches(
-        checkpoint,
-        current_ids,
+    current_matches = (
+        get_current_matches(
+            checkpoint,
+            current_ids,
+        )
     )
 
     save_public_output(
         current_matches
     )
 
-    # --------------------------------------------------------
-    # 7. Build expired/no-longer-active list
-    # --------------------------------------------------------
-
-    expired = []
-
-    for entry in history.values():
-
-        result = entry.get(
-            "result"
-        )
-
-        if not result:
-            continue
-
-        expired.append({
-            **result,
+    expired = [
+        {
+            **entry["result"],
             "last_seen": entry.get(
                 "last_seen"
             ),
             "reason": entry.get(
                 "reason"
             ),
-        })
+        }
+        for entry
+        in history.values()
+        if entry.get("result")
+    ]
 
     save_expired_output(
         expired
     )
 
+    save_checkpoint(
+        checkpoint
+    )
+
+    remaining = max(
+        0,
+        len(
+            build_work_queue(
+                current_opportunities,
+                checkpoint,
+            )
+        )
+    )
+
     # --------------------------------------------------------
-    # 8. Summary
+    # Summary
     # --------------------------------------------------------
 
     print("\n")
     print("=" * 70)
-    print("RUN COMPLETE")
+    print("BATCH COMPLETE")
     print("=" * 70)
 
     print(
-        f"Current opportunities: "
-        f"{len(current_opportunities)}"
+        f"Processed this batch: "
+        f"{processed_this_batch}"
     )
 
     print(
-        f"New opportunities: "
-        f"{len(new_ids)}"
-    )
-
-    print(
-        f"Checked this run: "
-        f"{processed_this_run}"
-    )
-
-    print(
-        f"New matches this run: "
-        f"{matches_found_this_run}"
+        f"Matches this batch: "
+        f"{matches_this_batch}"
     )
 
     print(
@@ -1491,45 +1633,36 @@ def main() -> int:
     )
 
     print(
-        f"Recently inactive matches: "
-        f"{len(expired)}"
+        f"Remaining work: "
+        f"{remaining}"
     )
 
-    print(
-        f"\nGenerated:"
-    )
-
-    print(
-        OPPORTUNITIES_FILE
-    )
-
-    print(
-        EXPIRED_FILE
-    )
-
-    print(
-        "\nCheckpoint:"
-    )
-
-    print(
-        CHECKPOINT_FILE
-    )
+    print("=" * 70)
 
     if rate_limited:
 
         print(
-            "\n⚠️ Rate limited."
+            "⚠️ Rate limited. "
+            "Checkpoint saved."
         )
 
-        print(
-            "Run again later to continue."
-        )
-
-        # Exit code 2 means "rate limited / resumable"
+        # Exit 2 means:
+        # "Pause; rerun later."
         return 2
 
+    if remaining > 0:
+
+        print(
+            "More batches remain."
+        )
+
+        # Exit 0 because the batch itself succeeded.
+        # GitHub Actions can invoke another batch.
+        return 0
+
     print(
-        "\n✅ Scan completed without rate limiting."
+        "🎉 Current opportunity population "
+        "has been fully processed."
     )
 
     return 0
@@ -1550,11 +1683,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
 
         print(
-            "\nInterrupted by user."
-        )
-
-        print(
-            "Progress already saved."
+            "\nInterrupted. "
+            "Checkpoint already saved."
         )
 
         sys.exit(2)
@@ -1562,7 +1692,7 @@ if __name__ == "__main__":
     except Exception as exc:
 
         print(
-            f"\nERROR: {exc}",
+            f"\nFATAL ERROR: {exc}",
             file=sys.stderr,
         )
 
