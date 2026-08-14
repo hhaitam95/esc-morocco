@@ -135,6 +135,12 @@ const translations = {
 
     daysLeft: "days left",
 
+    hour: "hour",
+
+    hourLeft: "hour left",
+
+    hoursLeft: "hours left",
+
     expiredToday: "Expired today",
 
     expiredAgo: "days ago",
@@ -228,6 +234,12 @@ const translations = {
 
     daysLeft: "jours restants",
 
+    hour: "heure",
+
+    hourLeft: "heure restante",
+
+    hoursLeft: "heures restantes",
+
     expiredToday: "Expirée aujourd'hui",
 
     expiredAgo: "jours",
@@ -318,6 +330,12 @@ const translations = {
     dayLeft: "يوم متبقٍ",
 
     daysLeft: "أيام متبقية",
+
+    hour: "ساعة",
+
+    hourLeft: "ساعة متبقية",
+
+    hoursLeft: "ساعات متبقية",
 
     expiredToday: "انتهت اليوم",
 
@@ -615,6 +633,23 @@ function daysFromToday(value) {
   return Math.ceil(difference / (1000 * 60 * 60 * 24));
 }
 
+function hoursFromNow(value) {
+  const date = parseDate(value);
+
+  if (!date) {
+    return null;
+  }
+
+  // Deadline is at the start of the day (00:00:00)
+  date.setHours(23, 59, 59, 999);
+
+  const now = new Date();
+
+  const difference = date.getTime() - now.getTime();
+
+  return Math.ceil(difference / (1000 * 60 * 60));
+}
+
 function deadlineClass(deadline) {
   const days = daysFromToday(deadline);
 
@@ -640,8 +675,27 @@ function deadlineRelative(deadline) {
     return "";
   }
 
+  if (days < 0) {
+    return "";
+  }
+
   if (days === 0) {
-    return `⏰ ${t("deadlineToday")}`;
+    // Within the last day: show hourly countdown
+    const hours = hoursFromNow(deadline);
+
+    if (hours === null || hours < 0) {
+      return "";
+    }
+
+    if (hours === 0) {
+      return `⏰ ${t("deadlineToday")}`;
+    }
+
+    if (hours === 1) {
+      return `⏰ 1 ${t("hourLeft")}`;
+    }
+
+    return `⏰ ${hours} ${t("hoursLeft")}`;
   }
 
   if (days === 1) {
@@ -1533,9 +1587,26 @@ document.getElementById("expired-toggle").addEventListener("click", () => {
 });
 
 // ============================================================
+// COUNTDOWN REFRESH
+// ============================================================
+
+function startCountdownRefresh() {
+  // Refresh the countdown display every minute to keep it current
+  setInterval(() => {
+    // Only re-render active opportunities if they exist
+    // This updates the deadline-relative display (hourly countdown)
+    if (activeOpportunities.length > 0) {
+      renderActive();
+    }
+  }, 60000); // 60000 ms = 1 minute
+}
+
+// ============================================================
 // INITIAL LOAD
 // ============================================================
 
 applyTranslations();
 
 loadData();
+
+startCountdownRefresh();
