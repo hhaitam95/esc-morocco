@@ -56,9 +56,6 @@ const errorMessage =
 const emptyMessage =
     document.getElementById("empty-message");
 
-const activeSection =
-    document.getElementById("active-section");
-
 const searchInput =
     document.getElementById("search-input");
 
@@ -851,17 +848,29 @@ const countryNames =
     );
 
 
-function getCountryName(
-    code
-) {
+// The European Youth Portal uses some country codes
+// that differ from standard ISO 3166-1 alpha-2 codes.
+const countryCodeOverrides = {
+    EL: "GR", // Greece
+    UK: "GB"  // United Kingdom
+};
+
+
+function getCountryName(code) {
 
     if (!code) {
         return "";
     }
 
+    const normalizedCode =
+        countryCodeOverrides[code]
+        || code;
+
     try {
         return (
-            countryNames.of(code)
+            countryNames.of(
+                normalizedCode
+            )
             || code
         );
     } catch {
@@ -1718,10 +1727,6 @@ refreshButton.addEventListener(
 
         refreshButton.disabled =
             true;
-
-        const originalText =
-            refreshButton.innerHTML;
-
 
         refreshButton.innerHTML =
             `↻ <span>${escapeHtml(
