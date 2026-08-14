@@ -679,23 +679,26 @@ function deadlineRelative(deadline) {
     return "";
   }
 
-  if (days === 0) {
-    // Within the last day: show hourly countdown
+  // Check if less than 24 hours remaining (today or tomorrow with early deadline)
+  if (days === 0 || days === 1) {
     const hours = hoursFromNow(deadline);
 
     if (hours === null || hours < 0) {
       return "";
     }
 
-    if (hours === 0) {
-      return `⏰ ${t("deadlineToday")}`;
-    }
+    // Show hourly countdown only if less than 24 hours remain
+    if (hours <= 24) {
+      if (hours === 0) {
+        return `⏰ ${t("deadlineToday")}`;
+      }
 
-    if (hours === 1) {
-      return `⏰ 1 ${t("hourLeft")}`;
-    }
+      if (hours === 1) {
+        return `⏰ 1 ${t("hourLeft")}`;
+      }
 
-    return `⏰ ${hours} ${t("hoursLeft")}`;
+      return `⏰ ${hours} ${t("hoursLeft")}`;
+    }
   }
 
   if (days === 1) {
