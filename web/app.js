@@ -420,13 +420,25 @@ document.querySelectorAll(".language-button").forEach((button) => {
 
     localStorage.setItem("esc_language", currentLanguage);
 
+    applyTranslations();
+  });
+});
+
+const savedLanguage = localStorage.getItem("esc_language");
+
+if (savedLanguage && translations[savedLanguage]) {
+  currentLanguage = savedLanguage;
+}
 
 // ============================================================
 // DARK MODE
 // ============================================================
 
-const themeToggle = document.getElementById("theme-toggle");
-const themeIcon = document.getElementById("theme-icon");
+const themeToggle =
+  document.getElementById("theme-toggle");
+
+const themeIcon =
+  document.getElementById("theme-icon");
 
 function updateThemeToggleLabel() {
   if (!themeToggle || !themeIcon) {
@@ -492,16 +504,6 @@ if (themeToggle) {
   );
 
   updateThemeToggleLabel();
-}
-
-applyTranslations();
-  });
-});
-
-const savedLanguage = localStorage.getItem("esc_language");
-
-if (savedLanguage && translations[savedLanguage]) {
-  currentLanguage = savedLanguage;
 }
 
 // ============================================================
