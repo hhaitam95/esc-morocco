@@ -892,6 +892,13 @@ function escapeHtml(value) {
 // NEW OPPORTUNITIES
 // ============================================================
 
+const SEEN_OPPORTUNITIES_KEY =
+    "esc_seen_opportunities";
+
+let newOpportunityIds =
+    new Set();
+
+
 function loadSeenOpportunities() {
 
     try {
@@ -902,7 +909,7 @@ function loadSeenOpportunities() {
             );
 
         if (!stored) {
-            return {};
+            return null;
         }
 
         const parsed =
@@ -911,39 +918,49 @@ function loadSeenOpportunities() {
             );
 
         if (
-            !parsed
-            || typeof parsed !== "object"
-            || Array.isArray(parsed)
+            !Array.isArray(parsed)
         ) {
 
-            return {};
+            return null;
         }
 
-        return parsed;
-
-    } catch {
-
-        return {};
-    }
-}
-
-
-function saveSeenOpportunities(
-    seen
-) {
-
-    try {
-
-        localStorage.setItem(
-            SEEN_OPPORTUNITIES_KEY,
-            JSON.stringify(
-                seen
+        return new Set(
+            parsed.map(
+                id => String(id)
             )
         );
 
     } catch {
 
-        // localStorage unavailable.
+        return null;
+    }
+}
+
+
+function saveSeenOpportunities(
+    opportunities
+) {
+
+    try {
+
+        const ids =
+            opportunities.map(
+                opportunity =>
+                    String(
+                        opportunity.id
+                    )
+            );
+
+        localStorage.setItem(
+            SEEN_OPPORTUNITIES_KEY,
+            JSON.stringify(
+                ids
+            )
+        );
+
+    } catch {
+
+        // Ignore localStorage failures.
     }
 }
 
@@ -952,109 +969,63 @@ function calculateNewOpportunities(
     opportunities
 ) {
 
-    const seen =
+    const previousIds =
         loadSeenOpportunities();
 
-    const now =
-        Date.now();
-
-    const expirationWindow =
-        NEW_OPPORTUNITY_DAYS
-        * 24
-        * 60
-        * 60
-        * 1000;
-
-    const currentIds =
-        new Set();
-
-    const freshIds =
-        new Set();
-
 
     /*
-     * First visit behavior:
+     * First visit:
      *
-     * Existing opportunities are remembered but NOT marked
-     * as NEW. This prevents the first visit from showing
-     * every existing row as new.
+     * There is no previous dataset, so we cannot know
+     * which opportunities are genuinely new.
+     *
+     * Remember the current dataset but show NO NEW badges.
      */
 
-    opportunities.forEach(
-        opportunity => {
+    if (!previousIds) {
 
-            const id =
-                String(
-                    opportunity.id
-                );
+        saveSeenOpportunities(
+            opportunities
+        );
 
-            currentIds.add(
-                id
-            );
+        newOpportunityIds =
+            new Set();
 
-            const firstSeen =
-                seen[id];
-
-            if (!firstSeen) {
-
-                seen[id] =
-                    now;
-
-                return;
-            }
-
-            const firstSeenTime =
-                Number(
-                    firstSeen
-                );
-
-            if (
-                Number.isFinite(
-                    firstSeenTime
-                )
-                && (
-                    now
-                    - firstSeenTime
-                ) <= expirationWindow
-            ) {
-
-                freshIds.add(
-                    id
-                );
-            }
-        }
-    );
+        return;
+    }
 
 
     /*
-     * Keep localStorage small.
-     * Remove IDs that no longer exist in the active dataset.
+     * Every opportunity currently visible that wasn't present
+     * in the previous dataset is genuinely new.
      */
 
-    Object.keys(
-        seen
-    )
-        .forEach(
-            id => {
-
-                if (
-                    !currentIds.has(
-                        id
-                    )
-                ) {
-
-                    delete seen[id];
-                }
-            }
+    newOpportunityIds =
+        new Set(
+            opportunities
+                .map(
+                    opportunity =>
+                        String(
+                            opportunity.id
+                        )
+                )
+                .filter(
+                    id =>
+                        !previousIds.has(
+                            id
+                        )
+                )
         );
 
 
-    saveSeenOpportunities(
-        seen
-    );
+    /*
+     * Save the current dataset so the next refresh compares
+     * against this one.
+     */
 
-    newOpportunityIds =
-        freshIds;
+    saveSeenOpportunities(
+        opportunities
+    );
 }
 
 
