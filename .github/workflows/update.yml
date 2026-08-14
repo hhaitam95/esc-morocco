@@ -1,9 +1,11 @@
 name: Update ESC Morocco Opportunities
 
 on:
+  # Automatic daily refresh at 08:00 UTC.
   schedule:
     - cron: "0 8 * * *"
 
+  # Manual run from GitHub Actions.
   workflow_dispatch:
 
 permissions:
@@ -15,47 +17,68 @@ jobs:
 
     steps:
 
-      # ------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------
+      # ======================================================
+      # CHECKOUT
+      # ======================================================
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ------------------------------------------------------
-      # Python
-      # ------------------------------------------------------
+
+      # ======================================================
+      # PYTHON
+      # ======================================================
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # ------------------------------------------------------
-      # Dependencies
-      # ------------------------------------------------------
+
+      # ======================================================
+      # DEPENDENCIES
+      # ======================================================
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
 
-      # ------------------------------------------------------
-      # Run several bounded scraper batches
-      # ------------------------------------------------------
+
+      # ======================================================
+      # GIT CONFIGURATION
+      # ======================================================
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+
+      # ======================================================
+      # RUN SCRAPER BATCHES
+      #
+      # Each Python invocation handles at most 40 detail pages.
+      #
+      # Maximum:
+      #   3 batches × 40 = 120 detail pages
+      #
+      # Exit code:
+      #   0 = batch completed normally
+      #   1 = genuine failure
+      #   2 = rate limited / safely paused
+      # ======================================================
 
       - name: Run scraper batches
         id: scraper
         continue-on-error: true
         run: |
+
           set +e
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          MAX_BATCHES=5
+          MAX_BATCHES=3
           BATCH=1
           OVERALL_EXIT_CODE=0
 
@@ -68,6 +91,7 @@ jobs:
             echo ""
 
             python scraper/scraper.py
+
             EXIT_CODE=$?
 
             echo ""
@@ -75,7 +99,7 @@ jobs:
             echo ""
 
             # ------------------------------------------------
-            # Copy the latest public data into the website.
+            # Publish latest JSON files into the website.
             # ------------------------------------------------
 
             if [ -f data/opportunities.json ]; then
@@ -87,7 +111,7 @@ jobs:
             fi
 
             # ------------------------------------------------
-            # Commit this batch immediately.
+            # Commit everything produced by this batch.
             # ------------------------------------------------
 
             if [ -n "$(git status --porcelain)" ]; then
@@ -95,15 +119,19 @@ jobs:
               git add data/opportunities.json
               git add data/expired.json
               git add data/checkpoint.json
+
               git add web/opportunities.json
               git add web/expired.json
 
-              git commit -m "Update ESC Morocco opportunities"
+              git commit \
+                -m "Update ESC Morocco opportunities"
 
               git push
 
             else
-              echo "No changes to commit."
+
+              echo "No repository changes after batch."
+
             fi
 
             # ------------------------------------------------
@@ -111,33 +139,56 @@ jobs:
             # ------------------------------------------------
 
             if [ "$EXIT_CODE" -eq 1 ]; then
+
+              echo ""
               echo "Genuine scraper error."
+              echo ""
+
               OVERALL_EXIT_CODE=1
+
               break
+
             fi
 
             # ------------------------------------------------
-            # Rate limit.
+            # Rate limited.
+            #
+            # The scraper has already saved its checkpoint.
+            # Stop further batches to avoid making the
+            # situation worse.
             # ------------------------------------------------
 
             if [ "$EXIT_CODE" -eq 2 ]; then
+
+              echo ""
               echo "Rate limit detected."
               echo "Stopping further batches."
+              echo "Completed progress was committed."
+              echo ""
+
               OVERALL_EXIT_CODE=2
+
               break
+
             fi
+
+            # ------------------------------------------------
+            # Normal batch completion.
+            # ------------------------------------------------
 
             BATCH=$((BATCH + 1))
 
           done
 
-          echo "exit_code=$OVERALL_EXIT_CODE" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$OVERALL_EXIT_CODE" \
+            >> "$GITHUB_OUTPUT"
 
           exit "$OVERALL_EXIT_CODE"
 
-      # ------------------------------------------------------
-      # Final status
-      # ------------------------------------------------------
+
+      # ======================================================
+      # FINAL STATUS
+      # ======================================================
 
       - name: Check scraper result
         if: always()
@@ -146,14 +197,22 @@ jobs:
           EXIT_CODE="${{ steps.scraper.outputs.exit_code }}"
 
           if [ "$EXIT_CODE" = "1" ]; then
+
             echo "Scraper encountered a genuine error."
+
             exit 1
 
           elif [ "$EXIT_CODE" = "2" ]; then
+
             echo "Scraper was rate-limited."
-            echo "Completed batches were committed."
+
+            echo "Checkpoint and completed data were committed."
+
+            # Rate limiting is an expected resumable condition.
             exit 0
 
           else
+
             echo "All scraper batches completed successfully."
+
           fi
