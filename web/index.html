@@ -12,7 +12,7 @@
       content="Find European Solidarity Corps volunteering opportunities open to participants from your country."
     />
 
-    <link rel="stylesheet" href="style.css?v=4" />
+    <link rel="stylesheet" href="style.css?v=8" />
 
     <script>
       (() => {
@@ -200,7 +200,39 @@
         <p class="intro-note" data-i18n="introNote">
           The list is automatically refreshed from the European Youth Portal.
         </p>
-      </section>
+
+        <div class="participant-selector">
+          <div class="participant-selector-field">
+            <label
+              for="participant-country"
+              data-i18n="participantCountry"
+            >
+              Participant country
+            </label>
+
+            <select
+              id="participant-country"
+              autocomplete="country-name"
+            >
+              <option
+                value=""
+                data-i18n="selectParticipantCountry"
+              >
+                Select participant country
+              </option>
+            </select>
+          </div>
+
+          <button
+            id="apply-participant-country"
+            class="participant-apply-button"
+            type="button"
+            data-i18n="apply"
+          >
+            Apply
+          </button>
+        </div>
+</section>
 
       <!-- =====================================================
          CONTROLS
@@ -381,7 +413,7 @@
       </footer>
     </main>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=16"></script>
   </body>
 </html>
 <!-- ESC-MOROCCO-PAGES-REDEPLOY -->

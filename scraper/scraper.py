@@ -15,7 +15,11 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://youth.europa.eu"
 API_URL = f"{BASE_URL}/api/rest/eyp/v1/search_en"
 
-TARGET_COUNTRY = "Morocco"
+CHECKPOINT_SCHEMA_VERSION = 2
+
+# Recheck active opportunities at most once per day. This keeps the hourly workflow lightweight while still detecting participant-eligibility changes.
+DETAIL_RECHECK_INTERVAL = 24 * 60 * 60
+
 
 # ------------------------------------------------------------
 # API
@@ -207,28 +211,28 @@ def parse_iso_datetime(
 
 
 def load_checkpoint() -> dict:
-
     if not CHECKPOINT_FILE.exists():
         return {
+            "schema_version": CHECKPOINT_SCHEMA_VERSION,
             "processed": {},
             "history": {},
             "last_scan_at": None,
         }
 
     try:
-
         with CHECKPOINT_FILE.open(
             "r",
             encoding="utf-8",
         ) as file:
-
             data = json.load(file)
 
         if not isinstance(
             data,
             dict,
         ):
-            raise ValueError("Checkpoint is not a JSON object.")
+            raise ValueError(
+                "Checkpoint is not a JSON object."
+            )
 
         if not isinstance(
             data.get("processed"),
@@ -247,24 +251,27 @@ def load_checkpoint() -> dict:
             None,
         )
 
-        return data
+        return normalize_checkpoint_for_country_neutral_mode(
+            data,
+        )
 
     except (
         OSError,
         json.JSONDecodeError,
         ValueError,
     ) as exc:
-
         print(
             f"Could not read checkpoint: {exc}",
             flush=True,
         )
 
         return {
+            "schema_version": CHECKPOINT_SCHEMA_VERSION,
             "processed": {},
             "history": {},
             "last_scan_at": None,
         }
+
 
 
 def save_checkpoint(
@@ -938,16 +945,16 @@ def parse_detail_page(
     opportunity: dict,
     html: str,
 ) -> dict:
-
     soup = BeautifulSoup(
         html,
         "html.parser",
     )
 
-    card = find_detail_card(soup)
+    card = find_detail_card(
+        soup,
+    )
 
     if card is None:
-
         return {
             "status": "parse_error",
             "result": None,
@@ -958,25 +965,17 @@ def parse_detail_page(
         "Looking for participants from",
     )
 
-    if not participant_text:
+    if participant_text:
+        countries = [
+            country.strip()
+            for country in participant_text.split(",")
+            if country.strip()
+        ]
 
-        return {
-            "status": "not_morocco",
-            "result": None,
-        }
-
-    countries = [country.strip() for country in participant_text.split(",")]
-
-    morocco_eligible = any(
-        country.lower() == TARGET_COUNTRY.lower() for country in countries
-    )
-
-    if not morocco_eligible:
-
-        return {
-            "status": "not_morocco",
-            "result": None,
-        }
+        eligibility_known = True
+    else:
+        countries = []
+        eligibility_known = False
 
     activity_text = get_section(
         card,
@@ -1003,36 +1002,58 @@ def parse_detail_page(
         "Project code",
     )
 
-    activity_dates = parse_dates(activity_text)
+    activity_dates = parse_dates(
+        activity_text,
+    )
 
-    start_date = activity_dates[0] if len(activity_dates) >= 1 else None
+    start_date = (
+        activity_dates[0]
+        if len(activity_dates) >= 1
+        else None
+    )
 
-    end_date = activity_dates[1] if len(activity_dates) >= 2 else None
+    end_date = (
+        activity_dates[1]
+        if len(activity_dates) >= 2
+        else None
+    )
 
-    deadline_dates = parse_dates(deadline_text)
+    deadline_dates = parse_dates(
+        deadline_text,
+    )
 
-    deadline = deadline_dates[0] if deadline_dates else None
+    deadline = (
+        deadline_dates[0]
+        if deadline_dates
+        else None
+    )
 
     # --------------------------------------------------------
-    # Defensive expiration checks
+    # Defensive expiration checks.
     # --------------------------------------------------------
 
-    if deadline is not None and deadline < TODAY:
-
+    if (
+        deadline is not None
+        and deadline < TODAY
+    ):
         return {
             "status": "expired_deadline",
             "result": None,
         }
 
-    if end_date is not None and end_date < TODAY:
-
+    if (
+        end_date is not None
+        and end_date < TODAY
+    ):
         return {
             "status": "activity_finished",
             "result": None,
         }
 
     result = {
-        "id": int(opportunity["opid"]),
+        "id": int(
+            opportunity["opid"]
+        ),
         "title": opportunity.get(
             "title",
             "",
@@ -1040,7 +1061,8 @@ def parse_detail_page(
         "location": (
             location
             or (
-                f"{opportunity.get('town', '')}, " f"{opportunity.get('country', '')}"
+                f"{opportunity.get('town', '')}, "
+                f"{opportunity.get('country', '')}"
             ).strip(", ")
         ),
         "country": opportunity.get(
@@ -1051,25 +1073,57 @@ def parse_detail_page(
             "town",
             "",
         ),
-        "activity_type": (activity_type or ""),
-        "start_date": (start_date.strftime("%Y-%m-%d") if start_date else None),
-        "end_date": (end_date.strftime("%Y-%m-%d") if end_date else None),
-        "deadline": (deadline.strftime("%Y-%m-%d") if deadline else None),
+        "activity_type": (
+            activity_type
+            or ""
+        ),
+        "start_date": (
+            start_date.strftime(
+                "%Y-%m-%d",
+            )
+            if start_date
+            else None
+        ),
+        "end_date": (
+            end_date.strftime(
+                "%Y-%m-%d",
+            )
+            if end_date
+            else None
+        ),
+        "deadline": (
+            deadline.strftime(
+                "%Y-%m-%d",
+            )
+            if deadline
+            else None
+        ),
         "eligible_countries": countries,
+        "eligibility_known": eligibility_known,
         "topics": get_topics(card),
-        "project_code": (project_code or ""),
+        "project_code": (
+            project_code
+            or ""
+        ),
         "created": opportunity.get(
             "created",
             "",
         ),
-        "image_url": get_image_url(soup),
-        "url": (f"{BASE_URL}/solidarity/" f"opportunity/" f"{opportunity['opid']}_en"),
+        "image_url": get_image_url(
+            soup,
+        ),
+        "url": (
+            f"{BASE_URL}/solidarity/"
+            f"opportunity/"
+            f"{opportunity['opid']}_en"
+        ),
     }
 
     return {
-        "status": "match",
+        "status": "scanned",
         "result": result,
     }
+
 
 
 # ============================================================
@@ -1099,31 +1153,43 @@ def archive_disappeared_matches(
     history: dict,
     current_ids: set[str],
 ) -> int:
-
     archived_count = 0
 
     for opid, entry in processed.items():
-
-        if entry.get("status") != "match":
+        if entry.get(
+            "status",
+        ) not in {
+            "match",
+            "scanned",
+            "error",
+            "parse_error",
+            "timeout",
+            "not_found",
+        }:
             continue
 
-        result = entry.get("result")
+        result = entry.get(
+            "result",
+        )
 
         if not result:
             continue
 
         if opid not in current_ids:
-
             archive_match(
                 history,
                 opid,
                 result,
-                ("No longer present in " "the active opportunity list."),
+                (
+                    "No longer present in "
+                    "the active opportunity list."
+                ),
             )
 
             archived_count += 1
 
     return archived_count
+
 
 
 def archive_previous_match(
@@ -1132,14 +1198,20 @@ def archive_previous_match(
     previous_entry: dict | None,
     reason: str,
 ) -> bool:
-
     if not previous_entry:
         return False
 
-    if previous_entry.get("status") != "match":
+    if previous_entry.get(
+        "status",
+    ) not in {
+        "match",
+        "scanned",
+    }:
         return False
 
-    result = previous_entry.get("result")
+    result = previous_entry.get(
+        "result",
+    )
 
     if not result:
         return False
@@ -1154,6 +1226,7 @@ def archive_previous_match(
     return True
 
 
+
 # ============================================================
 # PUBLIC OUTPUT
 # ============================================================
@@ -1163,59 +1236,105 @@ def get_current_matches(
     checkpoint: dict,
     current_ids: set[str],
 ) -> list[dict]:
-
     processed = checkpoint.get(
         "processed",
         {},
     )
 
-    matches = []
+    opportunities = []
 
     for opid in current_ids:
-
-        entry = processed.get(opid)
+        entry = processed.get(
+            opid,
+        )
 
         if not entry:
             continue
 
-        if entry.get("status") != "match":
+        status = entry.get(
+            "status",
+        )
+
+        if status in {
+            "expired_deadline",
+            "activity_finished",
+        }:
             continue
 
-        result = entry.get("result")
+        result = entry.get(
+            "result",
+        )
 
         if result:
+            opportunities.append(
+                result,
+            )
 
-            matches.append(result)
-
-    matches.sort(
+    opportunities.sort(
         key=lambda item: (
-            item.get("deadline") or "9999-12-31",
+            item.get(
+                "deadline"
+            ) or "9999-12-31",
             item.get(
                 "title",
                 "",
             ),
-        )
+        ),
     )
 
-    return matches
+    return opportunities
+
 
 
 def save_public_output(
-    matches: list[dict],
+    opportunities: list[dict],
+    migration_complete: bool,
+    current_ids: set[str],
+    checkpoint: dict,
 ) -> None:
+    participant_countries = (
+        get_participant_countries(
+            opportunities,
+        )
+    )
+
+    scanned_count = sum(
+        1
+        for opid in current_ids
+        if checkpoint.get(
+            "processed",
+            {},
+        ).get(
+            opid,
+            {},
+        ).get(
+            "status",
+        ) == "scanned"
+    )
 
     output = {
+        "schema_version": OUTPUT_SCHEMA_VERSION,
         "generated_at": now_iso(),
-        "source_date": TODAY.strftime("%Y-%m-%d"),
-        "country": TARGET_COUNTRY,
-        "count": len(matches),
-        "opportunities": matches,
+        "source_date": TODAY.strftime(
+            "%Y-%m-%d",
+        ),
+        "count": len(
+            opportunities,
+        ),
+        "scanned_count": scanned_count,
+        "total_current": len(
+            current_ids,
+        ),
+        "migration_complete": migration_complete,
+        "participant_countries": participant_countries,
+        "opportunities": opportunities,
     }
 
     atomic_write_json(
         OPPORTUNITIES_FILE,
         output,
     )
+
 
 
 def save_expired_output(
@@ -1263,6 +1382,126 @@ def save_expired_output(
     )
 
 
+
+def normalize_checkpoint_for_country_neutral_mode(
+    checkpoint: dict,
+) -> dict:
+    """
+    Migrate the old Morocco-specific checkpoint in place.
+
+    Existing scanned opportunities already contain complete detail results,
+    including eligible_countries, so they can safely become generic
+    'scanned' records.
+
+    Legacy unscanned records with no result remain unresolved and are
+    deliberately queued for the one-time migration scan.
+    """
+
+    checkpoint.setdefault(
+        "schema_version",
+        1,
+    )
+
+    processed = checkpoint.get(
+        "processed",
+        {},
+    )
+
+    for entry in processed.values():
+        if (
+            entry.get("status") == "match"
+            and entry.get("result")
+        ):
+            entry["status"] = "scanned"
+
+    checkpoint["schema_version"] = CHECKPOINT_SCHEMA_VERSION
+
+    return checkpoint
+
+
+def is_entry_stale(
+    entry: dict,
+) -> bool:
+    checked_at = parse_iso_datetime(
+        entry.get("checked_at"),
+    )
+
+    if checked_at is None:
+        return True
+
+    age_seconds = (
+        datetime.now() - checked_at
+    ).total_seconds()
+
+    return age_seconds >= DETAIL_RECHECK_INTERVAL
+
+
+def migration_entry_complete(
+    entry: dict | None,
+) -> bool:
+    if not entry:
+        return False
+
+    status = entry.get(
+        "status",
+    )
+
+    if status == "scanned" and entry.get(
+        "result",
+    ):
+        return True
+
+    return status in {
+        "expired_deadline",
+        "activity_finished",
+        "not_found",
+    }
+
+
+def is_country_neutral_scan_complete(
+    checkpoint: dict,
+    current_ids: set[str],
+) -> bool:
+    processed = checkpoint.get(
+        "processed",
+        {},
+    )
+
+    return all(
+        migration_entry_complete(
+            processed.get(opid),
+        )
+        for opid in current_ids
+    )
+
+
+def get_participant_countries(
+    opportunities: list[dict],
+) -> list[str]:
+    countries = {}
+
+    for opportunity in opportunities:
+        for country in opportunity.get(
+            "eligible_countries",
+            [],
+        ):
+            value = str(
+                country
+            ).strip()
+
+            if not value:
+                continue
+
+            countries.setdefault(
+                value.casefold(),
+                value,
+            )
+
+    return sorted(
+        countries.values(),
+        key=lambda value: value.casefold(),
+    )
+
 # ============================================================
 # WORK QUEUE
 # ============================================================
@@ -1273,25 +1512,15 @@ def build_work_queue(
     checkpoint: dict,
 ) -> list[str]:
     """
-    Queue rules:
+    Queue policy for the country-neutral dataset.
 
-    1. New opportunities:
-       Never seen before → scan.
-
-    2. Technical failures:
-       Retry.
-
-    3. Existing Morocco matches:
-       Recheck every run.
-
-    4. Previously scanned non-Morocco opportunities:
-       Skip.
-
-    5. Archived opportunities that disappeared:
-       Skip.
-
-    This is what allows the initial ~1200 opportunity scan
-    to eventually turn into a very small daily workload.
+    1. New opportunities are scanned immediately.
+    2. Legacy records without a complete result are scanned during
+       the one-time migration.
+    3. Technical failures are retried.
+    4. Active opportunities are periodically rechecked after the
+       configured stale interval.
+    5. Recently checked opportunities are skipped.
     """
 
     processed = checkpoint.get(
@@ -1299,64 +1528,107 @@ def build_work_queue(
         {},
     )
 
-    ordered_ids = [str(opportunity["opid"]) for opportunity in current_opportunities]
+    ordered_ids = [
+        str(
+            opportunity["opid"]
+        )
+        for opportunity in current_opportunities
+    ]
 
     new_ids = []
+    migration_ids = []
     retry_ids = []
-    match_ids = []
+    stale_ids = []
 
     for opid in ordered_ids:
-
-        entry = processed.get(opid)
-
-        # ----------------------------------------------------
-        # New opportunity.
-        # ----------------------------------------------------
+        entry = processed.get(
+            opid,
+        )
 
         if entry is None:
-
-            new_ids.append(opid)
-
+            new_ids.append(
+                opid,
+            )
             continue
 
-        status = entry.get("status")
+        status = entry.get(
+            "status",
+        )
 
-        # ----------------------------------------------------
-        # Retry technical problems.
-        # ----------------------------------------------------
+        result = entry.get(
+            "result",
+        )
 
+        # Legacy Morocco-specific entries with no result.
+        if (
+            not result
+            and status in {
+                "not_morocco",
+                "not_found",
+            }
+        ):
+            migration_ids.append(
+                opid,
+            )
+            continue
+
+        # Technical failures always get retried.
         if status in {
             "error",
             "parse_error",
             "timeout",
         }:
+            retry_ids.append(
+                opid,
+            )
+            continue
 
-            retry_ids.append(opid)
+        # Entries which did not produce an active result are retried
+        # when they become stale.
+        if (
+            status in {
+                "expired_deadline",
+                "activity_finished",
+                "not_found",
+            }
+            and is_entry_stale(
+                entry,
+            )
+        ):
+            stale_ids.append(
+                opid,
+            )
+            continue
+
+        # Every successfully scanned opportunity is periodically
+        # refreshed so participant eligibility changes are captured.
+        if status in {
+            "scanned",
+            "match",
+        }:
+            if is_entry_stale(
+                entry,
+            ):
+                stale_ids.append(
+                    opid,
+                )
 
             continue
 
-        # ----------------------------------------------------
-        # EXISTING MOROCCO MATCH.
-        #
-        # Recheck every run.
-        # ----------------------------------------------------
+        # Any legacy/unrecognized state without a usable result must
+        # be migrated.
+        if not result:
+            migration_ids.append(
+                opid,
+            )
 
-        if status == "match":
+    return (
+        new_ids
+        + migration_ids
+        + retry_ids
+        + stale_ids
+    )
 
-            match_ids.append(opid)
-
-            continue
-
-        # ----------------------------------------------------
-        # not_morocco
-        # not_found
-        # expired_deadline
-        # activity_finished
-        #
-        # Intentionally skipped.
-        # ----------------------------------------------------
-
-    return new_ids + retry_ids + match_ids
 
 
 # ============================================================
@@ -1365,13 +1637,16 @@ def build_work_queue(
 
 
 def main() -> int:
-
     print("=" * 70)
-    print("EU SOLIDARITY CORPS — " "MOROCCO OPPORTUNITY FINDER")
+    print(
+        "EUROPEAN SOLIDARITY CORPS — "
+        "OPPORTUNITY FINDER"
+    )
     print("=" * 70)
 
     print(
-        f"Date: " f"{TODAY.strftime('%d/%m/%Y')}",
+        f"Date: "
+        f"{TODAY.strftime('%d/%m/%Y')}",
         flush=True,
     )
 
@@ -1381,62 +1656,86 @@ def main() -> int:
     )
 
     print(
-        f"Detail request delay: " f"{DETAIL_REQUEST_DELAY}s",
+        f"Detail request delay: "
+        f"{DETAIL_REQUEST_DELAY}s",
         flush=True,
     )
 
     # --------------------------------------------------------
-    # 1. Fetch a fresh API snapshot.
+    # 1. Fresh active API snapshot.
     # --------------------------------------------------------
 
-    current_opportunities = fetch_current_opportunities()
+    current_opportunities = (
+        fetch_current_opportunities()
+    )
 
     if not current_opportunities:
+        raise RuntimeError(
+            "No current opportunities retrieved."
+        )
 
-        raise RuntimeError("No current opportunities retrieved.")
-
-    current_ids = {str(opportunity["opid"]) for opportunity in current_opportunities}
+    current_ids = {
+        str(
+            opportunity["opid"]
+        )
+        for opportunity in current_opportunities
+    }
 
     opportunities_by_id = {
-        str(opportunity["opid"]): opportunity for opportunity in current_opportunities
+        str(
+            opportunity["opid"]
+        ): opportunity
+        for opportunity in current_opportunities
     }
 
     # --------------------------------------------------------
-    # 2. Load persistent state.
+    # 2. Persistent migration-aware checkpoint.
     # --------------------------------------------------------
 
     checkpoint = load_checkpoint()
 
-    processed = checkpoint["processed"]
+    processed = checkpoint[
+        "processed"
+    ]
 
-    history = checkpoint["history"]
+    history = checkpoint[
+        "history"
+    ]
+
+    migration_complete = (
+        is_country_neutral_scan_complete(
+            checkpoint,
+            current_ids,
+        )
+    )
 
     # --------------------------------------------------------
-    # 3. Archive Morocco matches that disappeared from the
-    #    active API.
+    # 3. Archive active opportunities which disappeared from
+    #    the API.
     # --------------------------------------------------------
 
-    disappeared_count = archive_disappeared_matches(
-        processed,
-        history,
-        current_ids,
+    disappeared_count = (
+        archive_disappeared_matches(
+            processed,
+            history,
+            current_ids,
+        )
     )
 
     if disappeared_count:
-
         print(
-            f"Archived "
-            f"{disappeared_count} "
-            f"opportunity/opportunities "
-            f"that disappeared from "
-            f"the active list.",
+            f"Archived {disappeared_count} "
+            "opportunity/opportunities that "
+            "disappeared from the active list.",
             flush=True,
         )
 
-        save_checkpoint(checkpoint)
+        save_checkpoint(
+            checkpoint,
+        )
 
     # --------------------------------------------------------
-    # 4. Build current work queue.
+    # 4. Work queue.
     # --------------------------------------------------------
 
     queue = build_work_queue(
@@ -1444,108 +1743,141 @@ def main() -> int:
         checkpoint,
     )
 
-    already_processed = sum(1 for opid in current_ids if opid in processed)
-
-    new_count = sum(1 for opid in current_ids if opid not in processed)
-
-    existing_match_count = sum(
-        1 for opid in current_ids if (processed.get(opid, {}).get("status") == "match")
+    already_processed = sum(
+        1
+        for opid in current_ids
+        if opid in processed
     )
 
-    batch = queue[:BATCH_SIZE]
+    batch = queue[
+        :BATCH_SIZE
+    ]
 
-    # --------------------------------------------------------
-    # 5. Print plan.
-    # --------------------------------------------------------
-
-    print("\n")
+    print()
     print("=" * 70)
     print("SCAN PLAN")
     print("=" * 70)
 
-    print(f"Current opportunities: " f"{len(current_opportunities)}")
+    print(
+        f"Current opportunities: "
+        f"{len(current_opportunities)}"
+    )
 
-    print(f"Already processed: " f"{already_processed}")
+    print(
+        f"Already processed: "
+        f"{already_processed}"
+    )
 
-    print(f"New opportunities: " f"{new_count}")
+    print(
+        f"Country-neutral scan complete: "
+        f"{migration_complete}"
+    )
 
-    print(f"Existing Morocco matches: " f"{existing_match_count}")
+    print(
+        f"Work remaining: "
+        f"{len(queue)}"
+    )
 
-    print(f"Work remaining: " f"{len(queue)}")
-
-    print(f"This batch: " f"{len(batch)}")
+    print(
+        f"This batch: "
+        f"{len(batch)}"
+    )
 
     print("=" * 70)
 
     # --------------------------------------------------------
-    # 6. Nothing to scan.
+    # 5. Nothing to scan.
     # --------------------------------------------------------
 
     if not batch:
-
-        current_matches = get_current_matches(
+        opportunities = get_current_matches(
             checkpoint,
             current_ids,
         )
 
-        save_public_output(current_matches)
+        migration_complete = (
+            is_country_neutral_scan_complete(
+                checkpoint,
+                current_ids,
+            )
+        )
 
-        save_expired_output(history)
+        save_public_output(
+            opportunities,
+            migration_complete,
+            current_ids,
+            checkpoint,
+        )
 
-        save_checkpoint(checkpoint)
+        save_expired_output(
+            history,
+        )
+
+        save_checkpoint(
+            checkpoint,
+        )
 
         print(
-            "\n" "NO DETAIL SCANNING REQUIRED",
+            "\nNO DETAIL SCANNING REQUIRED",
             flush=True,
         )
 
         print(
-            f"Current Morocco matches: " f"{len(current_matches)}",
+            f"Current published opportunities: "
+            f"{len(opportunities)}",
             flush=True,
         )
 
         print(
-            "All current non-Morocco "
-            "opportunities are already "
-            "known and are being skipped.",
+            f"Country-neutral migration complete: "
+            f"{migration_complete}",
             flush=True,
         )
 
         return 0
 
     # --------------------------------------------------------
-    # 7. Cooldown before detail scanning.
+    # 6. Cooldown.
     # --------------------------------------------------------
 
     print(
-        f"\nWaiting " f"{DETAIL_SCAN_COOLDOWN}s " f"before detail scanning...",
+        f"\nWaiting "
+        f"{DETAIL_SCAN_COOLDOWN}s "
+        "before detail scanning...",
         flush=True,
     )
 
-    time.sleep(DETAIL_SCAN_COOLDOWN)
+    time.sleep(
+        DETAIL_SCAN_COOLDOWN,
+    )
 
     # --------------------------------------------------------
-    # 8. Process this batch.
+    # 7. Process batch.
     # --------------------------------------------------------
 
     session = requests.Session()
 
     processed_this_batch = 0
-    new_matches = 0
+    scanned_this_batch = 0
     archived_this_batch = 0
-
     rate_limited = False
 
     try:
-
         for index, opid in enumerate(
             batch,
             start=1,
         ):
+            opportunity = (
+                opportunities_by_id[
+                    opid
+                ]
+            )
 
-            opportunity = opportunities_by_id[opid]
-
-            previous_entry = processed.get(opid)
+            previous_entry = (
+                processed.get(
+                    opid,
+                )
+            )
 
             print(
                 "\n" + "=" * 60,
@@ -1553,21 +1885,19 @@ def main() -> int:
             )
 
             print(
-                f"[{index}/{len(batch)}] " f"Checking ID {opid}",
+                f"[{index}/{len(batch)}] "
+                f"Checking ID {opid}",
                 flush=True,
             )
 
-            status, html = fetch_detail_page(
-                session,
-                opportunity,
+            status, html = (
+                fetch_detail_page(
+                    session,
+                    opportunity,
+                )
             )
 
-            # ------------------------------------------------
-            # RATE LIMIT
-            # ------------------------------------------------
-
             if status == "429":
-
                 rate_limited = True
 
                 print(
@@ -1591,183 +1921,184 @@ def main() -> int:
 
             checked_at = now_iso()
 
-            # ------------------------------------------------
-            # 404
-            # ------------------------------------------------
-
             if status == "404":
-
+                # Preserve the last known result when available. The
+                # active API still lists this opportunity, so a 404
+                # can be transient.
                 processed[opid] = {
                     "status": "not_found",
-                    "result": None,
+                    "result": (
+                        previous_entry.get(
+                            "result"
+                        )
+                        if previous_entry
+                        else None
+                    ),
                     "checked_at": checked_at,
                 }
 
-            # ------------------------------------------------
-            # Technical error
-            # ------------------------------------------------
-
             elif status != "200":
-
                 processed[opid] = {
                     "status": "error",
                     "http_status": status,
-                    "result": None,
+                    "result": (
+                        previous_entry.get(
+                            "result"
+                        )
+                        if previous_entry
+                        else None
+                    ),
                     "checked_at": checked_at,
                 }
 
-            # ------------------------------------------------
-            # Successful page
-            # ------------------------------------------------
-
             else:
-
                 parsed = parse_detail_page(
                     opportunity,
                     html,
                 )
 
-                new_status = parsed.get("status")
+                new_status = parsed.get(
+                    "status",
+                )
 
-                # --------------------------------------------
-                # A previous Morocco match stopped qualifying.
-                # Archive the previous result before replacing
-                # the checkpoint entry.
-                # --------------------------------------------
-
+                # If a previously valid active result has actually
+                # expired or finished, archive it before removing it
+                # from the active dataset.
                 if (
                     previous_entry
-                    and previous_entry.get("status") == "match"
-                    and new_status != "match"
+                    and previous_entry.get(
+                        "status",
+                    ) in {
+                        "match",
+                        "scanned",
+                    }
+                    and previous_entry.get(
+                        "result",
+                    )
+                    and new_status in {
+                        "expired_deadline",
+                        "activity_finished",
+                    }
                 ):
+                    reason = (
+                        "Application deadline has expired."
+                        if new_status
+                        == "expired_deadline"
+                        else
+                        "Activity has finished."
+                    )
 
-                    if new_status == "not_morocco":
+                    if archive_previous_match(
+                        history,
+                        opid,
+                        previous_entry,
+                        reason,
+                    ):
+                        archived_this_batch += 1
 
-                        if archive_previous_match(
-                            history,
-                            opid,
-                            previous_entry,
-                            (
-                                "No longer lists "
-                                "Morocco among the "
-                                "eligible participant "
-                                "countries."
-                            ),
-                        ):
-
-                            archived_this_batch += 1
-
-                    elif new_status == "expired_deadline":
-
-                        if archive_previous_match(
-                            history,
-                            opid,
-                            previous_entry,
-                            ("Application deadline " "has expired."),
-                        ):
-
-                            archived_this_batch += 1
-
-                    elif new_status == "activity_finished":
-
-                        if archive_previous_match(
-                            history,
-                            opid,
-                            previous_entry,
-                            ("Activity has finished."),
-                        ):
-
-                            archived_this_batch += 1
-
-                # --------------------------------------------
-                # A previously archived opportunity has become
-                # active again and is now a Morocco match.
-                # Remove its archive entry.
-                # --------------------------------------------
-
-                if new_status == "match":
-
+                if new_status == "scanned":
                     if opid in history:
-
                         del history[opid]
 
-                    new_matches += 1
+                    scanned_this_batch += 1
 
-                    result = parsed["result"]
-
-                    print(
-                        "\n✅ MOROCCO MATCH",
-                        flush=True,
+                    result = parsed.get(
+                        "result",
                     )
 
-                    print(
-                        f"{result['id']} — " f"{result['title']}",
-                        flush=True,
-                    )
+                    if result:
+                        print(
+                            "\n✅ OPPORTUNITY SCANNED",
+                            flush=True,
+                        )
 
-                    print(
-                        f"Activity: "
-                        f"{result['start_date']} "
-                        f"→ "
-                        f"{result['end_date']}",
-                        flush=True,
-                    )
+                        print(
+                            f"{result['id']} — "
+                            f"{result['title']}",
+                            flush=True,
+                        )
 
-                    print(
-                        f"Deadline: " f"{result['deadline'] or 'No deadline'}",
-                        flush=True,
-                    )
+                elif new_status in {
+                    "parse_error",
+                }:
+                    # Preserve a last known result while requiring a
+                    # future successful scan before migration is called
+                    # complete.
+                    if (
+                        previous_entry
+                        and previous_entry.get(
+                            "result",
+                        )
+                    ):
+                        parsed[
+                            "result"
+                        ] = previous_entry[
+                            "result"
+                        ]
 
                 processed[opid] = {
                     **parsed,
                     "checked_at": checked_at,
                 }
 
-            # ------------------------------------------------
-            # SAVE CHECKPOINT AFTER EVERY SUCCESSFULLY
-            # HANDLED DETAIL PAGE.
-            # ------------------------------------------------
+            checkpoint[
+                "processed"
+            ] = processed
 
-            checkpoint["processed"] = processed
+            checkpoint[
+                "history"
+            ] = history
 
-            checkpoint["history"] = history
-
-            save_checkpoint(checkpoint)
+            save_checkpoint(
+                checkpoint,
+            )
 
             print(
-                f"Checkpoint saved " f"after ID {opid}.",
+                f"Checkpoint saved after ID {opid}.",
                 flush=True,
             )
 
-            # ------------------------------------------------
-            # Rate-limit-friendly delay.
-            # ------------------------------------------------
-
             if index < len(batch):
-
-                time.sleep(DETAIL_REQUEST_DELAY)
+                time.sleep(
+                    DETAIL_REQUEST_DELAY,
+                )
 
     finally:
-
         session.close()
 
     # --------------------------------------------------------
-    # 9. Build the current public dataset.
+    # 8. Build current country-neutral output.
     # --------------------------------------------------------
 
-    current_matches = get_current_matches(
+    opportunities = get_current_matches(
         checkpoint,
         current_ids,
     )
 
-    save_public_output(current_matches)
+    migration_complete = (
+        is_country_neutral_scan_complete(
+            checkpoint,
+            current_ids,
+        )
+    )
 
-    save_expired_output(history)
+    save_public_output(
+        opportunities,
+        migration_complete,
+        current_ids,
+        checkpoint,
+    )
 
-    save_checkpoint(checkpoint)
+    save_expired_output(
+        history,
+    )
+
+    save_checkpoint(
+        checkpoint,
+    )
 
     # --------------------------------------------------------
-    # 10. See what remains.
+    # 9. Remaining queue.
     # --------------------------------------------------------
 
     remaining_queue = build_work_queue(
@@ -1775,76 +2106,78 @@ def main() -> int:
         checkpoint,
     )
 
-    # --------------------------------------------------------
-    # 11. Summary.
-    # --------------------------------------------------------
-
-    print("\n")
+    print()
     print("=" * 70)
     print("BATCH COMPLETE")
     print("=" * 70)
 
-    print(f"Processed this batch: " f"{processed_this_batch}")
+    print(
+        f"Processed this batch: "
+        f"{processed_this_batch}"
+    )
 
-    print(f"Morocco matches found/rechecked: " f"{new_matches}")
+    print(
+        f"Successfully scanned: "
+        f"{scanned_this_batch}"
+    )
 
-    print(f"Archived this batch: " f"{archived_this_batch}")
+    print(
+        f"Archived this batch: "
+        f"{archived_this_batch}"
+    )
 
-    print(f"Current Morocco matches: " f"{len(current_matches)}")
+    print(
+        f"Current country-neutral opportunities: "
+        f"{len(opportunities)}"
+    )
 
-    print(f"Remaining work: " f"{len(remaining_queue)}")
+    print(
+        f"Remaining work: "
+        f"{len(remaining_queue)}"
+    )
+
+    print(
+        f"Country-neutral migration complete: "
+        f"{migration_complete}"
+    )
 
     print("=" * 70)
 
-    # --------------------------------------------------------
-    # 12. Rate-limit result.
-    # --------------------------------------------------------
-
     if rate_limited:
-
         print(
-            "⚠️ Rate limited. " "Checkpoint saved.",
+            "⚠️ Rate limited. "
+            "Checkpoint saved.",
             flush=True,
         )
 
         print(
-            "The next run will resume " "from the checkpoint.",
+            "The next workflow run will resume.",
             flush=True,
         )
 
         return 2
 
-    # --------------------------------------------------------
-    # 13. Normal batch result.
-    # --------------------------------------------------------
-
     if remaining_queue:
-
         print(
-            "More opportunities remain " "to be processed.",
+            "More opportunities remain "
+            "to be processed.",
             flush=True,
         )
 
         print(
-            "The next workflow run " "will continue.",
+            "The next batch will continue "
+            "from the checkpoint.",
             flush=True,
         )
 
     else:
-
         print(
-            "🎉 Initial population scan " "is complete.",
-            flush=True,
-        )
-
-        print(
-            "Future runs should only "
-            "process new opportunities "
-            "and current Morocco matches.",
+            "🎉 Country-neutral scan is complete.",
             flush=True,
         )
 
     return 0
+
 
 
 # ============================================================

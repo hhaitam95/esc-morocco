@@ -1,4 +1,4 @@
-name: Update ESC Morocco Opportunities
+name: Update ESC Opportunities
 
 on:
   # Run automatically every hour.
@@ -110,7 +110,27 @@ jobs:
             # ------------------------------------------------
 
             if [ -f data/opportunities.json ]; then
-              cp data/opportunities.json web/opportunities.json
+              python - <<'PY'
+import json
+
+with open(
+    "data/opportunities.json",
+    "r",
+    encoding="utf-8",
+) as file:
+    data = json.load(file)
+
+if data.get("migration_complete") is True:
+    raise SystemExit(0)
+
+raise SystemExit(1)
+PY
+              if [ $? -eq 0 ]; then
+                cp data/opportunities.json web/opportunities.json
+                echo "Published complete country-neutral dataset."
+              else
+                echo "Migration incomplete; keeping published dataset."
+              fi
             fi
 
             if [ -f data/expired.json ]; then
@@ -131,7 +151,7 @@ jobs:
               git add web/expired.json
 
               git commit \
-                -m "Update ESC Morocco opportunities"
+                -m "Update ESC opportunities"
 
               git push
 

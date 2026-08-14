@@ -60,16 +60,13 @@ const refreshButton = document.getElementById("refresh-button");
 const translations = {
   en: {
     title: "ESC Opportunity Finder",
-
     subtitle: "Find European Solidarity Corps volunteering opportunities open to participants from your country",
-
     activeOpportunities: "Active opportunities",
 
     lastUpdated: "Last updated",
 
     intro:
       "Find active European Solidarity Corps volunteering opportunities open to participants from your country.",
-
     introNote:
       "The list is automatically refreshed from the European Youth Portal.",
 
@@ -159,19 +156,20 @@ const translations = {
 
      darkMode: "Dark mode",
   },
+    participantCountry: "Participant country",
+    selectParticipantCountry: "Select participant country",
+    apply: "Apply",
+    allParticipantCountries: "All participant countries",
 
   fr: {
     title: "Outil de recherche d’opportunités du CES",
-
     subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
-
     activeOpportunities: "Opportunités actives",
 
     lastUpdated: "Dernière mise à jour",
 
     intro:
       "Voici les opportunités de volontariat actives du Corps européen de solidarité ouvertes aux participants de votre pays.",
-
     introNote:
       "La liste est automatiquement actualisée depuis le Portail européen de la jeunesse.",
 
@@ -262,19 +260,20 @@ const translations = {
 
      darkMode: "Mode sombre",
   },
+    participantCountry: "Pays du participant",
+    selectParticipantCountry: "Sélectionnez le pays du participant",
+    apply: "Appliquer",
+    allParticipantCountries: "Tous les pays participants",
 
   ar: {
     title: "البحث عن فرص الفيلق الأوروبي للتضامن",
-
     subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
-
     activeOpportunities: "الفرص المتاحة",
 
     lastUpdated: "آخر تحديث",
 
     intro:
       "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك.",
-
     introNote: "يتم تحديث القائمة تلقائياً من بوابة الشباب الأوروبية.",
 
     search: "بحث",
@@ -399,6 +398,10 @@ function applyTranslations() {
     });
 
   populateFilters();
+
+  if (currentActiveData) {
+    populateParticipantCountries(currentActiveData);
+  }
 
   renderActive();
 
@@ -1291,6 +1294,11 @@ const topicIcons = {
   "Post Disaster relief": "🆘",
 
   "WASH (Water, sanitation and hygiene)": "🚿",
+    participantCountry: "بلد المشارك",
+    selectParticipantCountry: "اختر بلد المشارك",
+    apply: "تطبيق",
+    allParticipantCountries: "جميع بلدان المشاركين",
+
 };
 
 function renderTopics(topics) {
@@ -1329,6 +1337,178 @@ function renderTopics(topics) {
 
         </div>
     `;
+}
+
+
+// ============================================================
+// PARTICIPANT COUNTRY FILTER
+// ============================================================
+
+const PARTICIPANT_COUNTRY_STORAGE_KEY =
+  "esc_participant_country";
+
+const participantCountryFilter =
+  document.getElementById(
+    "participant-country",
+  );
+
+const applyParticipantCountryButton =
+  document.getElementById(
+    "apply-participant-country",
+  );
+
+let selectedParticipantCountry =
+  localStorage.getItem(
+    PARTICIPANT_COUNTRY_STORAGE_KEY,
+  ) || "";
+
+let participantCountryDraft =
+  selectedParticipantCountry;
+
+function normalizeParticipantCountry(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase();
+}
+
+function getParticipantCountries(data) {
+  if (
+    Array.isArray(
+      data?.participant_countries,
+    )
+  ) {
+    return [...data.participant_countries]
+      .filter(Boolean)
+      .sort((a, b) =>
+        String(a).localeCompare(
+          String(b),
+          currentLanguage === "fr"
+            ? "fr"
+            : currentLanguage === "ar"
+              ? "ar"
+              : "en",
+        )
+      );
+  }
+
+  const derived =
+    activeOpportunities.flatMap(
+      (opportunity) =>
+        Array.isArray(
+          opportunity.eligible_countries,
+        )
+          ? opportunity.eligible_countries
+          : [],
+    );
+
+  return [
+    ...new Set(
+      derived
+        .map((country) =>
+          String(country).trim()
+        )
+        .filter(Boolean),
+    ),
+  ].sort((a, b) =>
+    String(a).localeCompare(
+      String(b),
+      currentLanguage === "fr"
+        ? "fr"
+        : currentLanguage === "ar"
+          ? "ar"
+          : "en",
+    )
+  );
+}
+
+function populateParticipantCountries(data) {
+  if (!participantCountryFilter) {
+    return;
+  }
+
+  const countries =
+    getParticipantCountries(data);
+
+  participantCountryFilter.innerHTML = "";
+
+  const placeholder =
+    document.createElement("option");
+
+  placeholder.value = "";
+  placeholder.textContent =
+    t("selectParticipantCountry");
+
+  participantCountryFilter.appendChild(
+    placeholder,
+  );
+
+  countries.forEach((country) => {
+    const option =
+      document.createElement("option");
+
+    option.value = country;
+    option.textContent = country;
+
+    participantCountryFilter.appendChild(
+      option,
+    );
+  });
+
+  const saved =
+    countries.find(
+      (country) =>
+        normalizeParticipantCountry(
+          country,
+        ) ===
+        normalizeParticipantCountry(
+          participantCountryDraft,
+        ),
+    );
+
+  participantCountryFilter.value =
+    saved || "";
+}
+
+function applyParticipantCountry() {
+  if (!participantCountryFilter) {
+    return;
+  }
+
+  selectedParticipantCountry =
+    participantCountryFilter.value;
+
+  participantCountryDraft =
+    selectedParticipantCountry;
+
+  if (selectedParticipantCountry) {
+    localStorage.setItem(
+      PARTICIPANT_COUNTRY_STORAGE_KEY,
+      selectedParticipantCountry,
+    );
+  } else {
+    localStorage.removeItem(
+      PARTICIPANT_COUNTRY_STORAGE_KEY,
+    );
+  }
+
+  renderActive();
+}
+
+if (participantCountryFilter) {
+  participantCountryFilter.addEventListener(
+    "change",
+    () => {
+      participantCountryDraft =
+        participantCountryFilter.value;
+    },
+  );
+}
+
+if (applyParticipantCountryButton) {
+  applyParticipantCountryButton.addEventListener(
+    "click",
+    applyParticipantCountry,
+  );
 }
 
 // ============================================================
@@ -1424,6 +1604,27 @@ function getFilteredActive() {
       return false;
     }
 
+    if (
+      selectedParticipantCountry &&
+      !(
+        Array.isArray(
+          opportunity.eligible_countries,
+        ) &&
+        opportunity.eligible_countries.some(
+          (country) =>
+            normalizeParticipantCountry(
+              country,
+            ) ===
+            normalizeParticipantCountry(
+              selectedParticipantCountry,
+            ),
+        )
+      )
+    ) {
+      return false;
+    }
+
+
     if (type && opportunity.activity_type !== type) {
       return false;
     }
@@ -1518,6 +1719,11 @@ function sortOpportunities(items) {
 
 function renderActive() {
   const filtered = sortOpportunities(getFilteredActive());
+
+  opportunityCount.textContent =
+    filtered.length === 1
+      ? `1 ${t("result")}`
+      : `${filtered.length} ${t("results")}`;
 
   activeResultCount.textContent =
     `${filtered.length} ` +
@@ -1836,6 +2042,8 @@ async function loadData() {
     }
 
     populateFilters();
+
+    populateParticipantCountries(currentActiveData);
 
     updateHeader(currentActiveData);
 
