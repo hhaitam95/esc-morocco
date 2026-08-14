@@ -640,8 +640,9 @@ function hoursFromNow(value) {
     return null;
   }
 
-  // Deadline is at the start of the day (00:00:00)
-  date.setHours(23, 59, 59, 999);
+  // Assume deadline is at 12:00 (noon) on the given date
+  // This is a reasonable default since we only have dates, not times
+  date.setHours(12, 0, 0, 0);
 
   const now = new Date();
 
