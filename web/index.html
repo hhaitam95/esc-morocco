@@ -1,538 +1,295 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>ESC Morocco Opportunities</title>
 
     <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+      name="description"
+      content="European Solidarity Corps volunteering opportunities accepting participants from Morocco."
+    />
 
-    <title>
-        ESC Morocco Opportunities
-    </title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-    <meta
-        name="description"
-        content="European Solidarity Corps volunteering opportunities accepting participants from Morocco."
-    >
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-</head>
-
-<body>
-
-<main class="container">
-
-    <!-- =====================================================
+  <body>
+    <main class="container">
+      <!-- =====================================================
          HEADER
     ====================================================== -->
 
-    <header class="header">
-
+      <header class="header">
         <div class="brand">
+          <div class="brand-icon">🇪🇺</div>
 
-            <div class="brand-icon">
-                🇪🇺
-            </div>
+          <div>
+            <h1 data-i18n="title">European Solidarity Corps</h1>
 
-            <div>
-
-                <h1 data-i18n="title">
-                    European Solidarity Corps
-                </h1>
-
-                <p
-                    class="subtitle"
-                    data-i18n="subtitle"
-                >
-                    Volunteering opportunities for applicants from Morocco
-                </p>
-
-            </div>
-
+            <p class="subtitle" data-i18n="subtitle">
+              Volunteering opportunities for applicants from Morocco
+            </p>
+          </div>
         </div>
-
 
         <!-- =================================================
              LANGUAGE SWITCHER
         ================================================== -->
 
         <div class="language-switcher">
+          <button
+            class="language-button active"
+            data-language="en"
+            type="button"
+            title="English"
+            aria-label="English"
+          >
+            <span class="language-flag">🇬🇧</span>
+            <span>EN</span>
+          </button>
 
-            <button
-                class="language-button active"
-                data-language="en"
-                type="button"
-                title="English"
-                aria-label="English"
-            >
-                <span class="language-flag">🇬🇧</span>
-                <span>EN</span>
-            </button>
+          <button
+            class="language-button"
+            data-language="fr"
+            type="button"
+            title="Français"
+            aria-label="Français"
+          >
+            <span class="language-flag">🇫🇷</span>
+            <span>FR</span>
+          </button>
 
-            <button
-                class="language-button"
-                data-language="fr"
-                type="button"
-                title="Français"
-                aria-label="Français"
-            >
-                <span class="language-flag">🇫🇷</span>
-                <span>FR</span>
-            </button>
-
-            <button
-                class="language-button"
-                data-language="ar"
-                type="button"
-                title="العربية"
-                aria-label="العربية"
-            >
-                <span class="language-flag">🇲🇦</span>
-                <span>AR</span>
-            </button>
-
+          <button
+            class="language-button"
+            data-language="ar"
+            type="button"
+            title="العربية"
+            aria-label="العربية"
+          >
+            <span class="language-flag">🇲🇦</span>
+            <span>AR</span>
+          </button>
         </div>
+      </header>
 
-    </header>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          STATUS
     ====================================================== -->
 
-    <section class="status-card">
-
+      <section class="status-card">
         <div class="status-item">
+          <span class="status-label" data-i18n="activeOpportunities">
+            Active opportunities
+          </span>
 
-            <span
-                class="status-label"
-                data-i18n="activeOpportunities"
-            >
-                Active opportunities
-            </span>
-
-            <strong
-                id="opportunity-count"
-                class="status-value"
-            >
-                —
-            </strong>
-
+          <strong id="opportunity-count" class="status-value"> — </strong>
         </div>
 
-
         <div class="status-item">
+          <span class="status-label" data-i18n="lastUpdated">
+            Last updated
+          </span>
 
-            <span
-                class="status-label"
-                data-i18n="lastUpdated"
-            >
-                Last updated
-            </span>
-
-            <strong
-                id="last-updated"
-                class="status-value"
-            >
-                —
-            </strong>
-
+          <strong id="last-updated" class="status-value"> — </strong>
         </div>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          INTRO
     ====================================================== -->
 
-    <section class="intro">
-
+      <section class="intro">
         <p data-i18n="intro">
-            These are active European Solidarity Corps volunteering
-            opportunities that accept participants from Morocco.
+          These are active European Solidarity Corps volunteering opportunities
+          that accept participants from Morocco.
         </p>
 
-        <p
-            class="intro-note"
-            data-i18n="introNote"
-        >
-            The list is automatically refreshed from the European Youth Portal.
+        <p class="intro-note" data-i18n="introNote">
+          The list is automatically refreshed from the European Youth Portal.
         </p>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          CONTROLS
     ====================================================== -->
 
-    <section class="controls">
-
+      <section class="controls">
         <div class="search-box">
+          <label for="search-input" data-i18n="search"> Search </label>
 
-            <label
-                for="search-input"
-                data-i18n="search"
-            >
-                Search
-            </label>
-
-            <input
-                id="search-input"
-                type="search"
-                placeholder="Search opportunities..."
-                data-i18n-placeholder="searchPlaceholder"
-            >
-
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Search opportunities..."
+            data-i18n-placeholder="searchPlaceholder"
+          />
         </div>
-
 
         <div class="filter-box">
+          <label for="country-filter" data-i18n="country"> Country </label>
 
-            <label
-                for="country-filter"
-                data-i18n="country"
-            >
-                Country
-            </label>
-
-            <select id="country-filter">
-
-                <option
-                    value=""
-                    data-i18n="allCountries"
-                >
-                    All countries
-                </option>
-
-            </select>
-
+          <select id="country-filter">
+            <option value="" data-i18n="allCountries">All countries</option>
+          </select>
         </div>
-
 
         <div class="filter-box">
+          <label for="type-filter" data-i18n="type"> Type </label>
 
-            <label
-                for="type-filter"
-                data-i18n="type"
-            >
-                Type
-            </label>
-
-            <select id="type-filter">
-
-                <option
-                    value=""
-                    data-i18n="allTypes"
-                >
-                    All types
-                </option>
-
-            </select>
-
+          <select id="type-filter">
+            <option value="" data-i18n="allTypes">All types</option>
+          </select>
         </div>
-
 
         <div class="sort-box">
+          <label for="sort-select" data-i18n="sortBy"> Sort by </label>
 
-            <label
-                for="sort-select"
-                data-i18n="sortBy"
-            >
-                Sort by
-            </label>
+          <select id="sort-select">
+            <option value="deadline" data-i18n="sortDeadline">
+              Application deadline
+            </option>
 
-            <select id="sort-select">
+            <option value="start" data-i18n="sortStart">
+              Activity start date
+            </option>
 
-                <option
-                    value="deadline"
-                    data-i18n="sortDeadline"
-                >
-                    Application deadline
-                </option>
-
-                <option
-                    value="start"
-                    data-i18n="sortStart"
-                >
-                    Activity start date
-                </option>
-
-                <option
-                    value="created"
-                    data-i18n="sortCreated"
-                >
-                    Recently added
-                </option>
-
-            </select>
-
+            <option value="created" data-i18n="sortCreated">
+              Recently added
+            </option>
+          </select>
         </div>
 
-
-        <button
-            id="refresh-button"
-            class="refresh-button"
-            type="button"
-        >
-            ↻
-            <span data-i18n="refresh">
-                Refresh
-            </span>
+        <button id="refresh-button" class="refresh-button" type="button">
+          ↻
+          <span data-i18n="refresh"> Refresh </span>
         </button>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          LOADING
     ====================================================== -->
 
-    <section
-        id="loading-message"
-        class="message"
-    >
+      <section id="loading-message" class="message">
+        <strong data-i18n="loading"> Loading opportunities... </strong>
+      </section>
 
-        <strong data-i18n="loading">
-            Loading opportunities...
-        </strong>
-
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          ERROR
     ====================================================== -->
 
-    <section
-        id="error-message"
-        class="message error-message hidden"
-    >
-
+      <section id="error-message" class="message error-message hidden">
         <strong data-i18n="errorTitle">
-            We couldn't load the opportunities.
+          We couldn't load the opportunities.
         </strong>
 
-        <p data-i18n="errorText">
-            Please try again later.
-        </p>
+        <p data-i18n="errorText">Please try again later.</p>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          ACTIVE OPPORTUNITIES
     ====================================================== -->
 
-    <section id="active-section">
-
+      <section id="active-section">
         <div class="section-header">
+          <div>
+            <h2 data-i18n="availableNow">Available now</h2>
 
-            <div>
-
-                <h2 data-i18n="availableNow">
-                    Available now
-                </h2>
-
-                <p
-                    id="active-result-count"
-                    class="section-count"
-                >
-                    —
-                </p>
-
-            </div>
-
+            <p id="active-result-count" class="section-count">—</p>
+          </div>
         </div>
 
+        <div id="opportunities" class="table-wrapper">
+          <table class="opportunity-table">
+            <thead>
+              <tr>
+                <th data-i18n="opportunity">Opportunity</th>
 
-        <div
-            id="opportunities"
-            class="table-wrapper"
-        >
+                <th data-i18n="location">Location</th>
 
-            <table class="opportunity-table">
+                <th data-i18n="activity">Activity</th>
 
-                <thead>
+                <th data-i18n="deadline">Deadline</th>
 
-                    <tr>
+                <th data-i18n="type">Type</th>
 
-                        <th data-i18n="opportunity">
-                            Opportunity
-                        </th>
+                <th class="apply-column"></th>
+              </tr>
+            </thead>
 
-                        <th data-i18n="location">
-                            Location
-                        </th>
-
-                        <th data-i18n="activity">
-                            Activity
-                        </th>
-
-                        <th data-i18n="deadline">
-                            Deadline
-                        </th>
-
-                        <th data-i18n="type">
-                            Type
-                        </th>
-
-                        <th class="apply-column">
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody id="opportunities-body">
-                </tbody>
-
-            </table>
-
+            <tbody id="opportunities-body"></tbody>
+          </table>
         </div>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          NO RESULTS
     ====================================================== -->
 
-    <section
-        id="empty-message"
-        class="message hidden"
-    >
+      <section id="empty-message" class="message hidden">
+        <strong data-i18n="noResultsTitle"> No opportunities found. </strong>
 
-        <strong data-i18n="noResultsTitle">
-            No opportunities found.
-        </strong>
+        <p data-i18n="noResultsText">Try changing your search or filters.</p>
+      </section>
 
-        <p data-i18n="noResultsText">
-            Try changing your search or filters.
-        </p>
-
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          RECENTLY EXPIRED
     ====================================================== -->
 
-    <section
-        id="expired-section"
-        class="expired-section hidden"
-    >
+      <section id="expired-section" class="expired-section hidden">
+        <button id="expired-toggle" class="expired-toggle" type="button">
+          <span>
+            <span data-i18n="recentlyExpired"> Recently expired </span>
 
-        <button
-            id="expired-toggle"
-            class="expired-toggle"
-            type="button"
-        >
+            <span id="expired-count" class="expired-count"> 0 </span>
+          </span>
 
-            <span>
-
-                <span data-i18n="recentlyExpired">
-                    Recently expired
-                </span>
-
-                <span
-                    id="expired-count"
-                    class="expired-count"
-                >
-                    0
-                </span>
-
-            </span>
-
-            <span
-                id="expired-arrow"
-                class="expired-arrow"
-            >
-                ▾
-            </span>
-
+          <span id="expired-arrow" class="expired-arrow"> ▾ </span>
         </button>
 
+        <div id="expired-content" class="table-wrapper expired-content hidden">
+          <table class="opportunity-table expired-table">
+            <thead>
+              <tr>
+                <th data-i18n="opportunity">Opportunity</th>
 
-        <div
-            id="expired-content"
-            class="table-wrapper expired-content hidden"
-        >
+                <th data-i18n="location">Location</th>
 
-            <table class="opportunity-table expired-table">
+                <th data-i18n="deadline">Deadline</th>
 
-                <thead>
+                <th data-i18n="expired">Expired</th>
+              </tr>
+            </thead>
 
-                    <tr>
-
-                        <th data-i18n="opportunity">
-                            Opportunity
-                        </th>
-
-                        <th data-i18n="location">
-                            Location
-                        </th>
-
-                        <th data-i18n="deadline">
-                            Deadline
-                        </th>
-
-                        <th data-i18n="expired">
-                            Expired
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody id="expired-body">
-                </tbody>
-
-            </table>
-
+            <tbody id="expired-body"></tbody>
+          </table>
         </div>
+      </section>
 
-    </section>
-
-
-    <!-- =====================================================
+      <!-- =====================================================
          FOOTER
     ====================================================== -->
 
-    <footer class="footer">
-
+      <footer class="footer">
         <p>
+          <span data-i18n="source"> Data sourced from </span>
 
-            <span data-i18n="source">
-                Data sourced from
-            </span>
-
-            <a
-                href="https://youth.europa.eu/go-abroad/volunteering/opportunities_en"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                European Youth Portal
-            </a>.
-
+          <a
+            href="https://youth.europa.eu/go-abroad/volunteering/opportunities_en"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            European Youth Portal </a
+          >.
         </p>
 
         <p data-i18n="footerNote">
-            Always check the official opportunity page before applying.
+          Always check the official opportunity page before applying.
         </p>
+      </footer>
+    </main>
 
-    </footer>
-
-</main>
-
-
-<script src="app.js?v=5"></script>
-
-</body>
+    <script src="app.js?v=6"></script>
+  </body>
 </html>
