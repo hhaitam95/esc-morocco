@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-14T18:51:52.984702",
+  "generated_at": "2026-08-14T18:55:59.735952",
   "source_date": "2026-08-14",
   "country": "Morocco",
-  "count": 27,
+  "count": 28,
   "opportunities": [
     {
       "id": 53463,
@@ -1038,6 +1038,57 @@
       "created": "2025-05-05T15:28:04",
       "image_url": "/sites/default/files/styles/medium/public/organisation-logos/logo_tou.play_.png?itok=u6rddsW7",
       "url": "https://youth.europa.eu/solidarity/opportunity/45866_en"
+    },
+    {
+      "id": 36109,
+      "title": "Join Our Team for Disadvantaged Children!",
+      "location": "Cevizlidere Mah. 1233 Sok. 5/4, Çankaya / Ankara, Türkiye",
+      "country": "TR",
+      "town": "Çankaya / Ankara",
+      "activity_type": "Individual volunteering",
+      "start_date": "2026-05-01",
+      "end_date": "2028-06-30",
+      "deadline": null,
+      "eligible_countries": [
+        "Albania",
+        "Armenia",
+        "Belarus",
+        "Bulgaria",
+        "Cyprus",
+        "Czechia",
+        "Estonia",
+        "Finland",
+        "France",
+        "Germany",
+        "Greece",
+        "Iceland",
+        "Ireland",
+        "Kosovo * UN resolution",
+        "Latvia",
+        "Liechtenstein",
+        "Lithuania",
+        "Malta",
+        "Morocco",
+        "Netherlands",
+        "North Macedonia",
+        "Poland",
+        "Portugal",
+        "Romania",
+        "Russia",
+        "Slovakia",
+        "Slovenia",
+        "Spain",
+        "Sweden"
+      ],
+      "topics": [
+        "Reception and integration of refugees and migrants",
+        "Education and training",
+        "Physical education and sport"
+      ],
+      "project_code": "2025-1-TR01-ESC51-VTJ-000346974",
+      "created": "2023-07-06T08:36:59",
+      "image_url": "/modules/custom/eyp_esc/images/esc-logo-en.png",
+      "url": "https://youth.europa.eu/solidarity/opportunity/36109_en"
     },
     {
       "id": 52433,
