@@ -6114,9 +6114,262 @@
       "status": "not_morocco",
       "result": null,
       "checked_at": "2026-08-14T18:39:32.382896"
+    },
+    "45969": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:39:44.330012"
+    },
+    "45877": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:39:50.768893"
+    },
+    "45866": {
+      "status": "match",
+      "result": {
+        "id": 45866,
+        "title": "GameCraft: Build, Belong, Become",
+        "location": "via Colonnello de Cristoforis, 8, Bari, Italy",
+        "country": "IT",
+        "town": "Bari",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-01",
+        "end_date": "2026-09-01",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Austria",
+          "Belgium",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Cyprus",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "Germany",
+          "Greece",
+          "Ireland",
+          "Latvia",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Montenegro",
+          "Morocco",
+          "North Macedonia",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Serbia",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "Sweden",
+          "Tunisia"
+        ],
+        "topics": [
+          "Citizenship and democratic participation",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "",
+        "created": "2025-05-05T15:28:04",
+        "image_url": "/sites/default/files/styles/medium/public/organisation-logos/logo_tou.play_.png?itok=u6rddsW7",
+        "url": "https://youth.europa.eu/solidarity/opportunity/45866_en"
+      },
+      "checked_at": "2026-08-14T18:39:55.946638"
+    },
+    "45844": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:02.081177"
+    },
+    "45785": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:07.891523"
+    },
+    "45768": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:13.708046"
+    },
+    "45696": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:20.268731"
+    },
+    "45585": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:26.084127"
+    },
+    "45582": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:31.947168"
+    },
+    "45578": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:37.878336"
+    },
+    "45540": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:43.684153"
+    },
+    "45422": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:49.671150"
+    },
+    "45209": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:40:55.746424"
+    },
+    "45161": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:01.532138"
+    },
+    "45156": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:07.652504"
+    },
+    "45120": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:12.759302"
+    },
+    "44964": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:17.862149"
+    },
+    "44930": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:22.966783"
+    },
+    "44928": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:29.180816"
+    },
+    "44927": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:34.280715"
+    },
+    "44907": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:40.089414"
+    },
+    "44882": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:46.113617"
+    },
+    "44861": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:52.194973"
+    },
+    "44841": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:41:59.174976"
+    },
+    "44830": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:05.058358"
+    },
+    "44690": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:10.160351"
+    },
+    "44687": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:15.261733"
+    },
+    "44677": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:20.363563"
+    },
+    "44621": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:25.478661"
+    },
+    "44600": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:30.581206"
+    },
+    "44592": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:35.689362"
+    },
+    "44558": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:40.791705"
+    },
+    "44557": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:45.894330"
+    },
+    "44516": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:50.995670"
+    },
+    "44379": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:42:56.101115"
+    },
+    "44358": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:43:01.976175"
+    },
+    "44310": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:43:07.773902"
+    },
+    "44248": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:43:14.148154"
+    },
+    "44181": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:43:19.249013"
+    },
+    "44113": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T18:43:24.353067"
     }
   },
-  "updated_at": "2026-08-14T18:39:32.404056",
+  "updated_at": "2026-08-14T18:43:24.374333",
   "history": {},
-  "last_scan_at": "2026-08-14T18:39:32.404052"
+  "last_scan_at": "2026-08-14T18:43:24.374329"
 }
