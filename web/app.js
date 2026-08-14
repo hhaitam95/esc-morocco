@@ -2568,3 +2568,462 @@ startCountdownRefresh();
         initHandlers();
     }
 })();
+
+
+// === ESC MULTI-COUNTRY ENGINE ===
+
+(function patchGlobalTranslations() {
+    const extra = {
+        en: { participantCountry: "Participant Country", selectParticipantCountry: "Select Participant Country", apply: "Apply" },
+        fr: { participantCountry: "Pays du participant", selectParticipantCountry: "Sélectionner le pays du participant", apply: "Appliquer" },
+        ar: { participantCountry: "بلد المشارك", selectParticipantCountry: "اختر بلد المشارك", apply: "تطبيق" }
+    };
+
+    const target = (typeof translations !== 'undefined') ? translations : ((typeof i18n !== 'undefined') ? i18n : null);
+    if (target) {
+        Object.keys(extra).forEach(lang => {
+            if (!target[lang]) target[lang] = {};
+            Object.assign(target[lang], extra[lang]);
+        });
+    }
+})();
+
+
+(function initEscMultiCountryEngine() {
+    const COUNTRIES_LIST = [
+  {
+    "code": "MA",
+    "name": "Morocco",
+    "flag": "🇲🇦"
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "flag": "🇩🇪"
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "flag": "🇫🇷"
+  },
+  {
+    "code": "ES",
+    "name": "Spain",
+    "flag": "🇪🇸"
+  },
+  {
+    "code": "IT",
+    "name": "Italy",
+    "flag": "🇮🇹"
+  },
+  {
+    "code": "TR",
+    "name": "Türkiye",
+    "flag": "🇹🇷"
+  },
+  {
+    "code": "EL",
+    "name": "Greece",
+    "flag": "🇬🇷"
+  },
+  {
+    "code": "PT",
+    "name": "Portugal",
+    "flag": "🇵🇹"
+  },
+  {
+    "code": "BE",
+    "name": "Belgium",
+    "flag": "🇧🇪"
+  },
+  {
+    "code": "NL",
+    "name": "Netherlands",
+    "flag": "🇳🇱"
+  },
+  {
+    "code": "PL",
+    "name": "Poland",
+    "flag": "🇵🇱"
+  },
+  {
+    "code": "RO",
+    "name": "Romania",
+    "flag": "🇷🇴"
+  },
+  {
+    "code": "CZ",
+    "name": "Czechia",
+    "flag": "🇨🇿"
+  },
+  {
+    "code": "HU",
+    "name": "Hungary",
+    "flag": "🇭🇺"
+  },
+  {
+    "code": "SE",
+    "name": "Sweden",
+    "flag": "🇸🇪"
+  },
+  {
+    "code": "AT",
+    "name": "Austria",
+    "flag": "🇦🇹"
+  },
+  {
+    "code": "BG",
+    "name": "Bulgaria",
+    "flag": "🇧🇬"
+  },
+  {
+    "code": "HR",
+    "name": "Croatia",
+    "flag": "🇭🇷"
+  },
+  {
+    "code": "CY",
+    "name": "Cyprus",
+    "flag": "🇨🇾"
+  },
+  {
+    "code": "DK",
+    "name": "Denmark",
+    "flag": "🇩🇰"
+  },
+  {
+    "code": "EE",
+    "name": "Estonia",
+    "flag": "🇪🇪"
+  },
+  {
+    "code": "FI",
+    "name": "Finland",
+    "flag": "🇫🇮"
+  },
+  {
+    "code": "IE",
+    "name": "Ireland",
+    "flag": "🇮🇪"
+  },
+  {
+    "code": "LV",
+    "name": "Latvia",
+    "flag": "🇱🇻"
+  },
+  {
+    "code": "LT",
+    "name": "Lithuania",
+    "flag": "🇱🇹"
+  },
+  {
+    "code": "LU",
+    "name": "Luxembourg",
+    "flag": "🇱🇺"
+  },
+  {
+    "code": "MT",
+    "name": "Malta",
+    "flag": "🇲🇹"
+  },
+  {
+    "code": "SK",
+    "name": "Slovakia",
+    "flag": "🇸🇰"
+  },
+  {
+    "code": "SI",
+    "name": "Slovenia",
+    "flag": "🇸🇮"
+  },
+  {
+    "code": "IS",
+    "name": "Iceland",
+    "flag": "🇮🇸"
+  },
+  {
+    "code": "LI",
+    "name": "Liechtenstein",
+    "flag": "🇱🇮"
+  },
+  {
+    "code": "NO",
+    "name": "Norway",
+    "flag": "🇳🇴"
+  },
+  {
+    "code": "MK",
+    "name": "North Macedonia",
+    "flag": "🇲🇰"
+  },
+  {
+    "code": "BA",
+    "name": "Bosnia and Herzegovina",
+    "flag": "🇧🇦"
+  },
+  {
+    "code": "XK",
+    "name": "Kosovo",
+    "flag": "🇽🇰"
+  },
+  {
+    "code": "AM",
+    "name": "Armenia",
+    "flag": "🇦🇲"
+  },
+  {
+    "code": "AZ",
+    "name": "Azerbaijan",
+    "flag": "🇦🇿"
+  },
+  {
+    "code": "GE",
+    "name": "Georgia",
+    "flag": "🇬🇪"
+  },
+  {
+    "code": "MD",
+    "name": "Moldova",
+    "flag": "🇲🇩"
+  },
+  {
+    "code": "UA",
+    "name": "Ukraine",
+    "flag": "🇺🇦"
+  },
+  {
+    "code": "DZ",
+    "name": "Algeria",
+    "flag": "🇩🇿"
+  },
+  {
+    "code": "EG",
+    "name": "Egypt",
+    "flag": "🇪🇬"
+  },
+  {
+    "code": "IL",
+    "name": "Israel",
+    "flag": "🇮🇱"
+  },
+  {
+    "code": "JO",
+    "name": "Jordan",
+    "flag": "🇯🇴"
+  },
+  {
+    "code": "LB",
+    "name": "Lebanon",
+    "flag": "🇱🇧"
+  },
+  {
+    "code": "LY",
+    "name": "Libya",
+    "flag": "🇱🇾"
+  },
+  {
+    "code": "PS",
+    "name": "Palestine",
+    "flag": "🇵🇸"
+  },
+  {
+    "code": "SY",
+    "name": "Syria",
+    "flag": "🇸🇾"
+  },
+  {
+    "code": "TN",
+    "name": "Tunisia",
+    "flag": "🇹🇳"
+  },
+  {
+    "code": "UK",
+    "name": "United Kingdom",
+    "flag": "🇬🇧"
+  },
+  {
+    "code": "AL",
+    "name": "Albania",
+    "flag": "🇦🇱"
+  },
+  {
+    "code": "RS",
+    "name": "Serbia",
+    "flag": "🇷🇸"
+  },
+  {
+    "code": "ME",
+    "name": "Montenegro",
+    "flag": "🇲🇪"
+  },
+  {
+    "code": "BY",
+    "name": "Belarus",
+    "flag": "🇧🇾"
+  },
+  {
+    "code": "RU",
+    "name": "Russia",
+    "flag": "🇷🇺"
+  }
+];
+
+    let currentCountryCode = localStorage.getItem('esc_participant_country') || 'MA';
+    let currentReqId = 0;
+
+    function getSelectedCountryInfo() {
+        const sel = document.getElementById('participant-country');
+        const code = (sel && sel.value) ? sel.value.toUpperCase() : currentCountryCode.toUpperCase();
+        const info = COUNTRIES_LIST.find(c => c.code === code) || { code: code, name: code, flag: '' };
+        return info;
+    }
+
+    function renderFallbackTable(items, countryInfo) {
+        const tableBody = document.querySelector('#opportunities-table tbody') ||
+                          document.querySelector('table tbody') ||
+                          document.querySelector('tbody');
+        if (!tableBody) return false;
+
+        if (!items || items.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">No active opportunities found for ${countryInfo.flag} ${countryInfo.name}.</td></tr>`;
+            return true;
+        }
+
+        const rows = items.map(item => {
+            const title = item.title || item.name || 'Untitled Opportunity';
+            const org = item.organization || item.organisation || item.host_organization || '';
+            const location = item.location || item.country || '';
+            const dates = item.dates || item.duration || (item.start_date ? `${item.start_date} - ${item.end_date || ''}` : '');
+            const link = item.link || item.url || '#';
+
+            return `<tr>
+                <td><strong><a href="${link}" target="_blank" rel="noopener">${title}</a></strong></td>
+                <td>${org}</td>
+                <td>${location}</td>
+                <td>${dates}</td>
+                <td><a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary" rel="noopener">View</a></td>
+            </tr>`;
+        }).join('');
+
+        tableBody.innerHTML = rows;
+        return true;
+    }
+
+    async function loadCountryOpportunities(code) {
+        const targetCode = (code || 'MA').toUpperCase();
+        const reqId = ++currentReqId;
+        const countryInfo = COUNTRIES_LIST.find(c => c.code === targetCode) || { code: targetCode, name: targetCode, flag: '' };
+
+        localStorage.setItem('esc_participant_country', targetCode);
+        currentCountryCode = targetCode;
+
+        const applyBtn = document.getElementById('apply-participant-country');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.classList.add('loading');
+        }
+
+        const tableBody = document.querySelector('#opportunities-table tbody') ||
+                          document.querySelector('table tbody') ||
+                          document.querySelector('tbody');
+        if (tableBody) {
+            tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">
+                Loading opportunities for ${countryInfo.flag} ${countryInfo.name}...
+            </td></tr>`;
+        }
+
+        try {
+            let data = null;
+            try {
+                const res = await fetch(`data/${targetCode.toLowerCase()}.json`);
+                if (res.ok) data = await res.json();
+            } catch (e) {}
+
+            if (!data) {
+                const res = await fetch('opportunities.json');
+                if (res.ok) {
+                    const full = await res.json();
+                    const list = Array.isArray(full) ? full : (full.opportunities || []);
+                    
+                    const filtered = list.filter(opp => {
+                        if (targetCode === 'MA' && !opp.eligible_countries) return true;
+                        if (!opp.eligible_countries) return true;
+                        if (Array.isArray(opp.eligible_countries)) {
+                            const upperList = opp.eligible_countries.map(c => String(c).toUpperCase());
+                            return upperList.includes(targetCode) ||
+                                   upperList.includes(countryInfo.name.toUpperCase()) ||
+                                   (targetCode === 'EL' && upperList.includes('GR')) ||
+                                   (targetCode === 'GR' && upperList.includes('EL'));
+                        }
+                        return true;
+                    });
+
+                    data = Array.isArray(full) ? filtered : { ...full, opportunities: filtered };
+                }
+            }
+
+            if (reqId !== currentReqId) return;
+
+            const finalItems = Array.isArray(data) ? data : (data ? (data.opportunities || []) : []);
+
+            let rendered = false;
+            const renderFuncs = ['renderOpportunitiesTable', 'renderOpportunities', 'renderTable', 'updateTable', 'displayOpportunities', 'renderData', 'render'];
+            for (const fnName of renderFuncs) {
+                if (typeof window[fnName] === 'function') {
+                    try {
+                        window[fnName](finalItems);
+                        rendered = true;
+                        break;
+                    } catch (err) {
+                        console.warn(`Error running ${fnName}:`, err);
+                    }
+                }
+            }
+
+            if (!rendered) {
+                renderFallbackTable(finalItems, countryInfo);
+            }
+
+            if (typeof updateTranslations === 'function') updateTranslations();
+            else if (typeof setLanguage === 'function') setLanguage();
+            else if (typeof applyTranslations === 'function') applyTranslations();
+
+        } catch (err) {
+            console.error('Error loading country data:', err);
+            if (reqId === currentReqId && tableBody) {
+                tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:red; padding:2rem;">Unable to load opportunities for ${countryInfo.name}.</td></tr>`;
+            }
+        } finally {
+            if (reqId === currentReqId && applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.classList.remove('loading');
+            }
+        }
+    }
+
+    function bindEvents() {
+        const sel = document.getElementById('participant-country');
+        if (sel) {
+            sel.value = currentCountryCode;
+            sel.onchange = function() {
+                const val = sel.value;
+                if (val) loadCountryOpportunities(val);
+            };
+        }
+
+        const applyBtn = document.getElementById('apply-participant-country');
+        if (applyBtn) {
+            applyBtn.onclick = function(e) {
+                e.preventDefault();
+                const info = getSelectedCountryInfo();
+                if (info.code) loadCountryOpportunities(info.code);
+            };
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindEvents);
+    } else {
+        bindEvents();
+    }
+})();
