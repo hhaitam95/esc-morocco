@@ -3678,9 +3678,356 @@
       "status": "not_morocco",
       "result": null,
       "checked_at": "2026-08-14T12:29:30.133491"
+    },
+    "51459": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:47:44.416927"
+    },
+    "51443": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:47:50.843076"
+    },
+    "51425": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:47:56.826646"
+    },
+    "51424": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:02.661686"
+    },
+    "51405": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:09.221392"
+    },
+    "51403": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:14.952646"
+    },
+    "51389": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:20.859348"
+    },
+    "51377": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:27.179593"
+    },
+    "51374": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:33.690925"
+    },
+    "51334": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:39.551857"
+    },
+    "51321": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:48.280094"
+    },
+    "51319": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:48:58.071273"
+    },
+    "51316": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:03.877767"
+    },
+    "51313": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:10.569343"
+    },
+    "51305": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:16.692314"
+    },
+    "51296": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:22.833699"
+    },
+    "51290": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:28.984250"
+    },
+    "51289": {
+      "status": "match",
+      "result": {
+        "id": 51289,
+        "title": "Volunteering Teams Project in Mugla, Türkiye (1 July - 29 August 2026)",
+        "location": "Emirbeyazit Mah. Ozer Turk Cad. No: 3/Z04 Mentese, Mugla, Türkiye",
+        "country": "TR",
+        "town": "Mugla",
+        "activity_type": "Volunteering teams",
+        "start_date": "2026-07-01",
+        "end_date": "2026-08-29",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Armenia",
+          "Austria",
+          "Azerbaijan",
+          "Belgium",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Czechia",
+          "Denmark",
+          "Estonia",
+          "Finland",
+          "France",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Hungary",
+          "Iceland",
+          "Ireland",
+          "Italy",
+          "Kosovo * UN resolution",
+          "Latvia",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "North Macedonia",
+          "Norway",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Serbia",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "Sweden",
+          "Tunisia",
+          "Ukraine"
+        ],
+        "topics": [
+          "Environment and natural protection",
+          "Creativity and culture",
+          "Physical education and sport"
+        ],
+        "project_code": "2025-1-TR01-ESC51-VTJ-000346364",
+        "created": "2026-04-21T17:24:00",
+        "url": "https://youth.europa.eu/solidarity/opportunity/51289_en"
+      },
+      "checked_at": "2026-08-14T12:49:34.845811"
+    },
+    "51282": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:42.356921"
+    },
+    "51278": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:48.385540"
+    },
+    "51277": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:49:57.239687"
+    },
+    "51262": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:03.336780"
+    },
+    "51251": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:11.200658"
+    },
+    "51247": {
+      "status": "match",
+      "result": {
+        "id": 51247,
+        "title": "Youth Education",
+        "location": "Don-Bosco-Str. 1, Benediktbeuern, Germany",
+        "country": "DE",
+        "town": "Benediktbeuern",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-08-24",
+        "end_date": "2027-08-24",
+        "deadline": null,
+        "eligible_countries": [
+          "Albania",
+          "Algeria",
+          "Armenia",
+          "Aruba",
+          "Austria",
+          "Azerbaijan",
+          "Belarus",
+          "Belgium",
+          "Bonaire Sint Eustatius and Saba",
+          "Bosnia and Herzegovina",
+          "Bulgaria",
+          "Croatia",
+          "Curaçao",
+          "Cyprus",
+          "Czechia",
+          "Denmark",
+          "Egypt",
+          "Estonia",
+          "Finland",
+          "France",
+          "French Polynesia",
+          "French Southern and Antarctic Territories",
+          "Georgia",
+          "Germany",
+          "Greece",
+          "Greenland",
+          "Hungary",
+          "Iceland",
+          "Ireland",
+          "Israel",
+          "Italy",
+          "Jordan",
+          "Kosovo * UN resolution",
+          "Latvia",
+          "Lebanon",
+          "Libya",
+          "Liechtenstein",
+          "Lithuania",
+          "Luxembourg",
+          "Malta",
+          "Moldova",
+          "Montenegro",
+          "Morocco",
+          "Netherlands",
+          "New Caledonia",
+          "North Macedonia",
+          "Norway",
+          "Palestine",
+          "Poland",
+          "Portugal",
+          "Romania",
+          "Russia",
+          "Saint Barthélemy",
+          "Serbia",
+          "Sint Maarten (dutch part)",
+          "Slovakia",
+          "Slovenia",
+          "Spain",
+          "St Pierre and Miquelon",
+          "Sweden",
+          "Syria",
+          "Tunisia",
+          "Türkiye",
+          "Ukraine",
+          "Wallis and Futuna"
+        ],
+        "topics": [
+          "Citizenship and democratic participation",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2026-1-DE04-ESC51-VTJ-000403745",
+        "created": "2026-04-20T14:14:19",
+        "url": "https://youth.europa.eu/solidarity/opportunity/51247_en"
+      },
+      "checked_at": "2026-08-14T12:50:17.621294"
+    },
+    "51228": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:23.870062"
+    },
+    "51226": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:29.928325"
+    },
+    "51230": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:39.608677"
+    },
+    "51221": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:45.517401"
+    },
+    "51203": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:51.398922"
+    },
+    "51189": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:50:57.218408"
+    },
+    "51182": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:03.133479"
+    },
+    "51178": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:09.100201"
+    },
+    "51177": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:15.161565"
+    },
+    "51174": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:21.848534"
+    },
+    "51169": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:27.834484"
+    },
+    "51166": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:34.088028"
+    },
+    "51140": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:39.864686"
+    },
+    "51135": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:45.791847"
+    },
+    "51134": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:51.647015"
+    },
+    "51125": {
+      "status": "not_morocco",
+      "result": null,
+      "checked_at": "2026-08-14T12:51:57.559516"
     }
   },
-  "updated_at": "2026-08-14T12:29:30.155702",
+  "updated_at": "2026-08-14T12:51:57.580174",
   "history": {},
-  "last_scan_at": "2026-08-14T12:29:30.155698"
+  "last_scan_at": "2026-08-14T12:51:57.580170"
 }
