@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import re
 import sys
@@ -5,80 +7,140 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import pycountry
 import requests
 from bs4 import BeautifulSoup
-import pycountry
 
 
-# ============================================================
-# COUNTRY NORMALIZATION
-# ============================================================
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 
-CHECKPOINT_SCHEMA_VERSION = 3
-OUTPUT_SCHEMA_VERSION = 3
+BASE_URL = "https://youth.europa.eu"
+API_URL = f"{BASE_URL}/api/rest/eyp/v1/search_en"
 
+# Phase 1 public country.
+DEFAULT_PARTICIPANT_COUNTRY = "MA"
+
+# Data schemas.
+CHECKPOINT_SCHEMA_VERSION = 4
+OUTPUT_SCHEMA_VERSION = 4
+
+# Active detail pages are rechecked at most once per day.
 DETAIL_RECHECK_INTERVAL = 24 * 60 * 60
 
-DEFAULT_PARTICIPANT_COUNTRY = "MA"
+# API.
+API_PAGE_SIZE = 100
+
+# Detail scanning.
+BATCH_SIZE = 40
+DETAIL_REQUEST_DELAY = 5.0
+DETAIL_SCAN_COOLDOWN = 10.0
+
+# HTTP.
+REQUEST_TIMEOUT = 20
+MAX_RETRIES = 3
+MAX_RATE_LIMIT_WAIT = 120
+
+# Archive.
+MAX_ARCHIVED_OPPORTUNITIES = 30
+
+
+# ============================================================================
+# PATHS
+# ============================================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+DATA_DIR = PROJECT_ROOT / "data"
+
+CHECKPOINT_FILE = DATA_DIR / "checkpoint.json"
+OPPORTUNITIES_FILE = DATA_DIR / "opportunities.json"
+EXPIRED_FILE = DATA_DIR / "expired.json"
+
+DATA_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+
+# ============================================================================
+# DATES
+# ============================================================================
+
+TODAY = datetime.now().replace(
+    hour=0,
+    minute=0,
+    second=0,
+    microsecond=0,
+)
+
+TODAY_API = TODAY.strftime(
+    "%Y-%m-%dT00:00:00"
+)
+
+
+# ============================================================================
+# HTTP
+# ============================================================================
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/151.0.0.0 Safari/537.36"
+    ),
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+# ============================================================================
+# COUNTRY NORMALIZATION
+# ============================================================================
 
 COUNTRY_NAME_ALIASES = {
     "el": "GR",
     "greece": "GR",
     "uk": "GB",
     "united kingdom": "GB",
-
     "turkey": "TR",
     "türkiye": "TR",
-
     "czech republic": "CZ",
     "czechia": "CZ",
-
     "north macedonia": "MK",
     "the former yugoslav republic of macedonia": "MK",
     "macedonia": "MK",
-
     "republic of moldova": "MD",
     "moldova": "MD",
-
     "kosovo": "XK",
     "kosovo * un resolution": "XK",
-
     "bonaire, sint eustatius and saba": "BQ",
     "caribbean netherlands": "BQ",
-
     "curacao": "CW",
     "curaçao": "CW",
-
     "sint maarten": "SX",
     "sint maarten (dutch part)": "SX",
-
     "bolivia": "BO",
     "bolivia, plurinational state of": "BO",
-
     "brunei": "BN",
     "brunei darussalam": "BN",
-
     "iran": "IR",
     "iran, islamic republic of": "IR",
-
     "laos": "LA",
     "lao people's democratic republic": "LA",
-
     "russia": "RU",
     "russian federation": "RU",
-
     "syria": "SY",
     "syrian arab republic": "SY",
-
     "vietnam": "VN",
     "viet nam": "VN",
-
     "venezuela": "VE",
     "venezuela, bolivarian republic of": "VE",
-
     "palestine": "PS",
     "palestine, state of": "PS",
 }
+
 
 COUNTRY_DISPLAY_OVERRIDES = {
     "TR": "Türkiye",
@@ -92,41 +154,31 @@ COUNTRY_DISPLAY_OVERRIDES = {
 }
 
 
-def normalize_country_text(
-    value: str | None,
-) -> str:
+def normalize_country_text(value):
     if not value:
         return ""
 
     return re.sub(
         r"\s+",
         " ",
-        value.strip(),
+        str(value).strip(),
     ).casefold()
 
 
-def country_code_from_name(
-    value: str | None,
-) -> str | None:
+def country_code_from_name(value):
     if not value:
         return None
-
-    import pycountry
 
     raw = re.sub(
         r"\s+",
         " ",
-        value.strip(),
+        str(value).strip(),
     )
 
-    normalized = normalize_country_text(
-        raw
-    )
+    normalized = normalize_country_text(raw)
 
     if normalized in COUNTRY_NAME_ALIASES:
-        return COUNTRY_NAME_ALIASES[
-            normalized
-        ]
+        return COUNTRY_NAME_ALIASES[normalized]
 
     if len(raw) == 2 and raw.isalpha():
         code = raw.upper()
@@ -172,9 +224,7 @@ def country_code_from_name(
     ):
         try:
             record = pycountry.countries.get(
-                **{
-                    field: cleaned,
-                }
+                **{field: cleaned}
             )
 
             if record:
@@ -195,12 +245,8 @@ def country_code_from_name(
     return None
 
 
-def country_display_name(
-    code: str,
-) -> str:
-    import pycountry
-
-    normalized = code.upper()
+def country_display_name(code):
+    normalized = str(code).upper()
 
     if normalized in COUNTRY_DISPLAY_OVERRIDES:
         return COUNTRY_DISPLAY_OVERRIDES[
@@ -227,30 +273,20 @@ def country_display_name(
     return normalized
 
 
-def normalize_eligible_country_codes(
-    values: list[str] | None,
-) -> tuple[list[str], list[str]]:
+def normalize_eligible_country_codes(values):
     codes = set()
     unmapped = set()
 
     for raw in values or []:
-        code = country_code_from_name(
-            raw
-        )
+        code = country_code_from_name(raw)
 
         if code:
-            codes.add(
-                code.upper()
-            )
+            codes.add(code.upper())
         else:
-            text = str(
-                raw
-            ).strip()
+            text = str(raw).strip()
 
             if text:
-                unmapped.add(
-                    text
-                )
+                unmapped.add(text)
 
     return (
         sorted(codes),
@@ -258,30 +294,23 @@ def normalize_eligible_country_codes(
     )
 
 
-def normalize_result_country_schema(
-    result: dict,
-) -> dict:
+def normalize_result_country_schema(result):
     raw_values = result.get(
         "eligible_countries",
         [],
     )
 
-    if isinstance(
-        raw_values,
-        list,
-    ):
-        eligible_codes, unmapped = (
+    if isinstance(raw_values, list):
+        codes, unmapped = (
             normalize_eligible_country_codes(
                 raw_values
             )
         )
     else:
-        eligible_codes = []
+        codes = []
         unmapped = []
 
-    result[
-        "eligible_countries"
-    ] = eligible_codes
+    result["eligible_countries"] = codes
 
     if unmapped:
         result[
@@ -293,197 +322,32 @@ def normalize_result_country_schema(
             None,
         )
 
-    result[
-        "eligibility_known"
-    ] = bool(
-        eligible_codes
-        or raw_values == []
+    # An empty list is valid only when the source explicitly gave
+    # us an empty participant-country list.
+    result["eligibility_known"] = bool(
+        codes or raw_values == []
     )
 
     return result
 
 
-def build_participant_country_registry(
-    opportunities: list[dict],
-) -> list[dict]:
-    codes = set()
-
-    for opportunity in opportunities:
-        for code in opportunity.get(
-            "eligible_countries",
-            [],
-        ):
-            if (
-                isinstance(
-                    code,
-                    str,
-                )
-                and len(code) == 2
-            ):
-                codes.add(
-                    code.upper()
-                )
-
-    return [
-        {
-            "code": code,
-            "name": country_display_name(
-                code
-            ),
-        }
-        for code in sorted(
-            codes
-        )
-    ]
-
-
-def checkpoint_migration_complete(
-    checkpoint: dict,
-    current_ids: set[str],
-) -> bool:
-    processed = checkpoint.get(
-        "processed",
-        {},
-    )
-
-    if not current_ids:
-        return False
-
-    completed_statuses = {
-        "scanned",
-        "match",
-        "expired_deadline",
-        "activity_finished",
-        "not_found",
-    }
-
-    return all(
-        processed.get(
-            opid,
-            {},
-        ).get(
-            "status"
-        )
-        in completed_statuses
-        for opid in current_ids
-    )
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-BASE_URL = "https://youth.europa.eu"
-API_URL = f"{BASE_URL}/api/rest/eyp/v1/search_en"
-
-CHECKPOINT_SCHEMA_VERSION = 2
-
-# Recheck active opportunities at most once per day. This keeps the hourly workflow lightweight while still detecting participant-eligibility changes.
-DETAIL_RECHECK_INTERVAL = 24 * 60 * 60
-
-
-# ------------------------------------------------------------
-# API
-# ------------------------------------------------------------
-
-API_PAGE_SIZE = 100
-
-# ------------------------------------------------------------
-# Detail-page scanning
-# ------------------------------------------------------------
-
-# Number of detail pages processed by ONE scraper invocation.
-#
-# Your GitHub workflow currently runs several invocations per
-# workflow. Keeping this small makes each individual batch safe.
-BATCH_SIZE = 40
-
-# Delay between detail-page requests.
-DETAIL_REQUEST_DELAY = 5.0
-
-# Cooldown before starting the detail scan.
-DETAIL_SCAN_COOLDOWN = 10.0
-
-# Hard timeout for individual HTTP requests.
-REQUEST_TIMEOUT = 20
-
-# Maximum retries for temporary failures.
-MAX_RETRIES = 3
-
-# Maximum number of seconds to respect for Retry-After.
-MAX_RATE_LIMIT_WAIT = 120
-
-# Number of archived opportunities kept in expired.json.
-MAX_ARCHIVED_OPPORTUNITIES = 30
-
-
-# ============================================================
-# PATHS
-# ============================================================
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-DATA_DIR = PROJECT_ROOT / "data"
-
-CHECKPOINT_FILE = DATA_DIR / "checkpoint.json"
-OPPORTUNITIES_FILE = DATA_DIR / "opportunities.json"
-EXPIRED_FILE = DATA_DIR / "expired.json"
-
-DATA_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
-
-
-# ============================================================
-# DATES
-# ============================================================
-
-TODAY = datetime.now().replace(
-    hour=0,
-    minute=0,
-    second=0,
-    microsecond=0,
-)
-
-TODAY_API = TODAY.strftime("%Y-%m-%dT00:00:00")
-
-
-# ============================================================
-# HTTP HEADERS
-# ============================================================
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/151.0.0.0 Safari/537.36"
-    ),
-    "Accept": "*/*",
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-
-# ============================================================
+# ============================================================================
 # API PARAMETERS
-# ============================================================
+# ============================================================================
 
 
-def build_api_params(offset: int) -> dict:
-    """
-    Build the same search query used by the European Youth Portal.
-    """
-
+def build_api_params(offset):
     return {
         "type": "Opportunity",
         "size": API_PAGE_SIZE,
         "from": offset,
-        # Open opportunities.
+
         "filters[status]": "open",
-        # Activity has not ended.
+
         "filters[date_end][operator]": ">=",
         "filters[date_end][value]": TODAY_API,
         "filters[date_end][type]": "must",
-        # Funding programmes used by the portal.
+
         "filters[funding_programme][id][0]": 5,
         "filters[funding_programme][id][1]": 4,
         "filters[funding_programme][id][2]": 3,
@@ -492,16 +356,16 @@ def build_api_params(offset: int) -> dict:
         "filters[funding_programme][id][5]": 8,
         "filters[funding_programme][id][6]": 6,
         "filters[funding_programme][id][7]": 7,
-        # Application deadline is still valid.
+
         "filters[date_application_end][operator]": ">=",
         "filters[date_application_end][value]": TODAY_API,
         "filters[date_application_end][type]": "must",
         "filters[date_application_end][group]": "deadline",
-        # Include opportunities without a deadline.
+
         "filters[has_no_deadline][value]": "true",
         "filters[has_no_deadline][type]": "must",
         "filters[has_no_deadline][group]": "deadline",
-        # Fields.
+
         "fields[0]": "opid",
         "fields[1]": "title",
         "fields[2]": "town",
@@ -513,86 +377,112 @@ def build_api_params(offset: int) -> dict:
         "fields[8]": "duration",
         "fields[9]": "created",
         "fields[10]": "is_esc_related",
-        # Newest first.
+
         "sort[created]": "desc",
     }
 
 
-# ============================================================
+# ============================================================================
 # GENERIC HELPERS
-# ============================================================
+# ============================================================================
 
 
-def now_iso() -> str:
+def now_iso():
     return datetime.now().isoformat()
 
 
-def atomic_write_json(
-    path: Path,
-    data: dict,
-) -> None:
-    """
-    Write JSON atomically so an interrupted write does not leave
-    a half-written file.
-    """
+def atomic_write_json(path, data):
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    temporary = path.with_suffix(".tmp")
+    temporary = path.with_suffix(
+        path.suffix + ".tmp"
+    )
 
-    with temporary.open(
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(
+    temporary.write_text(
+        json.dumps(
             data,
-            file,
             ensure_ascii=False,
             indent=2,
         )
+        + "\n",
+        encoding="utf-8",
+    )
 
     temporary.replace(path)
 
 
-def parse_iso_datetime(
-    value: str | None,
-) -> datetime | None:
-
+def parse_iso_datetime(value):
     if not value:
         return None
 
     try:
-        return datetime.fromisoformat(value)
+        return datetime.fromisoformat(
+            str(value).replace(
+                "Z",
+                "+00:00",
+            )
+        )
     except ValueError:
         return None
 
 
-# ============================================================
+def parse_date_values(text):
+    if not text:
+        return []
+
+    values = re.findall(
+        r"\d{2}/\d{2}/\d{4}",
+        text,
+    )
+
+    dates = []
+
+    for value in values:
+        try:
+            dates.append(
+                datetime.strptime(
+                    value,
+                    "%d/%m/%Y",
+                )
+            )
+        except ValueError:
+            pass
+
+    return dates
+
+
+# ============================================================================
 # CHECKPOINT
-# ============================================================
+# ============================================================================
 
 
+def default_checkpoint():
+    return {
+        "schema_version": CHECKPOINT_SCHEMA_VERSION,
+        "processed": {},
+        "history": {},
+        "last_scan_at": None,
+        "updated_at": None,
+    }
 
-def load_checkpoint() -> dict:
+
+def load_checkpoint():
     if not CHECKPOINT_FILE.exists():
-        return {
-            "schema_version": CHECKPOINT_SCHEMA_VERSION,
-            "processed": {},
-            "history": {},
-            "last_scan_at": None,
-        }
+        return default_checkpoint()
 
     try:
-        with CHECKPOINT_FILE.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-            data = json.load(file)
+        data = json.loads(
+            CHECKPOINT_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
 
-        if not isinstance(
-            data,
-            dict,
-        ):
+        if not isinstance(data, dict):
             raise ValueError(
-                "Checkpoint must contain a JSON object."
+                "Checkpoint must be a JSON object."
             )
 
         data.setdefault(
@@ -610,22 +500,23 @@ def load_checkpoint() -> dict:
             None,
         )
 
-        for entry in data["processed"].values():
-            result = entry.get(
-                "result"
-            )
+        data.setdefault(
+            "updated_at",
+            None,
+        )
 
-            if result:
+        for entry in data["processed"].values():
+            if not isinstance(entry, dict):
+                continue
+
+            result = entry.get("result")
+
+            if isinstance(result, dict):
                 entry["result"] = (
                     normalize_result_country_schema(
                         result
                     )
                 )
-
-                if entry.get(
-                    "status"
-                ) == "match":
-                    entry["status"] = "scanned"
 
         data[
             "schema_version"
@@ -638,24 +529,24 @@ def load_checkpoint() -> dict:
         json.JSONDecodeError,
         ValueError,
     ) as exc:
+
         print(
-            f"Checkpoint could not be read: {exc}",
+            f"Checkpoint could not be read safely: {exc}",
             flush=True,
         )
 
-        return {
-            "schema_version": CHECKPOINT_SCHEMA_VERSION,
-            "processed": {},
-            "history": {},
-            "last_scan_at": None,
-        }
+        print(
+            "Starting with an empty checkpoint.",
+            flush=True,
+        )
+
+        return default_checkpoint()
 
 
-
-
-def save_checkpoint(
-    checkpoint: dict,
-) -> None:
+def save_checkpoint(checkpoint):
+    checkpoint["schema_version"] = (
+        CHECKPOINT_SCHEMA_VERSION
+    )
 
     checkpoint["last_scan_at"] = now_iso()
     checkpoint["updated_at"] = now_iso()
@@ -666,25 +557,18 @@ def save_checkpoint(
     )
 
 
-# ============================================================
+# ============================================================================
 # API FETCHING
-# ============================================================
+# ============================================================================
 
 
-def get_retry_after_seconds(
-    response: requests.Response,
-) -> int:
-    """
-    Respect Retry-After when the server provides it.
-    Otherwise use a conservative default.
-    """
-
-    value = response.headers.get("Retry-After")
+def get_retry_after_seconds(response):
+    value = response.headers.get(
+        "Retry-After"
+    )
 
     if value:
-
         try:
-
             seconds = int(float(value))
 
             return max(
@@ -694,29 +578,23 @@ def get_retry_after_seconds(
                     MAX_RATE_LIMIT_WAIT,
                 ),
             )
-
         except ValueError:
             pass
 
     return 30
 
 
-def fetch_api_page(
-    session: requests.Session,
-    offset: int,
-) -> dict | None:
-
+def fetch_api_page(session, offset):
     params = build_api_params(offset)
 
     for attempt in range(
         1,
         MAX_RETRIES + 1,
     ):
-
         try:
-
             print(
-                f"API request: " f"from={offset}, " f"size={API_PAGE_SIZE}",
+                f"API request: from={offset}, "
+                f"size={API_PAGE_SIZE}",
                 flush=True,
             )
 
@@ -728,32 +606,40 @@ def fetch_api_page(
             )
 
             if response.status_code == 200:
+                try:
+                    return response.json()
+                except ValueError as exc:
+                    print(
+                        f"Invalid API JSON: {exc}",
+                        flush=True,
+                    )
 
-                return response.json()
+                    if attempt < MAX_RETRIES:
+                        time.sleep(2**attempt)
+                        continue
+
+                    return None
 
             if response.status_code == 429:
-
-                wait = get_retry_after_seconds(response)
+                wait = get_retry_after_seconds(
+                    response
+                )
 
                 print(
                     f"API HTTP 429. "
-                    f"Waiting {wait}s before retry "
+                    f"Waiting {wait}s "
                     f"({attempt}/{MAX_RETRIES})...",
                     flush=True,
                 )
 
                 if attempt >= MAX_RETRIES:
-
                     return None
 
                 time.sleep(wait)
-
                 continue
 
             if response.status_code >= 500:
-
                 if attempt < MAX_RETRIES:
-
                     wait = 2**attempt
 
                     print(
@@ -764,39 +650,35 @@ def fetch_api_page(
                     )
 
                     time.sleep(wait)
-
                     continue
 
                 return None
 
             print(
-                f"API error: " f"HTTP {response.status_code}",
+                f"API error: HTTP "
+                f"{response.status_code}",
                 flush=True,
             )
 
             return None
 
         except requests.Timeout:
-
             if attempt < MAX_RETRIES:
-
                 wait = 2**attempt
 
                 print(
-                    f"API timeout. " f"Retrying in {wait}s...",
+                    f"API timeout. "
+                    f"Retrying in {wait}s...",
                     flush=True,
                 )
 
                 time.sleep(wait)
-
                 continue
 
             return None
 
         except requests.RequestException as exc:
-
             if attempt < MAX_RETRIES:
-
                 wait = 2**attempt
 
                 print(
@@ -810,7 +692,6 @@ def fetch_api_page(
                 )
 
                 time.sleep(wait)
-
                 continue
 
             print(
@@ -823,10 +704,9 @@ def fetch_api_page(
     return None
 
 
-def fetch_current_opportunities() -> list[dict]:
-
+def fetch_current_opportunities():
     print("=" * 70)
-    print("FETCHING CURRENT OPPORTUNITIES")
+    print("FETCHING CURRENT ESC OPPORTUNITIES")
     print("=" * 70)
 
     session = requests.Session()
@@ -837,18 +717,16 @@ def fetch_current_opportunities() -> list[dict]:
     total = None
 
     try:
-
         while True:
-
             data = fetch_api_page(
                 session,
                 offset,
             )
 
             if data is None:
-
                 raise RuntimeError(
-                    "Could not retrieve " "the current opportunity list."
+                    "Could not retrieve the current "
+                    "opportunity list."
                 )
 
             hits = data.get(
@@ -862,20 +740,24 @@ def fetch_current_opportunities() -> list[dict]:
             )
 
             if total is None:
-
                 if isinstance(
                     total_info,
                     dict,
                 ):
-                    total = total_info.get(
-                        "value",
-                        0,
+                    total = int(
+                        total_info.get(
+                            "value",
+                            0,
+                        )
+                        or 0
                     )
                 else:
-                    total = int(total_info or 0)
+                    total = int(
+                        total_info or 0
+                    )
 
                 print(
-                    f"API reports " f"{total} opportunities.",
+                    f"API reports {total} opportunities.",
                     flush=True,
                 )
 
@@ -888,68 +770,85 @@ def fetch_current_opportunities() -> list[dict]:
                 break
 
             for hit in page_hits:
-
                 source = hit.get(
                     "_source",
                     {},
                 )
 
-                opid = source.get("opid")
+                opid = source.get(
+                    "opid"
+                )
 
                 if opid is None:
-                    opid = hit.get("_id")
+                    opid = hit.get(
+                        "_id"
+                    )
 
                 if opid is None:
                     continue
 
-                source["opid"] = int(opid)
+                try:
+                    source["opid"] = int(opid)
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    continue
 
-                opportunities.append(source)
+                opportunities.append(
+                    source
+                )
 
             offset += len(page_hits)
 
             print(
-                f"Retrieved " f"{len(opportunities)}/" f"{total}",
+                f"Retrieved "
+                f"{len(opportunities)}/{total}",
                 flush=True,
             )
 
-            if total is not None and offset >= total:
+            if (
+                total is not None
+                and offset >= total
+            ):
                 break
 
             if len(page_hits) < API_PAGE_SIZE:
                 break
 
     finally:
-
         session.close()
 
-    if total is not None and len(opportunities) != total:
-
-        raise RuntimeError("Incomplete API retrieval: " f"{len(opportunities)}/{total}")
+    if (
+        total is not None
+        and len(opportunities) != total
+    ):
+        raise RuntimeError(
+            "Incomplete API retrieval: "
+            f"{len(opportunities)}/{total}"
+        )
 
     return opportunities
 
 
-# ============================================================
-# DETAIL PAGE HELPERS
-# ============================================================
+# ============================================================================
+# DETAIL PAGE PARSING
+# ============================================================================
 
 
-def find_detail_card(
-    soup: BeautifulSoup,
-):
-
+def find_detail_card(soup):
     for card in soup.find_all(
         "div",
         class_="card-content",
     ):
-
         headings = [
             heading.get_text(
                 " ",
                 strip=True,
             ).lower()
-            for heading in card.find_all("h6")
+            for heading in card.find_all(
+                "h6"
+            )
         ]
 
         if "activity dates" in headings:
@@ -958,26 +857,25 @@ def find_detail_card(
     return None
 
 
-def get_section(
-    card,
-    heading_name: str,
-) -> str | None:
-
+def get_section(card, heading_name):
     if card is None:
         return None
 
-    for heading in card.find_all("h6"):
-
+    for heading in card.find_all(
+        "h6"
+    ):
         current = heading.get_text(
             " ",
             strip=True,
         )
 
-        if current.lower() != heading_name.lower():
+        if (
+            current.lower()
+            != heading_name.lower()
+        ):
             continue
 
         for sibling in heading.next_siblings:
-
             if (
                 getattr(
                     sibling,
@@ -986,7 +884,6 @@ def get_section(
                 )
                 == "p"
             ):
-
                 return sibling.get_text(
                     " ",
                     strip=True,
@@ -1000,21 +897,18 @@ def get_section(
                 )
                 == "h6"
             ):
-
                 break
 
     return None
 
 
-def get_topics(
-    card,
-) -> list[str]:
-
+def get_topics(card):
     if card is None:
         return []
 
-    for heading in card.find_all("h6"):
-
+    for heading in card.find_all(
+        "h6"
+    ):
         if (
             heading.get_text(
                 " ",
@@ -1027,7 +921,6 @@ def get_topics(
         topics = []
 
         for sibling in heading.next_siblings:
-
             if (
                 getattr(
                     sibling,
@@ -1036,7 +929,6 @@ def get_topics(
                 )
                 == "h6"
             ):
-
                 break
 
             if (
@@ -1047,7 +939,6 @@ def get_topics(
                 )
                 == "p"
             ):
-
                 text = sibling.get_text(
                     " ",
                     strip=True,
@@ -1061,21 +952,7 @@ def get_topics(
     return []
 
 
-def get_image_url(
-    soup: BeautifulSoup,
-) -> str | None:
-    """Extract the association logo from the organisation card."""
-
-    if soup is None:
-        return None
-
-    # The European Youth Portal places the association logo in:
-    #
-    #   <img class="org-logo responsive-img" ...>
-    #
-    # This is much more reliable than searching arbitrary images for
-    # the word "opportunity".
-
+def get_image_url(soup):
     logo = soup.find(
         "img",
         class_=lambda classes: (
@@ -1092,239 +969,16 @@ def get_image_url(
     if not src:
         return None
 
-    # The portal normally returns a root-relative URL such as:
-    #
-    #   /sites/default/files/styles/medium/public/...
-    #
-    # Convert it into an absolute URL so the published JSON can be
-    # consumed directly by the GitHub Pages frontend.
     if src.startswith("/"):
         return f"{BASE_URL}{src}"
 
     return src
 
 
-
-def parse_dates(
-    text: str | None,
-) -> list[datetime]:
-
-    if not text:
-        return []
-
-    values = re.findall(
-        r"\d{2}/\d{2}/\d{4}",
-        text,
-    )
-
-    dates = []
-
-    for value in values:
-
-        try:
-
-            dates.append(
-                datetime.strptime(
-                    value,
-                    "%d/%m/%Y",
-                )
-            )
-
-        except ValueError:
-            pass
-
-    return dates
-
-
-# ============================================================
-# DETAIL REQUEST
-# ============================================================
-
-
-def fetch_detail_page(
-    session: requests.Session,
-    opportunity: dict,
-) -> tuple[str, str | None]:
-
-    opid = int(opportunity["opid"])
-
-    url = f"{BASE_URL}/solidarity/" f"opportunity/{opid}_en"
-
-    print(
-        f"  → Requesting {opid}",
-        flush=True,
-    )
-
-    for attempt in range(
-        1,
-        MAX_RETRIES + 1,
-    ):
-
-        try:
-
-            response = session.get(
-                url,
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-
-            if response.status_code == 200:
-
-                print(
-                    f"  ← {opid}: HTTP 200",
-                    flush=True,
-                )
-
-                return (
-                    "200",
-                    response.text,
-                )
-
-            if response.status_code == 404:
-
-                print(
-                    f"  ← {opid}: HTTP 404",
-                    flush=True,
-                )
-
-                return (
-                    "404",
-                    None,
-                )
-
-            if response.status_code == 429:
-
-                wait = get_retry_after_seconds(response)
-
-                print(
-                    f"  ← {opid}: HTTP 429",
-                    flush=True,
-                )
-
-                if attempt >= MAX_RETRIES:
-
-                    print(
-                        "  Rate limit persisted. " "Stopping this batch.",
-                        flush=True,
-                    )
-
-                    return (
-                        "429",
-                        None,
-                    )
-
-                print(
-                    f"  Waiting {wait}s "
-                    f"before retry "
-                    f"{attempt}/{MAX_RETRIES}...",
-                    flush=True,
-                )
-
-                time.sleep(wait)
-
-                continue
-
-            if response.status_code >= 500:
-
-                print(
-                    f"  ← {opid}: " f"HTTP {response.status_code}",
-                    flush=True,
-                )
-
-                if attempt < MAX_RETRIES:
-
-                    wait = 2**attempt
-
-                    print(
-                        f"  Retrying in " f"{wait}s...",
-                        flush=True,
-                    )
-
-                    time.sleep(wait)
-
-                    continue
-
-                return (
-                    f"HTTP_{response.status_code}",
-                    None,
-                )
-
-            print(
-                f"  ← {opid}: " f"HTTP {response.status_code}",
-                flush=True,
-            )
-
-            return (
-                f"HTTP_{response.status_code}",
-                None,
-            )
-
-        except requests.Timeout:
-
-            print(
-                f"  ← {opid}: TIMEOUT",
-                flush=True,
-            )
-
-            if attempt < MAX_RETRIES:
-
-                wait = 2**attempt
-
-                print(
-                    f"  Retrying in " f"{wait}s...",
-                    flush=True,
-                )
-
-                time.sleep(wait)
-
-                continue
-
-            return (
-                "TIMEOUT",
-                None,
-            )
-
-        except requests.RequestException as exc:
-
-            print(
-                f"  ← {opid}: " f"REQUEST ERROR: {exc}",
-                flush=True,
-            )
-
-            if attempt < MAX_RETRIES:
-
-                wait = 2**attempt
-
-                print(
-                    f"  Retrying in " f"{wait}s...",
-                    flush=True,
-                )
-
-                time.sleep(wait)
-
-                continue
-
-            return (
-                "ERROR",
-                None,
-            )
-
-    return (
-        "FAILED",
-        None,
-    )
-
-
-# ============================================================
-# DETAIL PARSER
-# ============================================================
-
-
-
 def parse_detail_page(
-    opportunity: dict,
-    html: str,
-) -> dict:
+    opportunity,
+    html,
+):
     soup = BeautifulSoup(
         html,
         "html.parser",
@@ -1388,7 +1042,7 @@ def parse_detail_page(
         "Project code",
     )
 
-    activity_dates = parse_dates(
+    activity_dates = parse_date_values(
         activity_text
     )
 
@@ -1404,7 +1058,7 @@ def parse_detail_page(
         else None
     )
 
-    deadline_dates = parse_dates(
+    deadline_dates = parse_date_values(
         deadline_text
     )
 
@@ -1432,10 +1086,13 @@ def parse_detail_page(
             "result": None,
         }
 
+    opid = int(
+        opportunity["opid"]
+    )
+
     result = {
-        "id": int(
-            opportunity["opid"]
-        ),
+        "id": opid,
+        "opid": opid,
         "title": opportunity.get(
             "title",
             "",
@@ -1456,37 +1113,36 @@ def parse_detail_page(
             "",
         ),
         "activity_type": (
-            activity_type
-            or ""
+            activity_type or ""
         ),
         "start_date": (
             start_date.strftime(
-                "%Y-%m-%d",
+                "%Y-%m-%d"
             )
             if start_date
             else None
         ),
         "end_date": (
             end_date.strftime(
-                "%Y-%m-%d",
+                "%Y-%m-%d"
             )
             if end_date
             else None
         ),
         "deadline": (
             deadline.strftime(
-                "%Y-%m-%d",
+                "%Y-%m-%d"
             )
             if deadline
             else None
         ),
         "eligible_countries": eligible_codes,
+        "eligibility_known": True,
         "topics": get_topics(
             card
         ),
         "project_code": (
-            project_code
-            or ""
+            project_code or ""
         ),
         "created": opportunity.get(
             "created",
@@ -1497,8 +1153,7 @@ def parse_detail_page(
         ),
         "url": (
             f"{BASE_URL}/solidarity/"
-            f"opportunity/"
-            f"{opportunity['opid']}_en"
+            f"opportunity/{opid}_en"
         ),
     }
 
@@ -1507,33 +1162,180 @@ def parse_detail_page(
             "eligible_countries_unmapped"
         ] = unmapped
 
-    result[
-        "eligibility_known"
-    ] = True
-
     return {
         "status": "scanned",
         "result": result,
     }
 
 
+# ============================================================================
+# DETAIL REQUEST
+# ============================================================================
 
 
-# ============================================================
-# ARCHIVE HELPERS
-# ============================================================
+def fetch_detail_page(
+    session,
+    opportunity,
+):
+    opid = int(
+        opportunity["opid"]
+    )
+
+    url = (
+        f"{BASE_URL}/solidarity/"
+        f"opportunity/{opid}_en"
+    )
+
+    print(
+        f"  → Requesting {opid}",
+        flush=True,
+    )
+
+    for attempt in range(
+        1,
+        MAX_RETRIES + 1,
+    ):
+        try:
+            response = session.get(
+                url,
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT,
+            )
+
+            if response.status_code == 200:
+                print(
+                    f"  ← {opid}: HTTP 200",
+                    flush=True,
+                )
+
+                return (
+                    "200",
+                    response.text,
+                )
+
+            if response.status_code == 404:
+                print(
+                    f"  ← {opid}: HTTP 404",
+                    flush=True,
+                )
+
+                return (
+                    "404",
+                    None,
+                )
+
+            if response.status_code == 429:
+                wait = get_retry_after_seconds(
+                    response
+                )
+
+                print(
+                    f"  ← {opid}: HTTP 429",
+                    flush=True,
+                )
+
+                if attempt >= MAX_RETRIES:
+                    return (
+                        "429",
+                        None,
+                    )
+
+                print(
+                    f"  Waiting {wait}s...",
+                    flush=True,
+                )
+
+                time.sleep(wait)
+                continue
+
+            if response.status_code >= 500:
+                print(
+                    f"  ← {opid}: "
+                    f"HTTP {response.status_code}",
+                    flush=True,
+                )
+
+                if attempt < MAX_RETRIES:
+                    wait = 2**attempt
+                    time.sleep(wait)
+                    continue
+
+                return (
+                    f"HTTP_{response.status_code}",
+                    None,
+                )
+
+            print(
+                f"  ← {opid}: "
+                f"HTTP {response.status_code}",
+                flush=True,
+            )
+
+            return (
+                f"HTTP_{response.status_code}",
+                None,
+            )
+
+        except requests.Timeout:
+            print(
+                f"  ← {opid}: TIMEOUT",
+                flush=True,
+            )
+
+            if attempt < MAX_RETRIES:
+                time.sleep(2**attempt)
+                continue
+
+            return (
+                "TIMEOUT",
+                None,
+            )
+
+        except requests.RequestException as exc:
+            print(
+                f"  ← {opid}: REQUEST ERROR: {exc}",
+                flush=True,
+            )
+
+            if attempt < MAX_RETRIES:
+                time.sleep(2**attempt)
+                continue
+
+            return (
+                "ERROR",
+                None,
+            )
+
+    return (
+        "FAILED",
+        None,
+    )
+
+
+# ============================================================================
+# ARCHIVING
+# ============================================================================
 
 
 def archive_match(
-    history: dict,
-    opid: str,
-    result: dict,
-    reason: str,
-) -> None:
+    history,
+    opid,
+    result,
+    reason,
+):
+    existing = history.get(
+        opid,
+        {},
+    )
 
     history[opid] = {
         "first_seen": (
-            history.get(opid, {}).get("first_seen") or result.get("created")
+            existing.get(
+                "first_seen"
+            )
+            or result.get(
+                "created"
+            )
         ),
         "last_seen": now_iso(),
         "result": result,
@@ -1541,64 +1343,65 @@ def archive_match(
     }
 
 
-
 def archive_disappeared_matches(
-    processed: dict,
-    history: dict,
-    current_ids: set[str],
-) -> int:
-    archived_count = 0
+    processed,
+    history,
+    current_ids,
+):
+    count = 0
 
     for opid, entry in processed.items():
+        if not isinstance(
+            entry,
+            dict,
+        ):
+            continue
+
         if entry.get(
             "status"
-        ) not in {
-            "match",
-            "scanned",
-        }:
+        ) != "scanned":
             continue
 
         result = entry.get(
             "result"
         )
 
-        if not result:
+        if not isinstance(
+            result,
+            dict,
+        ):
             continue
 
-        if opid not in current_ids:
-            archive_match(
-                history,
-                opid,
-                result,
-                (
-                    "No longer present in "
-                    "the active opportunity list."
-                ),
-            )
+        if opid in current_ids:
+            continue
 
-            archived_count += 1
+        archive_match(
+            history,
+            opid,
+            result,
+            (
+                "No longer present in "
+                "the active opportunity list."
+            ),
+        )
 
-    return archived_count
+        count += 1
+
+    return count
 
 
-
-
-
-def archive_previous_match(
-    history: dict,
-    opid: str,
-    previous_entry: dict | None,
-    reason: str,
-) -> bool:
+def archive_previous_result(
+    history,
+    opid,
+    previous_entry,
+    reason,
+):
     if not previous_entry:
         return False
 
     if previous_entry.get(
         "status"
-    ) not in {
-        "match",
-        "scanned",
-    }:
+    ) != "scanned":
         return False
 
     result = previous_entry.get(
@@ -1618,53 +1421,154 @@ def archive_previous_match(
     return True
 
 
+# ============================================================================
+# WORK QUEUE
+# ============================================================================
 
 
-# ============================================================
-# PUBLIC OUTPUT
-# ============================================================
+def entry_is_stale(entry):
+    if not entry:
+        return True
+
+    checked_at = parse_iso_datetime(
+        entry.get(
+            "checked_at"
+        )
+    )
+
+    if checked_at is None:
+        return True
+
+    try:
+        if checked_at.tzinfo:
+            current = datetime.now(
+                checked_at.tzinfo
+            )
+        else:
+            current = datetime.now()
+
+        return (
+            current - checked_at
+        ).total_seconds() >= (
+            DETAIL_RECHECK_INTERVAL
+        )
+    except TypeError:
+        return True
 
 
-
-def get_current_matches(
-    checkpoint: dict,
-    current_ids: set[str],
-) -> list[dict]:
+def build_work_queue(
+    current_opportunities,
+    checkpoint,
+):
     processed = checkpoint.get(
         "processed",
         {},
     )
 
-    matches = []
+    new_ids = []
+    retry_ids = []
+    stale_ids = []
+
+    ordered_ids = [
+        str(
+            opportunity["opid"]
+        )
+        for opportunity in current_opportunities
+    ]
+
+    for opid in ordered_ids:
+        entry = processed.get(
+            opid
+        )
+
+        if entry is None:
+            new_ids.append(opid)
+            continue
+
+        status = entry.get(
+            "status"
+        )
+
+        if status in {
+            "error",
+            "parse_error",
+            "timeout",
+        }:
+            retry_ids.append(opid)
+            continue
+
+        if status == "not_found":
+            retry_ids.append(opid)
+            continue
+
+        if status in {
+            "scanned",
+            "expired_deadline",
+            "activity_finished",
+        }:
+            if entry_is_stale(entry):
+                stale_ids.append(opid)
+
+            continue
+
+        retry_ids.append(opid)
+
+    return (
+        new_ids
+        + retry_ids
+        + stale_ids
+    )
+
+
+# ============================================================================
+# CURRENT CACHE
+# ============================================================================
+
+
+def get_current_results(
+    checkpoint,
+    current_ids,
+):
+    processed = checkpoint.get(
+        "processed",
+        {},
+    )
+
+    results = []
 
     for opid in current_ids:
         entry = processed.get(
             opid
         )
 
-        if not entry:
+        if not isinstance(
+            entry,
+            dict,
+        ):
             continue
 
         if entry.get(
             "status"
-        ) not in {
-            "match",
-            "scanned",
-        }:
+        ) != "scanned":
             continue
 
         result = entry.get(
             "result"
         )
 
-        if result:
-            matches.append(
-                normalize_result_country_schema(
-                    dict(result)
-                )
-            )
+        if not isinstance(
+            result,
+            dict,
+        ):
+            continue
 
-    matches.sort(
+        results.append(
+            normalize_result_country_schema(
+                dict(result)
+            )
+        )
+
+    results.sort(
         key=lambda item: (
             item.get(
                 "deadline"
@@ -1673,37 +1577,82 @@ def get_current_matches(
             item.get(
                 "title",
                 "",
-            ),
+            ).casefold(),
         )
     )
 
-    return matches
+    return results
 
 
+def build_participant_country_registry(
+    opportunities,
+):
+    codes = set()
 
+    for opportunity in opportunities:
+        for code in opportunity.get(
+            "eligible_countries",
+            [],
+        ):
+            if (
+                isinstance(code, str)
+                and len(code) == 2
+            ):
+                codes.add(
+                    code.upper()
+                )
+
+    return [
+        {
+            "code": code,
+            "name": country_display_name(
+                code
+            ),
+        }
+        for code in sorted(codes)
+    ]
+
+
+# ============================================================================
+# PUBLIC OUTPUT
+# ============================================================================
 
 
 def save_public_output(
-    matches: list[dict],
-    checkpoint: dict | None = None,
-    current_ids: set[str] | None = None,
-) -> None:
+    opportunities,
+    checkpoint,
+    current_ids,
+):
     registry = build_participant_country_registry(
-        matches
+        opportunities
     )
 
-    migration_complete = False
-
-    if (
-        checkpoint is not None
-        and current_ids is not None
-    ):
-        migration_complete = (
-            checkpoint_migration_complete(
-                checkpoint,
-                current_ids,
+    scan_complete = bool(
+        current_ids
+    ) and all(
+        (
+            checkpoint.get(
+                "processed",
+                {},
             )
+            .get(opid, {})
+            .get("status")
+            == "scanned"
         )
+        for opid in current_ids
+    )
+
+    # Phase 1 intentionally exposes the full scanned cache.
+    # The frontend can filter by eligible_countries.
+    #
+    # This means the same backend can later support:
+    #
+    #   MA
+    #   FR
+    #   DE
+    #   etc.
+    #
+    # without another scraper architecture rewrite.
 
     output = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
@@ -1714,10 +1663,10 @@ def save_public_output(
         "default_participant_country": (
             DEFAULT_PARTICIPANT_COUNTRY
         ),
-        "migration_complete": migration_complete,
+        "scan_complete": scan_complete,
         "participant_countries": registry,
-        "count": len(matches),
-        "opportunities": matches,
+        "count": len(opportunities),
+        "opportunities": opportunities,
     }
 
     atomic_write_json(
@@ -1725,27 +1674,46 @@ def save_public_output(
         output,
     )
 
+    # The static frontend consumes this copy.
+    atomic_write_json(
+        PROJECT_ROOT
+        / "web"
+        / "opportunities.json",
+        output,
+    )
+
+    return output
 
 
-
-def save_expired_output(
-    history: dict,
-) -> None:
-
+def save_expired_output(history):
     archived = []
 
     for entry in history.values():
+        if not isinstance(
+            entry,
+            dict,
+        ):
+            continue
 
-        result = entry.get("result")
+        result = entry.get(
+            "result"
+        )
 
-        if not result:
+        if not isinstance(
+            result,
+            dict,
+        ):
             continue
 
         archived.append(
             {
                 **result,
-                "last_seen": entry.get("last_seen"),
-                "reason": entry.get("reason"),
+                "last_seen": entry.get(
+                    "last_seen"
+                ),
+                "reason": entry.get(
+                    "reason"
+                ),
             }
         )
 
@@ -1759,7 +1727,9 @@ def save_expired_output(
         reverse=True,
     )
 
-    archived = archived[:MAX_ARCHIVED_OPPORTUNITIES]
+    archived = archived[
+        :MAX_ARCHIVED_OPPORTUNITIES
+    ]
 
     output = {
         "generated_at": now_iso(),
@@ -1773,274 +1743,27 @@ def save_expired_output(
     )
 
 
-
-def normalize_checkpoint_for_country_neutral_mode(
-    checkpoint: dict,
-) -> dict:
-    """
-    Migrate the old Morocco-specific checkpoint in place.
-
-    Existing scanned opportunities already contain complete detail results,
-    including eligible_countries, so they can safely become generic
-    'scanned' records.
-
-    Legacy unscanned records with no result remain unresolved and are
-    deliberately queued for the one-time migration scan.
-    """
-
-    checkpoint.setdefault(
-        "schema_version",
-        1,
-    )
-
-    processed = checkpoint.get(
-        "processed",
-        {},
-    )
-
-    for entry in processed.values():
-        if (
-            entry.get("status") == "match"
-            and entry.get("result")
-        ):
-            entry["status"] = "scanned"
-
-    checkpoint["schema_version"] = CHECKPOINT_SCHEMA_VERSION
-
-    return checkpoint
-
-
-def is_entry_stale(
-    entry: dict,
-) -> bool:
-    checked_at = parse_iso_datetime(
-        entry.get("checked_at"),
-    )
-
-    if checked_at is None:
-        return True
-
-    age_seconds = (
-        datetime.now() - checked_at
-    ).total_seconds()
-
-    return age_seconds >= DETAIL_RECHECK_INTERVAL
-
-
-def migration_entry_complete(
-    entry: dict | None,
-) -> bool:
-    if not entry:
-        return False
-
-    status = entry.get(
-        "status",
-    )
-
-    if status == "scanned" and entry.get(
-        "result",
-    ):
-        return True
-
-    return status in {
-        "expired_deadline",
-        "activity_finished",
-        "not_found",
-    }
-
-
-def is_country_neutral_scan_complete(
-    checkpoint: dict,
-    current_ids: set[str],
-) -> bool:
-    processed = checkpoint.get(
-        "processed",
-        {},
-    )
-
-    return all(
-        migration_entry_complete(
-            processed.get(opid),
-        )
-        for opid in current_ids
-    )
-
-
-def get_participant_countries(
-    opportunities: list[dict],
-) -> list[str]:
-    countries = {}
-
-    for opportunity in opportunities:
-        for country in opportunity.get(
-            "eligible_countries",
-            [],
-        ):
-            value = str(
-                country
-            ).strip()
-
-            if not value:
-                continue
-
-            countries.setdefault(
-                value.casefold(),
-                value,
-            )
-
-    return sorted(
-        countries.values(),
-        key=lambda value: value.casefold(),
-    )
-
-# ============================================================
-# WORK QUEUE
-# ============================================================
-
-
-
-def build_work_queue(
-    current_opportunities: list[dict],
-    checkpoint: dict,
-) -> list[str]:
-    processed = checkpoint.get(
-        "processed",
-        {},
-    )
-
-    ordered_ids = [
-        str(
-            opportunity["opid"]
-        )
-        for opportunity in current_opportunities
-    ]
-
-    new_ids = []
-    migration_ids = []
-    retry_ids = []
-    stale_ids = []
-
-    for opid in ordered_ids:
-        entry = processed.get(
-            opid
-        )
-
-        if entry is None:
-            new_ids.append(
-                opid
-            )
-            continue
-
-        status = entry.get(
-            "status"
-        )
-
-        result = entry.get(
-            "result"
-        )
-
-        checked_at = entry.get(
-            "checked_at"
-        )
-
-        is_stale = True
-
-        if checked_at:
-            try:
-                checked = datetime.fromisoformat(
-                    checked_at.replace(
-                        "Z",
-                        "+00:00",
-                    )
-                )
-
-                current = datetime.now(
-                    checked.tzinfo
-                )
-
-                is_stale = (
-                    (
-                        current - checked
-                    ).total_seconds()
-                    >= DETAIL_RECHECK_INTERVAL
-                )
-
-            except (
-                ValueError,
-                TypeError,
-            ):
-                is_stale = True
-
-        if status in {
-            "error",
-            "parse_error",
-            "timeout",
-        }:
-            retry_ids.append(
-                opid
-            )
-            continue
-
-        if (
-            not result
-            and status in {
-                "legacy_unscanned",
-                "legacy_unscanned",
-                "not_found",
-            }
-        ):
-            migration_ids.append(
-                opid
-            )
-            continue
-
-        if status in {
-            "match",
-            "scanned",
-        }:
-            if is_stale:
-                stale_ids.append(
-                    opid
-                )
-
-            continue
-
-        if status in {
-            "expired_deadline",
-            "activity_finished",
-            "not_found",
-        }:
-            if is_stale:
-                stale_ids.append(
-                    opid
-                )
-
-    return (
-        new_ids
-        + migration_ids
-        + retry_ids
-        + stale_ids
-    )
-
-
-
-
-# ============================================================
+# ============================================================================
 # MAIN
-# ============================================================
+# ============================================================================
 
 
-def main() -> int:
+def main():
     print("=" * 70)
     print(
         "EUROPEAN SOLIDARITY CORPS — "
-        "OPPORTUNITY FINDER"
+        "PHASE 1 BACKEND CACHE"
     )
     print("=" * 70)
 
     print(
-        f"Date: "
-        f"{TODAY.strftime('%d/%m/%Y')}",
+        f"Date: {TODAY.strftime('%d/%m/%Y')}",
+        flush=True,
+    )
+
+    print(
+        f"Default participant country: "
+        f"{DEFAULT_PARTICIPANT_COUNTRY}",
         flush=True,
     )
 
@@ -2055,9 +1778,9 @@ def main() -> int:
         flush=True,
     )
 
-    # --------------------------------------------------------
-    # 1. Fresh active API snapshot.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 1. Retrieve the authoritative active API snapshot.
+    # ------------------------------------------------------------------
 
     current_opportunities = (
         fetch_current_opportunities()
@@ -2065,7 +1788,7 @@ def main() -> int:
 
     if not current_opportunities:
         raise RuntimeError(
-            "No current opportunities retrieved."
+            "No current opportunities were retrieved."
         )
 
     current_ids = {
@@ -2082,9 +1805,9 @@ def main() -> int:
         for opportunity in current_opportunities
     }
 
-    # --------------------------------------------------------
-    # 2. Persistent migration-aware checkpoint.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 2. Load persistent checkpoint.
+    # ------------------------------------------------------------------
 
     checkpoint = load_checkpoint()
 
@@ -2096,19 +1819,11 @@ def main() -> int:
         "history"
     ]
 
-    migration_complete = (
-        is_country_neutral_scan_complete(
-            checkpoint,
-            current_ids,
-        )
-    )
+    # ------------------------------------------------------------------
+    # 3. Archive opportunities that disappeared from the API.
+    # ------------------------------------------------------------------
 
-    # --------------------------------------------------------
-    # 3. Archive active opportunities which disappeared from
-    #    the API.
-    # --------------------------------------------------------
-
-    disappeared_count = (
+    disappeared = (
         archive_disappeared_matches(
             processed,
             history,
@@ -2116,26 +1831,29 @@ def main() -> int:
         )
     )
 
-    if disappeared_count:
+    if disappeared:
         print(
-            f"Archived {disappeared_count} "
-            "opportunity/opportunities that "
-            "disappeared from the active list.",
+            f"Archived {disappeared} disappeared "
+            "opportunity/opportunities.",
             flush=True,
         )
 
         save_checkpoint(
-            checkpoint,
+            checkpoint
         )
 
-    # --------------------------------------------------------
-    # 4. Work queue.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 4. Build incremental work queue.
+    # ------------------------------------------------------------------
 
     queue = build_work_queue(
         current_opportunities,
         checkpoint,
     )
+
+    batch = queue[
+        :BATCH_SIZE
+    ]
 
     already_processed = sum(
         1
@@ -2143,28 +1861,19 @@ def main() -> int:
         if opid in processed
     )
 
-    batch = queue[
-        :BATCH_SIZE
-    ]
-
     print()
     print("=" * 70)
     print("SCAN PLAN")
     print("=" * 70)
 
     print(
-        f"Current opportunities: "
+        f"Current API opportunities: "
         f"{len(current_opportunities)}"
     )
 
     print(
-        f"Already processed: "
+        f"Already known: "
         f"{already_processed}"
-    )
-
-    print(
-        f"Country-neutral scan complete: "
-        f"{migration_complete}"
     )
 
     print(
@@ -2173,81 +1882,67 @@ def main() -> int:
     )
 
     print(
-        f"This batch: "
+        f"This invocation: "
         f"{len(batch)}"
     )
 
     print("=" * 70)
 
-    # --------------------------------------------------------
-    # 5. Nothing to scan.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 5. No detail work required.
+    # ------------------------------------------------------------------
 
     if not batch:
-        opportunities = get_current_matches(
+        opportunities = get_current_results(
             checkpoint,
             current_ids,
-        )
-
-        migration_complete = (
-            is_country_neutral_scan_complete(
-                checkpoint,
-                current_ids,
-            )
         )
 
         save_public_output(
             opportunities,
-            migration_complete,
-            current_ids,
             checkpoint,
+            current_ids,
         )
 
         save_expired_output(
-            history,
+            history
         )
 
         save_checkpoint(
-            checkpoint,
+            checkpoint
         )
 
+        print()
         print(
-            "\nNO DETAIL SCANNING REQUIRED",
+            "NO DETAIL SCANNING REQUIRED",
             flush=True,
         )
 
         print(
-            f"Current published opportunities: "
+            f"Published scanned opportunities: "
             f"{len(opportunities)}",
-            flush=True,
-        )
-
-        print(
-            f"Country-neutral migration complete: "
-            f"{migration_complete}",
             flush=True,
         )
 
         return 0
 
-    # --------------------------------------------------------
-    # 6. Cooldown.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 6. Cooldown before detail scanning.
+    # ------------------------------------------------------------------
 
     print(
-        f"\nWaiting "
-        f"{DETAIL_SCAN_COOLDOWN}s "
+        f"\nWaiting {DETAIL_SCAN_COOLDOWN}s "
         "before detail scanning...",
         flush=True,
     )
 
     time.sleep(
-        DETAIL_SCAN_COOLDOWN,
+        DETAIL_SCAN_COOLDOWN
     )
 
-    # --------------------------------------------------------
-    # 7. Process batch.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 7. Process one incremental batch.
+    # ------------------------------------------------------------------
 
     session = requests.Session()
 
@@ -2269,7 +1964,7 @@ def main() -> int:
 
             previous_entry = (
                 processed.get(
-                    opid,
+                    opid
                 )
             )
 
@@ -2291,6 +1986,10 @@ def main() -> int:
                 )
             )
 
+            # ------------------------------------------------------
+            # Rate limit: do not mark the opportunity as processed.
+            # ------------------------------------------------------
+
             if status == "429":
                 rate_limited = True
 
@@ -2305,7 +2004,7 @@ def main() -> int:
                 )
 
                 print(
-                    "Stopping this batch safely.",
+                    "Stopping this invocation safely.",
                     flush=True,
                 )
 
@@ -2315,10 +2014,11 @@ def main() -> int:
 
             checked_at = now_iso()
 
+            # ------------------------------------------------------
+            # 404: keep the last known result but retry later.
+            # ------------------------------------------------------
+
             if status == "404":
-                # Preserve the last known result when available. The
-                # active API still lists this opportunity, so a 404
-                # can be transient.
                 processed[opid] = {
                     "status": "not_found",
                     "result": (
@@ -2330,6 +2030,10 @@ def main() -> int:
                     ),
                     "checked_at": checked_at,
                 }
+
+            # ------------------------------------------------------
+            # Other HTTP/network failures.
+            # ------------------------------------------------------
 
             elif status != "200":
                 processed[opid] = {
@@ -2345,6 +2049,10 @@ def main() -> int:
                     "checked_at": checked_at,
                 }
 
+            # ------------------------------------------------------
+            # Successful detail-page retrieval.
+            # ------------------------------------------------------
+
             else:
                 parsed = parse_detail_page(
                     opportunity,
@@ -2352,24 +2060,22 @@ def main() -> int:
                 )
 
                 new_status = parsed.get(
-                    "status",
+                    "status"
                 )
 
-                # If a previously valid active result has actually
-                # expired or finished, archive it before removing it
-                # from the active dataset.
+                # Archive a previously active result if the
+                # opportunity has genuinely expired.
                 if (
                     previous_entry
                     and previous_entry.get(
-                        "status",
-                    ) in {
-                        "match",
-                        "scanned",
-                    }
-                    and previous_entry.get(
-                        "result",
+                        "status"
                     )
-                    and new_status in {
+                    == "scanned"
+                    and previous_entry.get(
+                        "result"
+                    )
+                    and new_status
+                    in {
                         "expired_deadline",
                         "activity_finished",
                     }
@@ -2382,7 +2088,7 @@ def main() -> int:
                         "Activity has finished."
                     )
 
-                    if archive_previous_match(
+                    if archive_previous_result(
                         history,
                         opid,
                         previous_entry,
@@ -2391,18 +2097,20 @@ def main() -> int:
                         archived_this_batch += 1
 
                 if new_status == "scanned":
-                    if opid in history:
-                        del history[opid]
+                    history.pop(
+                        opid,
+                        None,
+                    )
 
                     scanned_this_batch += 1
 
                     result = parsed.get(
-                        "result",
+                        "result"
                     )
 
                     if result:
                         print(
-                            "\n✅ OPPORTUNITY SCANNED",
+                            "\n✅ SCANNED",
                             flush=True,
                         )
 
@@ -2412,16 +2120,13 @@ def main() -> int:
                             flush=True,
                         )
 
-                elif new_status in {
-                    "parse_error",
-                }:
-                    # Preserve a last known result while requiring a
-                    # future successful scan before migration is called
-                    # complete.
+                elif new_status == "parse_error":
+                    # Never destroy a valid previous result merely
+                    # because the website HTML changed temporarily.
                     if (
                         previous_entry
                         and previous_entry.get(
-                            "result",
+                            "result"
                         )
                     ):
                         parsed[
@@ -2444,7 +2149,7 @@ def main() -> int:
             ] = history
 
             save_checkpoint(
-                checkpoint,
+                checkpoint
             )
 
             print(
@@ -2454,46 +2159,38 @@ def main() -> int:
 
             if index < len(batch):
                 time.sleep(
-                    DETAIL_REQUEST_DELAY,
+                    DETAIL_REQUEST_DELAY
                 )
 
     finally:
         session.close()
 
-    # --------------------------------------------------------
-    # 8. Build current country-neutral output.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 8. Publish current cache.
+    # ------------------------------------------------------------------
 
-    opportunities = get_current_matches(
+    opportunities = get_current_results(
         checkpoint,
         current_ids,
     )
 
-    migration_complete = (
-        is_country_neutral_scan_complete(
-            checkpoint,
-            current_ids,
-        )
-    )
-
-    save_public_output(
+    output = save_public_output(
         opportunities,
-        migration_complete,
-        current_ids,
         checkpoint,
+        current_ids,
     )
 
     save_expired_output(
-        history,
+        history
     )
 
     save_checkpoint(
-        checkpoint,
+        checkpoint
     )
 
-    # --------------------------------------------------------
-    # 9. Remaining queue.
-    # --------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 9. Determine remaining work.
+    # ------------------------------------------------------------------
 
     remaining_queue = build_work_queue(
         current_opportunities,
@@ -2506,7 +2203,7 @@ def main() -> int:
     print("=" * 70)
 
     print(
-        f"Processed this batch: "
+        f"Processed this invocation: "
         f"{processed_this_batch}"
     )
 
@@ -2516,23 +2213,23 @@ def main() -> int:
     )
 
     print(
-        f"Archived this batch: "
+        f"Archived this invocation: "
         f"{archived_this_batch}"
     )
 
     print(
-        f"Current country-neutral opportunities: "
+        f"Published scanned opportunities: "
         f"{len(opportunities)}"
     )
 
     print(
-        f"Remaining work: "
-        f"{len(remaining_queue)}"
+        f"Participant countries discovered: "
+        f"{len(output['participant_countries'])}"
     )
 
     print(
-        f"Country-neutral migration complete: "
-        f"{migration_complete}"
+        f"Remaining detail work: "
+        f"{len(remaining_queue)}"
     )
 
     print("=" * 70)
@@ -2540,12 +2237,7 @@ def main() -> int:
     if rate_limited:
         print(
             "⚠️ Rate limited. "
-            "Checkpoint saved.",
-            flush=True,
-        )
-
-        print(
-            "The next workflow run will resume.",
+            "Checkpoint and cache were saved.",
             flush=True,
         )
 
@@ -2553,53 +2245,47 @@ def main() -> int:
 
     if remaining_queue:
         print(
-            "More opportunities remain "
-            "to be processed.",
-            flush=True,
-        )
-
-        print(
-            "The next batch will continue "
+            "More opportunities remain. "
+            "The next hourly run will continue "
             "from the checkpoint.",
             flush=True,
         )
-
     else:
         print(
-            "🎉 Country-neutral scan is complete.",
+            "🎉 Current active opportunity set "
+            "has been fully scanned.",
             flush=True,
         )
 
     return 0
 
 
-
-# ============================================================
+# ============================================================================
 # ENTRY POINT
-# ============================================================
+# ============================================================================
+
 
 if __name__ == "__main__":
-
     try:
-
-        sys.exit(main())
+        sys.exit(
+            main()
+        )
 
     except KeyboardInterrupt:
-
         print(
             "\nInterrupted by user.",
             flush=True,
         )
 
         print(
-            "Existing checkpoint progress " "has been preserved.",
+            "Existing checkpoint progress "
+            "has been preserved.",
             flush=True,
         )
 
         sys.exit(2)
 
     except Exception as exc:
-
         print(
             f"\nFATAL ERROR: {exc}",
             file=sys.stderr,

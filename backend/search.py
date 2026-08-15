@@ -18,6 +18,7 @@ def main():
                 ensure_ascii=False,
             )
         )
+
         return 1
 
     country_code = sys.argv[1]
@@ -26,6 +27,7 @@ def main():
         payload = search_cache(
             country_code
         )
+
     except Exception as exc:
         print(
             json.dumps(
@@ -36,6 +38,7 @@ def main():
                 ensure_ascii=False,
             )
         )
+
         return 1
 
     print(
@@ -49,4 +52,6 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        main()
+    )

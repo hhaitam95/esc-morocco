@@ -52,8 +52,33 @@ class CacheTests(unittest.TestCase):
             )
         )
 
+    def test_country_code_is_case_insensitive(self):
+        opportunity = {
+            "id": "TEST-2",
+            "eligible_countries": [
+                "MA",
+            ],
+        }
+
+        self.assertTrue(
+            opportunity_matches_country(
+                opportunity,
+                "ma",
+            )
+        )
+
+    def test_invalid_country_is_rejected(self):
+        with self.assertRaises(
+            ValueError
+        ):
+            search_cache(
+                "MOR"
+            )
+
     def test_search_returns_expected_shape(self):
-        payload = search_cache("MA")
+        payload = search_cache(
+            "MA"
+        )
 
         self.assertEqual(
             payload["status"],

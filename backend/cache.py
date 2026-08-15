@@ -7,11 +7,12 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
 CACHE_FILE = DATA_DIR / "opportunities.json"
+
 MANIFEST_FILE = DATA_DIR / "cache_manifest.json"
 
 
 class CacheError(RuntimeError):
-    pass
+    """Raised when the opportunity cache cannot be served safely."""
 
 
 def load_json(path):
@@ -21,10 +22,12 @@ def load_json(path):
             encoding="utf-8",
         ) as handle:
             return json.load(handle)
+
     except FileNotFoundError as exc:
         raise CacheError(
             f"Cache file does not exist: {path}"
         ) from exc
+
     except json.JSONDecodeError as exc:
         raise CacheError(
             f"Invalid JSON in cache file: {path}"
@@ -32,9 +35,14 @@ def load_json(path):
 
 
 def load_cache():
-    data = load_json(CACHE_FILE)
+    data = load_json(
+        CACHE_FILE
+    )
 
-    if not isinstance(data, dict):
+    if not isinstance(
+        data,
+        dict,
+    ):
         raise CacheError(
             "Opportunity cache must be a JSON object."
         )
@@ -44,7 +52,10 @@ def load_cache():
         [],
     )
 
-    if not isinstance(opportunities, list):
+    if not isinstance(
+        opportunities,
+        list,
+    ):
         raise CacheError(
             "Opportunity cache contains an invalid opportunities list."
         )
@@ -56,7 +67,9 @@ def load_manifest():
     if not MANIFEST_FILE.exists():
         return None
 
-    return load_json(MANIFEST_FILE)
+    return load_json(
+        MANIFEST_FILE
+    )
 
 
 def normalize_country_code(value):
@@ -75,6 +88,26 @@ def opportunity_matches_country(
     opportunity,
     country_code,
 ):
+    """
+    Return True when an opportunity is eligible for
+    the requested participant country.
+
+    Country matching is deliberately case-insensitive
+    because cached/source data may contain either
+    uppercase or lowercase ISO country codes.
+    """
+
+    if not isinstance(opportunity, dict):
+        return False
+
+    if not isinstance(country_code, str):
+        return False
+
+    requested = country_code.strip().upper()
+
+    if len(requested) != 2 or not requested.isalpha():
+        return False
+
     eligible = opportunity.get(
         "eligible_countries",
         [],
@@ -83,14 +116,14 @@ def opportunity_matches_country(
     if not isinstance(eligible, list):
         return False
 
-    normalized = {
-        normalize_country_code(value)
-        for value in eligible
-    }
+    for value in eligible:
+        if not isinstance(value, str):
+            continue
 
-    normalized.discard("")
+        if value.strip().upper() == requested:
+            return True
 
-    return country_code in normalized
+    return False
 
 
 def search_cache(country_code):
@@ -113,7 +146,10 @@ def search_cache(country_code):
     matches = [
         opportunity
         for opportunity in opportunities
-        if isinstance(opportunity, dict)
+        if isinstance(
+            opportunity,
+            dict,
+        )
         and opportunity_matches_country(
             opportunity,
             country_code,
@@ -126,7 +162,14 @@ def search_cache(country_code):
         "count": len(matches),
         "opportunities": matches,
         "cache": {
-            "generated_at": data.get("generated_at"),
-            "schema_version": data.get("schema_version"),
+            "generated_at": data.get(
+                "generated_at"
+            ),
+            "schema_version": data.get(
+                "schema_version"
+            ),
+            "cache_schema_version": data.get(
+                "cache_schema_version"
+            ),
         },
     }
