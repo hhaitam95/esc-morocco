@@ -1915,6 +1915,11 @@ function updateHeaderForParticipantSearch() {
 // ============================================================
 
 function renderActive() {
+  if (!participantSearchApplied) {
+    resetParticipantSearchDisplay();
+    return;
+  }
+
   const filtered = sortOpportunities(getFilteredActive());
 
   opportunityCount.textContent =
@@ -2159,6 +2164,11 @@ function renderExpired() {
 // ============================================================
 
 function updateHeader(data) {
+  if (!participantSearchApplied) {
+    resetParticipantSearchDisplay();
+    return;
+  }
+
   const count = Number.isFinite(data?.count)
     ? data.count
     : activeOpportunities.length;

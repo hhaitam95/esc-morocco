@@ -7,6 +7,366 @@ from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
+import pycountry
+
+
+# ============================================================
+# COUNTRY NORMALIZATION
+# ============================================================
+
+CHECKPOINT_SCHEMA_VERSION = 3
+OUTPUT_SCHEMA_VERSION = 3
+
+DETAIL_RECHECK_INTERVAL = 24 * 60 * 60
+
+DEFAULT_PARTICIPANT_COUNTRY = "MA"
+
+COUNTRY_NAME_ALIASES = {
+    "el": "GR",
+    "greece": "GR",
+    "uk": "GB",
+    "united kingdom": "GB",
+
+    "turkey": "TR",
+    "türkiye": "TR",
+
+    "czech republic": "CZ",
+    "czechia": "CZ",
+
+    "north macedonia": "MK",
+    "the former yugoslav republic of macedonia": "MK",
+    "macedonia": "MK",
+
+    "republic of moldova": "MD",
+    "moldova": "MD",
+
+    "kosovo": "XK",
+    "kosovo * un resolution": "XK",
+
+    "bonaire, sint eustatius and saba": "BQ",
+    "caribbean netherlands": "BQ",
+
+    "curacao": "CW",
+    "curaçao": "CW",
+
+    "sint maarten": "SX",
+    "sint maarten (dutch part)": "SX",
+
+    "bolivia": "BO",
+    "bolivia, plurinational state of": "BO",
+
+    "brunei": "BN",
+    "brunei darussalam": "BN",
+
+    "iran": "IR",
+    "iran, islamic republic of": "IR",
+
+    "laos": "LA",
+    "lao people's democratic republic": "LA",
+
+    "russia": "RU",
+    "russian federation": "RU",
+
+    "syria": "SY",
+    "syrian arab republic": "SY",
+
+    "vietnam": "VN",
+    "viet nam": "VN",
+
+    "venezuela": "VE",
+    "venezuela, bolivarian republic of": "VE",
+
+    "palestine": "PS",
+    "palestine, state of": "PS",
+}
+
+COUNTRY_DISPLAY_OVERRIDES = {
+    "TR": "Türkiye",
+    "CZ": "Czechia",
+    "MK": "North Macedonia",
+    "BA": "Bosnia and Herzegovina",
+    "CW": "Curaçao",
+    "SX": "Sint Maarten",
+    "BQ": "Bonaire, Sint Eustatius and Saba",
+    "XK": "Kosovo",
+}
+
+
+def normalize_country_text(
+    value: str | None,
+) -> str:
+    if not value:
+        return ""
+
+    return re.sub(
+        r"\s+",
+        " ",
+        value.strip(),
+    ).casefold()
+
+
+def country_code_from_name(
+    value: str | None,
+) -> str | None:
+    if not value:
+        return None
+
+    import pycountry
+
+    raw = re.sub(
+        r"\s+",
+        " ",
+        value.strip(),
+    )
+
+    normalized = normalize_country_text(
+        raw
+    )
+
+    if normalized in COUNTRY_NAME_ALIASES:
+        return COUNTRY_NAME_ALIASES[
+            normalized
+        ]
+
+    if len(raw) == 2 and raw.isalpha():
+        code = raw.upper()
+
+        if code == "EL":
+            return "GR"
+
+        if code == "UK":
+            return "GB"
+
+        if code == "XK":
+            return "XK"
+
+        try:
+            record = pycountry.countries.get(
+                alpha_2=code
+            )
+
+            if record:
+                return code
+        except LookupError:
+            pass
+
+    cleaned = re.sub(
+        r"\s*\*.*$",
+        "",
+        raw,
+    ).strip()
+
+    cleaned_normalized = normalize_country_text(
+        cleaned
+    )
+
+    if cleaned_normalized in COUNTRY_NAME_ALIASES:
+        return COUNTRY_NAME_ALIASES[
+            cleaned_normalized
+        ]
+
+    for field in (
+        "name",
+        "official_name",
+        "common_name",
+    ):
+        try:
+            record = pycountry.countries.get(
+                **{
+                    field: cleaned,
+                }
+            )
+
+            if record:
+                return record.alpha_2
+        except LookupError:
+            pass
+
+    try:
+        matches = pycountry.countries.search_fuzzy(
+            cleaned
+        )
+
+        if matches:
+            return matches[0].alpha_2
+    except LookupError:
+        pass
+
+    return None
+
+
+def country_display_name(
+    code: str,
+) -> str:
+    import pycountry
+
+    normalized = code.upper()
+
+    if normalized in COUNTRY_DISPLAY_OVERRIDES:
+        return COUNTRY_DISPLAY_OVERRIDES[
+            normalized
+        ]
+
+    try:
+        record = pycountry.countries.get(
+            alpha_2=normalized
+        )
+
+        if record:
+            return (
+                getattr(
+                    record,
+                    "common_name",
+                    None,
+                )
+                or record.name
+            )
+    except LookupError:
+        pass
+
+    return normalized
+
+
+def normalize_eligible_country_codes(
+    values: list[str] | None,
+) -> tuple[list[str], list[str]]:
+    codes = set()
+    unmapped = set()
+
+    for raw in values or []:
+        code = country_code_from_name(
+            raw
+        )
+
+        if code:
+            codes.add(
+                code.upper()
+            )
+        else:
+            text = str(
+                raw
+            ).strip()
+
+            if text:
+                unmapped.add(
+                    text
+                )
+
+    return (
+        sorted(codes),
+        sorted(unmapped),
+    )
+
+
+def normalize_result_country_schema(
+    result: dict,
+) -> dict:
+    raw_values = result.get(
+        "eligible_countries",
+        [],
+    )
+
+    if isinstance(
+        raw_values,
+        list,
+    ):
+        eligible_codes, unmapped = (
+            normalize_eligible_country_codes(
+                raw_values
+            )
+        )
+    else:
+        eligible_codes = []
+        unmapped = []
+
+    result[
+        "eligible_countries"
+    ] = eligible_codes
+
+    if unmapped:
+        result[
+            "eligible_countries_unmapped"
+        ] = unmapped
+    else:
+        result.pop(
+            "eligible_countries_unmapped",
+            None,
+        )
+
+    result[
+        "eligibility_known"
+    ] = bool(
+        eligible_codes
+        or raw_values == []
+    )
+
+    return result
+
+
+def build_participant_country_registry(
+    opportunities: list[dict],
+) -> list[dict]:
+    codes = set()
+
+    for opportunity in opportunities:
+        for code in opportunity.get(
+            "eligible_countries",
+            [],
+        ):
+            if (
+                isinstance(
+                    code,
+                    str,
+                )
+                and len(code) == 2
+            ):
+                codes.add(
+                    code.upper()
+                )
+
+    return [
+        {
+            "code": code,
+            "name": country_display_name(
+                code
+            ),
+        }
+        for code in sorted(
+            codes
+        )
+    ]
+
+
+def checkpoint_migration_complete(
+    checkpoint: dict,
+    current_ids: set[str],
+) -> bool:
+    processed = checkpoint.get(
+        "processed",
+        {},
+    )
+
+    if not current_ids:
+        return False
+
+    completed_statuses = {
+        "scanned",
+        "match",
+        "expired_deadline",
+        "activity_finished",
+        "not_found",
+    }
+
+    return all(
+        processed.get(
+            opid,
+            {},
+        ).get(
+            "status"
+        )
+        in completed_statuses
+        for opid in current_ids
+    )
 
 # ============================================================
 # CONFIGURATION
@@ -210,6 +570,7 @@ def parse_iso_datetime(
 # ============================================================
 
 
+
 def load_checkpoint() -> dict:
     if not CHECKPOINT_FILE.exists():
         return {
@@ -231,29 +592,46 @@ def load_checkpoint() -> dict:
             dict,
         ):
             raise ValueError(
-                "Checkpoint is not a JSON object."
+                "Checkpoint must contain a JSON object."
             )
 
-        if not isinstance(
-            data.get("processed"),
-            dict,
-        ):
-            data["processed"] = {}
+        data.setdefault(
+            "processed",
+            {},
+        )
 
-        if not isinstance(
-            data.get("history"),
-            dict,
-        ):
-            data["history"] = {}
+        data.setdefault(
+            "history",
+            {},
+        )
 
         data.setdefault(
             "last_scan_at",
             None,
         )
 
-        return normalize_checkpoint_for_country_neutral_mode(
-            data,
-        )
+        for entry in data["processed"].values():
+            result = entry.get(
+                "result"
+            )
+
+            if result:
+                entry["result"] = (
+                    normalize_result_country_schema(
+                        result
+                    )
+                )
+
+                if entry.get(
+                    "status"
+                ) == "match":
+                    entry["status"] = "scanned"
+
+        data[
+            "schema_version"
+        ] = CHECKPOINT_SCHEMA_VERSION
+
+        return data
 
     except (
         OSError,
@@ -261,7 +639,7 @@ def load_checkpoint() -> dict:
         ValueError,
     ) as exc:
         print(
-            f"Could not read checkpoint: {exc}",
+            f"Checkpoint could not be read: {exc}",
             flush=True,
         )
 
@@ -271,6 +649,7 @@ def load_checkpoint() -> dict:
             "history": {},
             "last_scan_at": None,
         }
+
 
 
 
@@ -941,6 +1320,7 @@ def fetch_detail_page(
 # ============================================================
 
 
+
 def parse_detail_page(
     opportunity: dict,
     html: str,
@@ -951,7 +1331,7 @@ def parse_detail_page(
     )
 
     card = find_detail_card(
-        soup,
+        soup
     )
 
     if card is None:
@@ -965,17 +1345,23 @@ def parse_detail_page(
         "Looking for participants from",
     )
 
-    if participant_text:
-        countries = [
-            country.strip()
-            for country in participant_text.split(",")
-            if country.strip()
-        ]
+    if participant_text is None:
+        return {
+            "status": "parse_error",
+            "result": None,
+        }
 
-        eligibility_known = True
-    else:
-        countries = []
-        eligibility_known = False
+    raw_countries = [
+        item.strip()
+        for item in participant_text.split(",")
+        if item.strip()
+    ]
+
+    eligible_codes, unmapped = (
+        normalize_eligible_country_codes(
+            raw_countries
+        )
+    )
 
     activity_text = get_section(
         card,
@@ -1003,7 +1389,7 @@ def parse_detail_page(
     )
 
     activity_dates = parse_dates(
-        activity_text,
+        activity_text
     )
 
     start_date = (
@@ -1019,7 +1405,7 @@ def parse_detail_page(
     )
 
     deadline_dates = parse_dates(
-        deadline_text,
+        deadline_text
     )
 
     deadline = (
@@ -1027,10 +1413,6 @@ def parse_detail_page(
         if deadline_dates
         else None
     )
-
-    # --------------------------------------------------------
-    # Defensive expiration checks.
-    # --------------------------------------------------------
 
     if (
         deadline is not None
@@ -1098,9 +1480,10 @@ def parse_detail_page(
             if deadline
             else None
         ),
-        "eligible_countries": countries,
-        "eligibility_known": eligibility_known,
-        "topics": get_topics(card),
+        "eligible_countries": eligible_codes,
+        "topics": get_topics(
+            card
+        ),
         "project_code": (
             project_code
             or ""
@@ -1110,7 +1493,7 @@ def parse_detail_page(
             "",
         ),
         "image_url": get_image_url(
-            soup,
+            soup
         ),
         "url": (
             f"{BASE_URL}/solidarity/"
@@ -1119,10 +1502,20 @@ def parse_detail_page(
         ),
     }
 
+    if unmapped:
+        result[
+            "eligible_countries_unmapped"
+        ] = unmapped
+
+    result[
+        "eligibility_known"
+    ] = True
+
     return {
         "status": "scanned",
         "result": result,
     }
+
 
 
 
@@ -1148,6 +1541,7 @@ def archive_match(
     }
 
 
+
 def archive_disappeared_matches(
     processed: dict,
     history: dict,
@@ -1157,19 +1551,15 @@ def archive_disappeared_matches(
 
     for opid, entry in processed.items():
         if entry.get(
-            "status",
+            "status"
         ) not in {
             "match",
             "scanned",
-            "error",
-            "parse_error",
-            "timeout",
-            "not_found",
         }:
             continue
 
         result = entry.get(
-            "result",
+            "result"
         )
 
         if not result:
@@ -1192,6 +1582,8 @@ def archive_disappeared_matches(
 
 
 
+
+
 def archive_previous_match(
     history: dict,
     opid: str,
@@ -1202,7 +1594,7 @@ def archive_previous_match(
         return False
 
     if previous_entry.get(
-        "status",
+        "status"
     ) not in {
         "match",
         "scanned",
@@ -1210,7 +1602,7 @@ def archive_previous_match(
         return False
 
     result = previous_entry.get(
-        "result",
+        "result"
     )
 
     if not result:
@@ -1227,9 +1619,11 @@ def archive_previous_match(
 
 
 
+
 # ============================================================
 # PUBLIC OUTPUT
 # ============================================================
+
 
 
 def get_current_matches(
@@ -1241,99 +1635,96 @@ def get_current_matches(
         {},
     )
 
-    opportunities = []
+    matches = []
 
     for opid in current_ids:
         entry = processed.get(
-            opid,
+            opid
         )
 
         if not entry:
             continue
 
-        status = entry.get(
-            "status",
-        )
-
-        if status in {
-            "expired_deadline",
-            "activity_finished",
+        if entry.get(
+            "status"
+        ) not in {
+            "match",
+            "scanned",
         }:
             continue
 
         result = entry.get(
-            "result",
+            "result"
         )
 
         if result:
-            opportunities.append(
-                result,
+            matches.append(
+                normalize_result_country_schema(
+                    dict(result)
+                )
             )
 
-    opportunities.sort(
+    matches.sort(
         key=lambda item: (
             item.get(
                 "deadline"
-            ) or "9999-12-31",
+            )
+            or "9999-12-31",
             item.get(
                 "title",
                 "",
             ),
-        ),
+        )
     )
 
-    return opportunities
+    return matches
+
+
 
 
 
 def save_public_output(
-    opportunities: list[dict],
-    migration_complete: bool,
-    current_ids: set[str],
-    checkpoint: dict,
+    matches: list[dict],
+    checkpoint: dict | None = None,
+    current_ids: set[str] | None = None,
 ) -> None:
-    participant_countries = (
-        get_participant_countries(
-            opportunities,
-        )
+    registry = build_participant_country_registry(
+        matches
     )
 
-    scanned_count = sum(
-        1
-        for opid in current_ids
-        if checkpoint.get(
-            "processed",
-            {},
-        ).get(
-            opid,
-            {},
-        ).get(
-            "status",
-        ) == "scanned"
-    )
+    migration_complete = False
+
+    if (
+        checkpoint is not None
+        and current_ids is not None
+    ):
+        migration_complete = (
+            checkpoint_migration_complete(
+                checkpoint,
+                current_ids,
+            )
+        )
 
     output = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "generated_at": now_iso(),
         "source_date": TODAY.strftime(
-            "%Y-%m-%d",
+            "%Y-%m-%d"
         ),
-        "count": len(
-            opportunities,
-        ),
-        "scanned_count": scanned_count,
-        "total_current": len(
-            current_ids,
+        "default_participant_country": (
+            DEFAULT_PARTICIPANT_COUNTRY
         ),
         "migration_complete": migration_complete,
-        "participant_countries": participant_countries,
-        "opportunities": opportunities,
+        "participant_countries": registry,
+        "count": len(matches),
+        "opportunities": matches,
     }
 
     atomic_write_json(
         OPPORTUNITIES_FILE,
         output,
     )
+
 
 
 
@@ -1507,22 +1898,11 @@ def get_participant_countries(
 # ============================================================
 
 
+
 def build_work_queue(
     current_opportunities: list[dict],
     checkpoint: dict,
 ) -> list[str]:
-    """
-    Queue policy for the country-neutral dataset.
-
-    1. New opportunities are scanned immediately.
-    2. Legacy records without a complete result are scanned during
-       the one-time migration.
-    3. Technical failures are retried.
-    4. Active opportunities are periodically rechecked after the
-       configured stale interval.
-    5. Recently checked opportunities are skipped.
-    """
-
     processed = checkpoint.get(
         "processed",
         {},
@@ -1542,85 +1922,98 @@ def build_work_queue(
 
     for opid in ordered_ids:
         entry = processed.get(
-            opid,
+            opid
         )
 
         if entry is None:
             new_ids.append(
-                opid,
+                opid
             )
             continue
 
         status = entry.get(
-            "status",
+            "status"
         )
 
         result = entry.get(
-            "result",
+            "result"
         )
 
-        # Legacy Morocco-specific entries with no result.
-        if (
-            not result
-            and status in {
-                "not_morocco",
-                "not_found",
-            }
-        ):
-            migration_ids.append(
-                opid,
-            )
-            continue
+        checked_at = entry.get(
+            "checked_at"
+        )
 
-        # Technical failures always get retried.
+        is_stale = True
+
+        if checked_at:
+            try:
+                checked = datetime.fromisoformat(
+                    checked_at.replace(
+                        "Z",
+                        "+00:00",
+                    )
+                )
+
+                current = datetime.now(
+                    checked.tzinfo
+                )
+
+                is_stale = (
+                    (
+                        current - checked
+                    ).total_seconds()
+                    >= DETAIL_RECHECK_INTERVAL
+                )
+
+            except (
+                ValueError,
+                TypeError,
+            ):
+                is_stale = True
+
         if status in {
             "error",
             "parse_error",
             "timeout",
         }:
             retry_ids.append(
-                opid,
+                opid
             )
             continue
 
-        # Entries which did not produce an active result are retried
-        # when they become stale.
         if (
-            status in {
-                "expired_deadline",
-                "activity_finished",
+            not result
+            and status in {
+                "legacy_unscanned",
+                "legacy_unscanned",
                 "not_found",
             }
-            and is_entry_stale(
-                entry,
-            )
         ):
-            stale_ids.append(
-                opid,
+            migration_ids.append(
+                opid
             )
             continue
 
-        # Every successfully scanned opportunity is periodically
-        # refreshed so participant eligibility changes are captured.
         if status in {
-            "scanned",
             "match",
+            "scanned",
         }:
-            if is_entry_stale(
-                entry,
-            ):
+            if is_stale:
                 stale_ids.append(
-                    opid,
+                    opid
                 )
 
             continue
 
-        # Any legacy/unrecognized state without a usable result must
-        # be migrated.
-        if not result:
-            migration_ids.append(
-                opid,
-            )
+        if status in {
+            "expired_deadline",
+            "activity_finished",
+            "not_found",
+        }:
+            if is_stale:
+                stale_ids.append(
+                    opid
+                )
 
     return (
         new_ids
@@ -1628,6 +2021,7 @@ def build_work_queue(
         + retry_ids
         + stale_ids
     )
+
 
 
 
