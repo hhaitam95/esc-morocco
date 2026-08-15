@@ -155,11 +155,11 @@ const translations = {
      lightMode: "Light mode",
 
      darkMode: "Dark mode",
-  },
     participantCountry: "Participant Country",
     selectParticipantCountry: "Select Participant Country",
     apply: "Apply",
     allParticipantCountries: "All participant countries",
+},
   fr: {
     title: "Outil de recherche d’opportunités du CES",
     subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
@@ -258,11 +258,11 @@ const translations = {
      lightMode: "Mode clair",
 
      darkMode: "Mode sombre",
-  },
     participantCountry: "Pays du participant",
     selectParticipantCountry: "Sélectionnez le pays du participant",
     apply: "Appliquer",
     allParticipantCountries: "Tous les pays participants",
+},
   ar: {
     title: "البحث عن فرص الفيلق الأوروبي للتضامن",
     subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
@@ -359,7 +359,11 @@ const translations = {
      lightMode: "الوضع الفاتح",
 
      darkMode: "الوضع الداكن",
-  },
+    participantCountry: "بلد المشارك",
+    selectParticipantCountry: "اختر بلد المشارك",
+    apply: "تطبيق",
+    allParticipantCountries: "جميع بلدان المشاركين",
+},
     participantCountry: "بلد المشارك",
     selectParticipantCountry: "اختر بلد المشارك",
     apply: "تطبيق",
