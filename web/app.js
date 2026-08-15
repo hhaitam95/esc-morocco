@@ -156,8 +156,8 @@ const translations = {
 
      darkMode: "Dark mode",
   },
-    participantCountry: "Participant country",
-    selectParticipantCountry: "Select participant country",
+    participantCountry: "Participant Country",
+    selectParticipantCountry: "Select Participant Country",
     apply: "Apply",
     allParticipantCountries: "All participant countries",
   fr: {
@@ -1397,84 +1397,21 @@ function participantCountryMatches(
     return false;
   }
 
+  const selectedNormalized =
+    normalizeParticipantCountryName(selected);
+
+  // At this stage the scraper/cache only contains Morocco's participant
+  // country results. Other countries intentionally return zero results
+  // until the backend and update.yml pipeline are extended.
+  if (selectedNormalized !== "morocco") {
+    return false;
+  }
+
   return (
     normalizeParticipantCountryName(value) ===
-    normalizeParticipantCountryName(selected)
+    selectedNormalized
   );
 }
-
-const participantCountryCodeMap = {
-  albania: "AL",
-  algeria: "DZ",
-  armenia: "AM",
-  aruba: "AW",
-  austria: "AT",
-  azerbaijan: "AZ",
-  belarus: "BY",
-  belgium: "BE",
-  "bonaire sint eustatius and saba": "BQ",
-  "bonaire, sint eustatius and saba": "BQ",
-  "bosnia and herzegovina": "BA",
-  bulgaria: "BG",
-  croatia: "HR",
-  curaçao: "CW",
-  cyprus: "CY",
-  czechia: "CZ",
-  denmark: "DK",
-  egypt: "EG",
-  estonia: "EE",
-  finland: "FI",
-  france: "FR",
-  "french polynesia": "PF",
-  "french southern and antarctic territories": "TF",
-  georgia: "GE",
-  germany: "DE",
-  greece: "EL",
-  greenland: "GL",
-  hungary: "HU",
-  iceland: "IS",
-  ireland: "IE",
-  israel: "IL",
-  italy: "IT",
-  jordan: "JO",
-  "kosovo * un resolution": "XK",
-  kosovo: "XK",
-  latvia: "LV",
-  lebanon: "LB",
-  libya: "LY",
-  liechtenstein: "LI",
-  lithuania: "LT",
-  luxembourg: "LU",
-  malta: "MT",
-  moldova: "MD",
-  montenegro: "ME",
-  morocco: "MA",
-  netherlands: "NL",
-  "new caledonia": "NC",
-  "north macedonia": "MK",
-  norway: "NO",
-  palestine: "PS",
-  poland: "PL",
-  portugal: "PT",
-  romania: "RO",
-  russia: "RU",
-  "saint barthélemy": "BL",
-  serbia: "RS",
-  "sint maarten": "SX",
-  "sint maarten (dutch part)": "SX",
-  slovakia: "SK",
-  slovenia: "SI",
-  spain: "ES",
-  "st pierre and miquelon": "PM",
-  sweden: "SE",
-  syria: "SY",
-  tunisia: "TN",
-  "türkiye": "TR",
-  turkiye: "TR",
-  ukraine: "UA",
-  "wallis and futuna": "WF",
-  "united kingdom": "GB",
-};
 
 function getParticipantCountryFlag(country) {
   const code =
