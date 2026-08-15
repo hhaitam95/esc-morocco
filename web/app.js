@@ -131,7 +131,7 @@ const translations = {
   en: {
     participantCountry: "Participant Country",
     selectParticipantCountry: "Select Participant Country",
-    apply: "Apply",
+    apply: "Search",
     allParticipantCountries: "All participant countries",
     title: "ESC Opportunity Finder",
     subtitle: "Find European Solidarity Corps volunteering opportunities open to participants from your country",
@@ -234,7 +234,7 @@ const translations = {
   fr: {
     participantCountry: "Pays du participant",
     selectParticipantCountry: "Sélectionnez le pays du participant",
-    apply: "Appliquer",
+    apply: "Rechercher",
     allParticipantCountries: "Tous les pays participants",
     title: "Outil de recherche d’opportunités du CES",
     subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
@@ -338,7 +338,7 @@ const translations = {
   ar: {
     participantCountry: "بلد المشارك",
     selectParticipantCountry: "اختر بلد المشارك",
-    apply: "تطبيق",
+    apply: "بحث",
     allParticipantCountries: "جميع بلدان المشاركين",
     title: "البحث عن فرص الفيلق الأوروبي للتضامن",
     subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
