@@ -6,5 +6,8 @@
   "participant_countries": 62,
   "participant_country_count": 62,
   "schema_version": 1,
-  "source": "data/opportunities.json"
+  "source": "data/opportunities.json",
+  "participant_country_index_schema_version": 1,
+  "participant_country_index_file": "participant_country_index.json",
+  "participant_country_index_generated_at": "2026-08-15T15:53:50.645691+00:00"
 }
