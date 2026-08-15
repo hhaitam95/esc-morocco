@@ -43,7 +43,7 @@ const ESC_PARTICIPANT_COUNTRIES = [
   { name: "Malta", flag: "🇲🇹" },
   { name: "Moldova", flag: "🇲🇩" },
   { name: "Montenegro", flag: "🇲🇪" },
-  { name: "Morocco", flag: "🇸🇦" },
+  { name: "Morocco", flag: "🇲🇦" },
   { name: "Netherlands", flag: "🇳🇱" },
   { name: "New Caledonia", flag: "🇳🇨" },
   { name: "North Macedonia", flag: "🇲🇰" },
