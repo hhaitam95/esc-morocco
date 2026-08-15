@@ -1,3 +1,73 @@
+// Complete participant-country list exposed // by the ESC API.
+// The backend currently has cached opportunity // data only for Morocco.
+const ESC_PARTICIPANT_COUNTRIES = [
+  { name: 'Albania', flag: '🇦🇱' },
+  { name: 'Algeria', flag: '🇩🇿' },
+  { name: 'Armenia', flag: '🇦🇲' },
+  { name: 'Aruba', flag: '🇦🇼' },
+  { name: 'Austria', flag: '🇦🇹' },
+  { name: 'Azerbaijan', flag: '🇦🇿' },
+  { name: 'Belarus', flag: '🇧🇾' },
+  { name: 'Belgium', flag: '🇧🇪' },
+  { name: 'Bonaire Sint Eustatius and Saba', flag: '🇧🇶' },
+  { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+  { name: 'Bulgaria', flag: '🇧🇬' },
+  { name: 'Croatia', flag: '🇭🇷' },
+  { name: 'Curaçao', flag: '🇨🇼' },
+  { name: 'Cyprus', flag: '🇨🇾' },
+  { name: 'Czechia', flag: '🇨🇿' },
+  { name: 'Denmark', flag: '🇩🇰' },
+  { name: 'Egypt', flag: '🇪🇬' },
+  { name: 'Estonia', flag: '🇪🇪' },
+  { name: 'Finland', flag: '🇫🇮' },
+  { name: 'France', flag: '🇫🇷' },
+  { name: 'French Polynesia', flag: '🇵🇫' },
+  { name: 'French Southern and Antarctic Territories', flag: '🇹🇫' },
+  { name: 'Georgia', flag: '🇬🇪' },
+  { name: 'Germany', flag: '🇩🇪' },
+  { name: 'Greece', flag: '🇬🇷' },
+  { name: 'Greenland', flag: '🇬🇱' },
+  { name: 'Hungary', flag: '🇭🇺' },
+  { name: 'Iceland', flag: '🇮🇸' },
+  { name: 'Ireland', flag: '🇮🇪' },
+  { name: 'Israel', flag: '🇮🇱' },
+  { name: 'Italy', flag: '🇮🇹' },
+  { name: 'Jordan', flag: '🇯🇴' },
+  { name: 'Kosovo * UN resolution', flag: '🇽🇰' },
+  { name: 'Latvia', flag: '🇱🇻' },
+  { name: 'Lebanon', flag: '🇱🇧' },
+  { name: 'Libya', flag: '🇱🇾' },
+  { name: 'Liechtenstein', flag: '🇱🇮' },
+  { name: 'Lithuania', flag: '🇱🇹' },
+  { name: 'Luxembourg', flag: '🇱🇺' },
+  { name: 'Malta', flag: '🇲🇹' },
+  { name: 'Moldova', flag: '🇲🇩' },
+  { name: 'Montenegro', flag: '🇲🇪' },
+  { name: 'Morocco', flag: '🇲🇦' },
+  { name: 'Netherlands', flag: '🇳🇱' },
+  { name: 'New Caledonia', flag: '🇳🇨' },
+  { name: 'North Macedonia', flag: '🇲🇰' },
+  { name: 'Norway', flag: '🇳🇴' },
+  { name: 'Palestine', flag: '🇵🇸' },
+  { name: 'Poland', flag: '🇵🇱' },
+  { name: 'Portugal', flag: '🇵🇹' },
+  { name: 'Romania', flag: '🇷🇴' },
+  { name: 'Russia', flag: '🇷🇺' },
+  { name: 'Saint Barthélemy', flag: '🇧🇱' },
+  { name: 'Serbia', flag: '🇷🇸' },
+  { name: 'Sint Maarten (dutch part)', flag: '🇸🇽' },
+  { name: 'Slovakia', flag: '🇸🇰' },
+  { name: 'Slovenia', flag: '🇸🇮' },
+  { name: 'Spain', flag: '🇪🇸' },
+  { name: 'St Pierre and Miquelon', flag: '🇵🇲' },
+  { name: 'Sweden', flag: '🇸🇪' },
+  { name: 'Syria', flag: '🇸🇾' },
+  { name: 'Tunisia', flag: '🇹🇳' },
+  { name: 'Türkiye', flag: '🇹🇷' },
+  { name: 'Ukraine', flag: '🇺🇦' },
+  { name: 'Wallis and Futuna', flag: '🇼🇫' },
+];
+
 // ============================================================
 // ESC MOROCCO OPPORTUNITIES
 // Frontend logic
@@ -1349,7 +1419,15 @@ function renderTopics(topics) {
 const PARTICIPANT_COUNTRY_STORAGE_KEY =
   "esc_participant_country";
 
-const participantCountryFilter =
+const // Complete participant-country list exposed by the ESC API.
+// The frontend can display all countries even while the
+// backend currently has cached data only for Morocco.
+// Complete participant-country list exposed by the ESC API.
+// The backend currently has cached data only for Morocco.
+// Complete participant-country list exposed by the ESC API.
+// The backend currently has cached data only for Morocco.
+
+participantCountryFilter =
   document.getElementById(
     "participant-country",
   );
@@ -1480,51 +1558,57 @@ function getParticipantCountries(data) {
   );
 }
 
-function populateParticipantCountries(data) {
+function populateParticipantCountries() {
   if (!participantCountryFilter) {
     return;
   }
 
-  const countries =
-    getParticipantCountries(data);
-
   participantCountryFilter.innerHTML = "";
 
-  const placeholder =
-    document.createElement("option");
-
+  const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent =
-    t("selectParticipantCountry");
+
+  if (typeof t === "function") {
+    placeholder.textContent =
+      t("selectParticipantCountry");
+  } else {
+    placeholder.textContent =
+      "Select Participant Country";
+  }
 
   participantCountryFilter.appendChild(
     placeholder,
   );
 
-  countries.forEach((country) => {
-    const option =
-      document.createElement("option");
+  ESC_PARTICIPANT_COUNTRIES.forEach((country) => {
+    const option = document.createElement("option");
 
-    option.value = country;
-
+    option.value = country.name;
     option.textContent =
-      `${getParticipantCountryFlag(country)} ${country}`;
+      `${country.flag} ${country.name}`;
 
     participantCountryFilter.appendChild(
       option,
     );
   });
 
-  const saved =
-    countries.find((country) =>
-      participantCountryMatches(
-        country,
-        participantCountryDraft,
-      ),
-    );
+  if (participantCountryDraft) {
+    const matchingCountry =
+      ESC_PARTICIPANT_COUNTRIES.find(
+        (country) =>
+          normalizeParticipantCountry(
+            country.name,
+          ) ===
+          normalizeParticipantCountry(
+            participantCountryDraft,
+          ),
+      );
 
-  participantCountryFilter.value =
-    saved || "";
+    participantCountryFilter.value =
+      matchingCountry
+        ? matchingCountry.name
+        : "";
+  }
 }
 
 function applyParticipantCountry() {
@@ -1631,6 +1715,45 @@ function populateFilters() {
 // ============================================================
 
 function getFilteredActive() {
+  /*
+   * The frontend exposes all participant countries,
+   * but the backend currently contains cached
+   * opportunity data only for Morocco.
+   *
+   * Non-Morocco selections intentionally return no
+   * results until country-specific backend scraping
+   * is implemented.
+   */
+  if (
+    selectedParticipantCountry &&
+    normalizeParticipantCountry(
+      selectedParticipantCountry,
+    ) !==
+    normalizeParticipantCountry("Morocco")
+  ) {
+    return [];
+  }
+
+
+  /*
+   * Backend support is currently Morocco-only.
+   *
+   * Morocco continues to use the existing scraper cache.
+   * Other countries are deliberately exposed in the UI but return
+   * zero results until country-specific scraper/update.yml support
+   * is implemented.
+   */
+  if (
+    selectedParticipantCountry &&
+    normalizeParticipantCountry(
+      selectedParticipantCountry,
+    ) !==
+    normalizeParticipantCountry("Morocco")
+  ) {
+    return [];
+  }
+
+
   const search = searchInput.value.trim().toLowerCase();
 
   const country = countryFilter.value;
