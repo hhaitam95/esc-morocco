@@ -141,7 +141,7 @@
                   class="language-flag"
                   aria-hidden="true"
                 >
-                  🇲🇦
+                  🇸🇦
                 </span>
 
                 <span>
@@ -169,6 +169,26 @@
          STATUS
     ====================================================== -->
 
+      <section class="intro">
+        <p data-i18n="intro">Find active European Solidarity Corps volunteering opportunities open to participants from your country.</p>
+
+        <p class="intro-note" data-i18n="introNote">The list is automatically refreshed from the European Youth Portal.</p>
+
+        <div class="participant-selector">
+          <div class="participant-selector-field">
+            <label for="participant-country" data-i18n="participantCountry">Participant Country</label>
+
+            <select id="participant-country" autocomplete="country-name"><option value="">Select Participant Country</option></select>
+          </div>
+
+          <button id="apply-participant-country" class="refresh-button" data-i18n="apply">Apply</button>
+        </div>
+</section>
+
+      <!-- =====================================================
+         INTRO
+    ====================================================== -->
+
       <section class="status-card">
         <div class="status-item">
           <span class="status-label" data-i18n="activeOpportunities">
@@ -186,26 +206,6 @@
           <strong id="last-updated" class="status-value"> — </strong>
         </div>
       </section>
-
-      <!-- =====================================================
-         INTRO
-    ====================================================== -->
-
-      <section class="intro">
-        <p data-i18n="intro">Find active European Solidarity Corps volunteering opportunities open to participants from your country.</p>
-
-        <p class="intro-note" data-i18n="introNote">The list is automatically refreshed from the European Youth Portal.</p>
-
-        <div class="participant-selector">
-          <div class="participant-selector-field">
-            <label for="participant-country" data-i18n="participantCountry">Participant Country</label>
-
-            <select id="participant-country" autocomplete="country-name"><option value="">Select Participant Country</option></select>
-          </div>
-
-          <button id="apply-participant-country" class="refresh-button" data-i18n="apply">Apply</button>
-        </div>
-</section>
 
       <!-- =====================================================
          CONTROLS
