@@ -1437,13 +1437,9 @@ const applyParticipantCountryButton =
     "apply-participant-country",
   );
 
-let selectedParticipantCountry =
-  localStorage.getItem(
-    PARTICIPANT_COUNTRY_STORAGE_KEY,
-  ) || "";
-
-let participantCountryDraft =
-  selectedParticipantCountry;
+let selectedParticipantCountry = "";
+let participantCountryDraft = "";
+let participantSearchApplied = false;
 
 function normalizeParticipantCountry(value) {
   return String(value || "")
@@ -1580,17 +1576,7 @@ function populateParticipantCountries() {
     participantCountryFilter.appendChild(option);
   });
 
-  if (participantCountryDraft) {
-    const matchingCountry =
-      ESC_PARTICIPANT_COUNTRIES.find(
-        (country) =>
-          normalizeParticipantCountry(country.name) ===
-          normalizeParticipantCountry(participantCountryDraft),
-      );
-
-    participantCountryFilter.value =
-      matchingCountry ? matchingCountry.name : "";
-  }
+  participantCountryFilter.value = "";
 }
 
 function applyParticipantCountry() {
@@ -1604,18 +1590,16 @@ function applyParticipantCountry() {
   participantCountryDraft =
     selectedParticipantCountry;
 
-  if (selectedParticipantCountry) {
-    localStorage.setItem(
-      PARTICIPANT_COUNTRY_STORAGE_KEY,
-      selectedParticipantCountry,
-    );
-  } else {
-    localStorage.removeItem(
-      PARTICIPANT_COUNTRY_STORAGE_KEY,
-    );
-  }
+  participantSearchApplied = Boolean(
+    selectedParticipantCountry,
+  );
 
-  renderActive();
+  if (participantSearchApplied) {
+    renderActive();
+    updateHeaderForParticipantSearch();
+  } else {
+    resetParticipantSearchDisplay();
+  }
 }
 
 if (participantCountryFilter) {
@@ -1873,6 +1857,57 @@ function sortOpportunities(items) {
   });
 
   return sorted;
+}
+
+
+function resetParticipantSearchDisplay() {
+  opportunityCount.textContent = "—";
+  activeResultCount.textContent = "—";
+  lastUpdated.textContent = "—";
+
+  opportunitiesBody.innerHTML = "";
+  emptyMessage.classList.add("hidden");
+}
+
+function updateHeaderForParticipantSearch() {
+  const filtered = sortOpportunities(getFilteredActive());
+
+  const count = filtered.length;
+
+  opportunityCount.textContent =
+    count === 1
+      ? `1 ${t("result")}`
+      : `${count} ${t("results")}`;
+
+  activeResultCount.textContent =
+    count === 1
+      ? `1 ${t("result")}`
+      : `${count} ${t("results")}`;
+
+  if (currentActiveData?.generated_at) {
+    const date = parseDateTime(currentActiveData.generated_at);
+
+    if (date) {
+      lastUpdated.textContent = new Intl.DateTimeFormat(
+        currentLanguage === "ar"
+          ? "ar-MA"
+          : currentLanguage === "fr"
+            ? "fr-FR"
+            : "en-GB",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      ).format(date);
+
+      return;
+    }
+  }
+
+  lastUpdated.textContent = "—";
 }
 
 // ============================================================
@@ -2207,9 +2242,8 @@ async function loadData() {
 
     populateParticipantCountries(currentActiveData);
 
-    updateHeader(currentActiveData);
+    resetParticipantSearchDisplay();
 
-    renderActive();
 
     renderExpired();
   } catch (error) {
