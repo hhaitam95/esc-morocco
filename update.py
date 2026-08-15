@@ -6,10 +6,12 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+
+APP_FILE = ROOT / "web" / "app.js"
+INDEX_HTML_FILE = ROOT / "web" / "index.html"
 
 CANONICAL_CACHE = ROOT / "data" / "opportunities.json"
 PUBLISHED_CACHE = ROOT / "web" / "opportunities.json"
@@ -17,82 +19,70 @@ PUBLISHED_CACHE = ROOT / "web" / "opportunities.json"
 PARTICIPANT_INDEX = ROOT / "data" / "participant_country_index.json"
 PUBLISHED_PARTICIPANT_INDEX = ROOT / "web" / "participant_country_index.json"
 
-MANIFEST = ROOT / "data" / "cache_manifest.json"
+SCRAPER_FILE = ROOT / "scraper" / "scraper.py"
 
-BACKEND_CACHE = ROOT / "backend" / "cache.py"
-BACKEND_SEARCH = ROOT / "backend" / "search.py"
-BACKEND_TESTS = ROOT / "backend" / "test_search.py"
-
-SCRAPER = ROOT / "scraper" / "scraper.py"
-
-REQUIRED_FILES = [
-    "backend/__init__.py",
-    "backend/cache.py",
-    "backend/search.py",
-    "backend/test_search.py",
-    "data/opportunities.json",
-    "scraper/scraper.py",
+MANAGED_FILES = [
     "web/app.js",
-    "web/opportunities.json",
-]
-
-PHASE_FOUR_FILES = [
-    "backend/cache.py",
-    "backend/search.py",
-    "backend/test_search.py",
-    "data/cache_manifest.json",
-    "data/participant_country_index.json",
-    "web/participant_country_index.json",
+    "web/index.html",
     "update.py",
 ]
 
-INDEX_SCHEMA_VERSION = 1
+REQUIRED_FILES = [
+    "scraper/scraper.py",
+    "data/opportunities.json",
+    "data/participant_country_index.json",
+    "web/opportunities.json",
+    "web/participant_country_index.json",
+    "web/app.js",
+    "web/index.html",
+]
 
-COUNTRY_NAME_ALIASES = {
-    "el": "GR",
-    "greece": "GR",
-    "uk": "GB",
-    "united kingdom": "GB",
-    "turkey": "TR",
-    "türkiye": "TR",
-    "czech republic": "CZ",
-    "czechia": "CZ",
-    "north macedonia": "MK",
-    "the former yugoslav republic of macedonia": "MK",
-    "macedonia": "MK",
-    "republic of moldova": "MD",
-    "moldova": "MD",
-    "kosovo": "XK",
-    "kosovo * un resolution": "XK",
-    "bonaire, sint eustatius and saba": "BQ",
-    "bonaire sint eustatius and saba": "BQ",
-    "caribbean netherlands": "BQ",
-    "curacao": "CW",
-    "curaçao": "CW",
-    "sint maarten": "SX",
-    "sint maarten (dutch part)": "SX",
-    "palestine": "PS",
-    "palestine, state of": "PS",
-    "russia": "RU",
-    "russian federation": "RU",
-    "syria": "SY",
-    "syrian arab republic": "SY",
-}
+PARTICIPANT_SECTION_START = (
+    "// ============================================================\n"
+    "// PARTICIPANT COUNTRY FILTER\n"
+    "// ============================================================\n"
+)
 
-COUNTRY_DISPLAY_OVERRIDES = {
-    "TR": "Türkiye",
-    "CZ": "Czechia",
-    "MK": "North Macedonia",
-    "BA": "Bosnia and Herzegovina",
-    "CW": "Curaçao",
-    "SX": "Sint Maarten",
-    "BQ": "Bonaire, Sint Eustatius and Saba",
-    "XK": "Kosovo",
-}
+FILTER_OPTIONS_SECTION = (
+    "// ============================================================\n"
+    "// FILTER OPTIONS\n"
+    "// ============================================================\n"
+)
+
+FILTERING_SECTION = (
+    "// ============================================================\n"
+    "// FILTERING\n"
+    "// ============================================================\n"
+)
+
+SORTING_SECTION = (
+    "// ============================================================\n"
+    "// SORTING\n"
+    "// ============================================================\n"
+)
+
+REFRESH_BUTTON_SECTION = (
+    "// ============================================================\n"
+    "// REFRESH BUTTON\n"
+    "// ============================================================\n"
+)
+
+PHASE_TWO_SECTION = (
+    "// ============================================================\n"
+    "// PHASE TWO CACHE-FIRST SEARCH INTEGRATION\n"
+    "// ============================================================\n"
+)
+
+
+def banner(text):
+    print()
+    print("=" * 72)
+    print(text)
+    print("=" * 72)
 
 
 def run(command, *, check=True, capture=False):
-    print("$ " + " ".join(str(item) for item in command))
+    print("$ " + " ".join(str(x) for x in command))
 
     result = subprocess.run(
         command,
@@ -110,166 +100,28 @@ def run(command, *, check=True, capture=False):
     if check and result.returncode != 0:
         raise RuntimeError(
             f"Command failed with exit code {result.returncode}: "
-            + " ".join(str(item) for item in command)
+            + " ".join(str(x) for x in command)
         )
 
     return result
 
 
-def read_text(path: Path) -> str:
+def read_text(path):
     return path.read_text(encoding="utf-8")
 
 
-def load_json(path: Path):
+def write_text(path, content):
+    path.write_text(
+        content.rstrip("\r\n") + "\n",
+        encoding="utf-8",
+    )
+
+
+def load_json(path):
     try:
         return json.loads(read_text(path))
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Invalid JSON in {path.relative_to(ROOT)}: {exc}") from exc
-
-
-def atomic_write_json(path: Path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    temporary = path.with_suffix(path.suffix + ".tmp")
-
-    temporary.write_text(
-        json.dumps(
-            data,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=False,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-    temporary.replace(path)
-
-
-def normalize_country_text(value):
-    if value is None:
-        return ""
-
-    return re.sub(
-        r"\s+",
-        " ",
-        str(value).strip(),
-    ).casefold()
-
-
-def country_code_from_value(value):
-    """
-    Resolve a participant-country value to an ISO-style two-letter code.
-
-    The scraper already performs this normalization, but Phase Four also
-    normalizes the existing cache so the index can safely be generated from
-    older cache records containing country names.
-    """
-
-    if value is None:
-        return None
-
-    raw = re.sub(
-        r"\s+",
-        " ",
-        str(value).strip(),
-    )
-
-    if not raw:
-        return None
-
-    normalized = normalize_country_text(raw)
-
-    if normalized in COUNTRY_NAME_ALIASES:
-        return COUNTRY_NAME_ALIASES[normalized]
-
-    if len(raw) == 2 and raw.isalpha():
-        code = raw.upper()
-
-        if code == "EL":
-            return "GR"
-
-        if code == "UK":
-            return "GB"
-
-        if code == "XK":
-            return "XK"
-
-        try:
-            import pycountry
-
-            record = pycountry.countries.get(alpha_2=code)
-
-            if record:
-                return code
-        except (ImportError, LookupError):
-            pass
-
-    cleaned = re.sub(
-        r"\s*\*.*$",
-        "",
-        raw,
-    ).strip()
-
-    cleaned_normalized = normalize_country_text(cleaned)
-
-    if cleaned_normalized in COUNTRY_NAME_ALIASES:
-        return COUNTRY_NAME_ALIASES[cleaned_normalized]
-
-    try:
-        import pycountry
-
-        for field in (
-            "name",
-            "official_name",
-            "common_name",
-        ):
-            try:
-                record = pycountry.countries.get(**{field: cleaned})
-
-                if record:
-                    return record.alpha_2.upper()
-            except LookupError:
-                continue
-
-        try:
-            matches = pycountry.countries.search_fuzzy(cleaned)
-
-            if matches:
-                return matches[0].alpha_2.upper()
-        except LookupError:
-            pass
-
-    except ImportError:
-        pass
-
-    return None
-
-
-def country_display_name(code):
-    normalized = str(code).strip().upper()
-
-    if normalized in COUNTRY_DISPLAY_OVERRIDES:
-        return COUNTRY_DISPLAY_OVERRIDES[normalized]
-
-    try:
-        import pycountry
-
-        record = pycountry.countries.get(alpha_2=normalized)
-
-        if record:
-            return (
-                getattr(
-                    record,
-                    "common_name",
-                    None,
-                )
-                or record.name
-            )
-    except (ImportError, LookupError):
-        pass
-
-    return normalized
 
 
 def require_files():
@@ -299,18 +151,13 @@ def check_git_state():
 
     if status.strip():
         print("Current working tree:")
+        print(status, end="" if status.endswith("\n") else "\n")
         print(
-            status,
-            end="" if status.endswith("\n") else "\n",
+            "NOTE: Existing changes detected; only Phase Five files " "will be staged."
         )
-        print("NOTE: Existing working-tree changes were detected.")
-        print(
-            "NOTE: This updater will stage only explicitly "
-            "declared Phase Four files."
-        )
-        print("NOTE: Unrelated changes will not be included.")
+        print("NOTE: Unrelated changes will remain untouched.")
     else:
-        print("PASS: working tree is clean before this update.")
+        print("PASS: working tree is clean.")
 
 
 def check_branch():
@@ -324,7 +171,7 @@ def check_branch():
     branch = result.stdout.strip()
 
     if branch != "main":
-        raise RuntimeError(f"Expected branch 'main', found '{branch}'.")
+        raise RuntimeError(f"Expected branch main, found {branch!r}.")
 
     print("PASS: current branch is main.")
 
@@ -345,27 +192,22 @@ def check_remote():
         capture=True,
     )
 
-    values = result.stdout.strip().split()
+    parts = result.stdout.strip().split()
 
-    if len(values) != 2:
-        raise RuntimeError("Unable to determine local/remote synchronization state.")
+    if len(parts) != 2:
+        raise RuntimeError("Could not determine local/remote commit state.")
 
-    local_only, remote_only = map(int, values)
+    local_only = int(parts[0])
+    remote_only = int(parts[1])
 
     print(f"Local-only commits: {local_only}")
     print(f"Remote-only commits: {remote_only}")
 
-    if remote_only != 0:
-        raise RuntimeError(
-            "Remote main contains commits not present locally. "
-            "Refusing to modify/commit/push."
-        )
-
     if local_only != 0:
-        raise RuntimeError(
-            "Local main contains commits not present remotely. "
-            "Refusing to modify/commit/push."
-        )
+        raise RuntimeError("Local main contains commits not present remotely.")
+
+    if remote_only != 0:
+        raise RuntimeError("Remote main contains commits not present locally.")
 
     print("PASS: local main is synchronized with origin/main.")
 
@@ -373,12 +215,10 @@ def check_remote():
 def validate_scraper():
     print("\nValidating existing scraper architecture...")
 
-    scraper = read_text(SCRAPER)
+    source = read_text(SCRAPER_FILE)
 
-    required_markers = [
-        "normalize_result_country_schema",
+    required = [
         "eligible_countries",
-        "eligible_countries_unmapped",
         "eligibility_known",
         "CHECKPOINT_FILE",
         "OPPORTUNITIES_FILE",
@@ -387,1232 +227,1131 @@ def validate_scraper():
         "MAX_RETRIES",
     ]
 
-    missing = [marker for marker in required_markers if marker not in scraper]
+    missing = [marker for marker in required if marker not in source]
 
     if missing:
         raise RuntimeError(
-            "Scraper architecture validation failed. "
-            "Missing markers:\n" + "\n".join(f"  - {item}" for item in missing)
+            "Scraper architecture validation failed:\n"
+            + "\n".join(f"  - {item}" for item in missing)
         )
 
     print(
-        "PASS: existing resumable/incremental " "scraper architecture remains intact."
+        "PASS: existing resumable/incremental "
+        "country-agnostic scraper architecture remains intact."
     )
 
 
-def validate_hourly_workflow():
+def validate_workflow():
     print("\nValidating hourly scraper workflow...")
 
-    workflow_candidates = [
+    candidates = [
         ROOT / ".github" / "workflows" / "update.yml",
         ROOT / ".github" / "workflows" / "scrape.yml",
     ]
 
     workflow = next(
-        (path for path in workflow_candidates if path.is_file()),
+        (path for path in candidates if path.is_file()),
         None,
     )
 
     if workflow is None:
-        raise RuntimeError("No background scraper workflow was found.")
+        raise RuntimeError("No hourly scraper workflow found.")
 
-    content = read_text(workflow)
+    source = read_text(workflow)
 
-    if "schedule:" not in content:
-        raise RuntimeError("Background scraper workflow does not contain a schedule.")
-
-    if "cron:" not in content:
-        raise RuntimeError(
-            "Background scraper workflow does not contain a cron schedule."
-        )
+    if "schedule:" not in source or "cron:" not in source:
+        raise RuntimeError("Hourly scraper workflow is missing its schedule.")
 
     print(
         f"PASS: hourly scraper workflow is present " f"({workflow.relative_to(ROOT)})."
     )
 
 
-def load_canonical_cache():
-    print("\nValidating canonical opportunity cache...")
+def validate_cache():
+    print("\nValidating canonical and published caches...")
 
-    data = load_json(CANONICAL_CACHE)
+    canonical = load_json(CANONICAL_CACHE)
+    published = load_json(PUBLISHED_CACHE)
 
-    if not isinstance(data, dict):
-        raise RuntimeError("Canonical cache must be a JSON object.")
+    canonical_ops = canonical.get("opportunities")
+    published_ops = published.get("opportunities")
 
-    opportunities = data.get("opportunities")
-
-    if not isinstance(opportunities, list):
+    if not isinstance(canonical_ops, list):
         raise RuntimeError("Canonical cache does not contain an opportunities list.")
 
-    if not opportunities:
-        raise RuntimeError("Canonical cache is empty.")
-
-    seen_ids = set()
-    duplicate_ids = []
-
-    with_country_data = 0
-    unknown_country_data = 0
-
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            raise RuntimeError("Canonical cache contains a non-object opportunity.")
-
-        opportunity_id = opportunity.get("id")
-
-        if opportunity_id is None:
-            raise RuntimeError("Canonical cache contains an opportunity without an ID.")
-
-        identity = str(opportunity_id)
-
-        if identity in seen_ids:
-            duplicate_ids.append(identity)
-
-        seen_ids.add(identity)
-
-        countries = opportunity.get("eligible_countries")
-
-        if isinstance(countries, list):
-            with_country_data += 1
-
-        if opportunity.get("eligibility_known") is False:
-            unknown_country_data += 1
-
-    if duplicate_ids:
-        raise RuntimeError(
-            "Canonical cache contains duplicate opportunity IDs:\n"
-            + "\n".join(f"  - {item}" for item in sorted(set(duplicate_ids)))
-        )
-
-    print(f"Cached opportunities: {len(opportunities)}")
-    print("Opportunities with participant-country data: " f"{with_country_data}")
-
-    if unknown_country_data:
-        print(
-            "NOTE: opportunities with unknown participant-country "
-            f"eligibility: {unknown_country_data}"
-        )
-
-    print("PASS: canonical cache is structurally valid.")
-
-    return data
-
-
-def load_published_cache():
-    print("\nValidating published website cache...")
-
-    data = load_json(PUBLISHED_CACHE)
-
-    if not isinstance(data, dict):
-        raise RuntimeError("Published cache must be a JSON object.")
-
-    opportunities = data.get("opportunities")
-
-    if not isinstance(opportunities, list):
+    if not isinstance(published_ops, list):
         raise RuntimeError("Published cache does not contain an opportunities list.")
 
-    if not opportunities:
-        raise RuntimeError("Published cache is empty.")
-
-    print(f"Web cached opportunities: {len(opportunities)}")
-    print("PASS: published website cache is structurally valid.")
-
-    return data
-
-
-def validate_canonical_published_ids(
-    canonical_data,
-    published_data,
-):
-    print("\nValidating canonical/published opportunity consistency...")
-
-    canonical_ids = {
-        str(item.get("id"))
-        for item in canonical_data.get(
-            "opportunities",
-            [],
-        )
-        if isinstance(item, dict) and item.get("id") is not None
-    }
-
-    published_ids = {
-        str(item.get("id"))
-        for item in published_data.get(
-            "opportunities",
-            [],
-        )
-        if isinstance(item, dict) and item.get("id") is not None
-    }
-
-    if canonical_ids != published_ids:
-        missing_from_web = sorted(canonical_ids - published_ids)
-        missing_from_canonical = sorted(published_ids - canonical_ids)
-
-        raise RuntimeError(
-            "Canonical and published caches contain different "
-            "opportunity IDs.\n"
-            f"Missing from web cache: {missing_from_web}\n"
-            f"Missing from canonical cache: {missing_from_canonical}"
-        )
-
-    print("PASS: canonical and published caches contain " "the same opportunity IDs.")
-
-
-def normalize_opportunity_country_values(
-    canonical_data,
-):
-    """
-    Normalize participant-country values in the canonical cache.
-
-    The scraper's current schema already stores ISO-style codes.
-    This function also supports older cache records containing names,
-    allowing Phase Four to safely migrate the existing dataset.
-    """
-
-    opportunities = canonical_data.get(
-        "opportunities",
-        [],
-    )
-
-    normalized_count = 0
-    unmapped_values = set()
-
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            continue
-
-        values = opportunity.get(
-            "eligible_countries",
-            [],
-        )
-
-        if not isinstance(values, list):
-            continue
-
-        codes = set()
-        original_unmapped = set(
-            opportunity.get(
-                "eligible_countries_unmapped",
-                [],
-            )
-            or []
-        )
-
-        for value in values:
-            code = country_code_from_value(value)
-
-            if code:
-                codes.add(code.upper())
-            else:
-                text = str(value).strip()
-
-                if text:
-                    unmapped_values.add(text)
-                    original_unmapped.add(text)
-
-        normalized_codes = sorted(codes)
-
-        if normalized_codes != values:
-            opportunity["eligible_countries"] = normalized_codes
-            normalized_count += 1
-
-        if original_unmapped:
-            opportunity["eligible_countries_unmapped"] = sorted(original_unmapped)
-        else:
-            opportunity.pop(
-                "eligible_countries_unmapped",
-                None,
-            )
-
-        opportunity["eligibility_known"] = bool(normalized_codes or values == [])
-
-    if normalized_count:
-        print(
-            "Normalized participant-country schema "
-            f"for {normalized_count} cached opportunities."
-        )
-    else:
-        print(
-            "Participant-country values already use "
-            "the canonical normalized representation."
-        )
-
-    if unmapped_values:
-        print("WARNING: unmapped participant-country values:")
-
-        for value in sorted(unmapped_values):
-            print(f"  - {value}")
-
-    return canonical_data, unmapped_values
-
-
-def build_participant_country_index(
-    canonical_data,
-):
-    print("\nBuilding participant-country index...")
-
-    opportunities = canonical_data.get(
-        "opportunities",
-        [],
-    )
-
-    countries = {}
-
-    indexed_opportunities = set()
-    skipped_without_country_data = []
-
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            continue
-
-        opportunity_id = opportunity.get("id")
-
-        if opportunity_id is None:
-            continue
-
-        countries_for_opportunity = opportunity.get(
-            "eligible_countries",
-            [],
-        )
-
-        if not isinstance(
-            countries_for_opportunity,
-            list,
-        ):
-            skipped_without_country_data.append(str(opportunity_id))
-            continue
-
-        normalized_codes = set()
-
-        for value in countries_for_opportunity:
-            code = country_code_from_value(value)
-
-            if code:
-                normalized_codes.add(code.upper())
-
-        for code in normalized_codes:
-            countries.setdefault(
-                code,
-                [],
-            ).append(opportunity_id)
-
-            indexed_opportunities.add(str(opportunity_id))
-
-    for code in countries:
-        countries[code] = sorted(
-            countries[code],
-            key=lambda value: (
-                str(type(value)),
-                str(value),
-            ),
-        )
-
-    sorted_countries = dict(
-        sorted(
-            countries.items(),
-            key=lambda item: item[0],
-        )
-    )
-
-    generated_at = datetime.now(timezone.utc).isoformat()
-
-    index = {
-        "schema_version": INDEX_SCHEMA_VERSION,
-        "generated_at": generated_at,
-        "opportunity_count": len(opportunities),
-        "participant_country_count": len(sorted_countries),
-        "indexed_opportunity_count": len(indexed_opportunities),
-        "countries": sorted_countries,
-    }
-
-    print(f"  Opportunities: {len(opportunities)}")
-    print("  Participant countries indexed: " f"{len(sorted_countries)}")
-    print("  Opportunities indexed: " f"{len(indexed_opportunities)}")
-
-    if skipped_without_country_data:
-        print(
-            "  Opportunities skipped because participant-country "
-            "data was unavailable: "
-            f"{len(skipped_without_country_data)}"
-        )
-
-    if "MA" in sorted_countries:
-        print("  Morocco (MA): " f"{len(sorted_countries['MA'])} opportunities")
-    else:
-        print("  Morocco (MA): 0 opportunities")
-
-    return index
-
-
-def validate_index(
-    index,
-    canonical_data,
-):
-    print("\nValidating participant-country index...")
-
-    if not isinstance(
-        index,
-        dict,
-    ):
-        raise RuntimeError("Participant-country index must be a JSON object.")
-
-    if index.get("schema_version") != INDEX_SCHEMA_VERSION:
-        raise RuntimeError("Unexpected participant-country index schema version.")
-
-    countries = index.get("countries")
-
-    if not isinstance(
-        countries,
-        dict,
-    ):
-        raise RuntimeError(
-            "Participant-country index does not contain a countries object."
-        )
+    if not canonical_ops:
+        raise RuntimeError("Canonical opportunity cache is empty.")
 
     canonical_by_id = {
         str(item.get("id")): item
-        for item in canonical_data.get(
-            "opportunities",
-            [],
-        )
+        for item in canonical_ops
         if isinstance(item, dict) and item.get("id") is not None
     }
 
-    indexed_ids = set()
-
-    for country_code, opportunity_ids in countries.items():
-        if not isinstance(
-            country_code,
-            str,
-        ):
-            raise RuntimeError(
-                "Participant-country index contains a non-string country key."
-            )
-
-        if (
-            len(country_code) != 2
-            or not country_code.isalpha()
-            or country_code != country_code.upper()
-        ):
-            raise RuntimeError(
-                f"Invalid participant-country index key: {country_code!r}"
-            )
-
-        if not isinstance(
-            opportunity_ids,
-            list,
-        ):
-            raise RuntimeError(f"Index entry for {country_code} is not a list.")
-
-        previous = None
-
-        for opportunity_id in opportunity_ids:
-            identity = str(opportunity_id)
-
-            if identity not in canonical_by_id:
-                raise RuntimeError(
-                    f"Index references unknown opportunity "
-                    f"{opportunity_id} for {country_code}."
-                )
-
-            if previous is not None:
-                current_sort = (
-                    str(type(opportunity_id)),
-                    str(opportunity_id),
-                )
-
-                if current_sort < previous:
-                    raise RuntimeError(
-                        f"Index entry for {country_code} is not deterministic."
-                    )
-
-                previous = current_sort
-            else:
-                previous = (
-                    str(type(opportunity_id)),
-                    str(opportunity_id),
-                )
-
-            indexed_ids.add(identity)
-
-            opportunity = canonical_by_id[identity]
-
-            eligible = {
-                code
-                for code in (
-                    opportunity.get(
-                        "eligible_countries",
-                        [],
-                    )
-                    or []
-                )
-                if isinstance(
-                    code,
-                    str,
-                )
-            }
-
-            if country_code not in {value.upper() for value in eligible}:
-                raise RuntimeError(
-                    f"Index incorrectly maps opportunity "
-                    f"{opportunity_id} to {country_code}."
-                )
-
-    expected_pairs = set()
-
-    for identity, opportunity in canonical_by_id.items():
-        for value in (
-            opportunity.get(
-                "eligible_countries",
-                [],
-            )
-            or []
-        ):
-            code = country_code_from_value(value)
-
-            if code:
-                expected_pairs.add(
-                    (
-                        code.upper(),
-                        identity,
-                    )
-                )
-
-    actual_pairs = {
-        (
-            country_code,
-            str(opportunity_id),
-        )
-        for country_code, opportunity_ids in countries.items()
-        for opportunity_id in opportunity_ids
+    published_by_id = {
+        str(item.get("id")): item
+        for item in published_ops
+        if isinstance(item, dict) and item.get("id") is not None
     }
 
-    if expected_pairs != actual_pairs:
-        missing_pairs = sorted(expected_pairs - actual_pairs)
-        unexpected_pairs = sorted(actual_pairs - expected_pairs)
+    if len(canonical_by_id) != len(canonical_ops):
+        raise RuntimeError("Canonical cache contains duplicate opportunity IDs.")
 
+    if set(canonical_by_id) != set(published_by_id):
         raise RuntimeError(
-            "Participant-country index does not exactly match "
-            "canonical eligibility data.\n"
-            f"Missing index mappings: {missing_pairs[:20]}\n"
-            f"Unexpected index mappings: {unexpected_pairs[:20]}"
+            "Canonical and published caches contain different " "opportunity IDs."
         )
 
+    for opportunity_id in canonical_by_id:
+        canonical_item = canonical_by_id[opportunity_id]
+        published_item = published_by_id[opportunity_id]
+
+        if canonical_item.get("eligible_countries") != published_item.get(
+            "eligible_countries"
+        ):
+            raise RuntimeError(
+                f"Published cache differs from canonical cache "
+                f"for opportunity {opportunity_id}."
+            )
+
+    with_country_data = sum(
+        isinstance(item.get("eligible_countries"), list)
+        for item in canonical_ops
+        if isinstance(item, dict)
+    )
+
+    print(f"Canonical opportunities: {len(canonical_ops)}")
+    print(f"Published opportunities: {len(published_ops)}")
+    print("Opportunities with participant-country data: " f"{with_country_data}")
+
+    if with_country_data != len(canonical_ops):
+        raise RuntimeError(
+            "Not every canonical opportunity has participant-country data."
+        )
+
+    print("PASS: canonical and published caches are consistent.")
+
+    return canonical
+
+
+def validate_index(canonical):
+    print("\nValidating participant-country index...")
+
+    index = load_json(PARTICIPANT_INDEX)
+
+    if index.get("schema_version") != 1:
+        raise RuntimeError("Unsupported participant-country index schema.")
+
+    countries = index.get("countries")
+
+    if not isinstance(countries, dict):
+        raise RuntimeError("Participant-country index has an invalid countries object.")
+
+    canonical_by_id = {
+        str(item["id"]): item
+        for item in canonical["opportunities"]
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+
+    expected = {}
+
+    for opportunity in canonical["opportunities"]:
+        if not isinstance(opportunity, dict):
+            continue
+
+        opportunity_id = str(opportunity["id"])
+
+        eligible = opportunity.get(
+            "eligible_countries",
+            [],
+        )
+
+        if not isinstance(eligible, list):
+            raise RuntimeError(
+                f"Opportunity {opportunity_id} has invalid " "eligible_countries."
+            )
+
+        for country in eligible:
+            if not isinstance(country, str):
+                continue
+
+            code = country.strip().upper()
+
+            if not code:
+                continue
+
+            expected.setdefault(code, set()).add(opportunity_id)
+
+    actual = {}
+
+    for country_code, opportunity_ids in countries.items():
+        normalized_code = str(country_code).strip().upper()
+
+        if not isinstance(opportunity_ids, list):
+            raise RuntimeError(f"Index entry {normalized_code} is not a list.")
+
+        actual[normalized_code] = {str(value) for value in opportunity_ids}
+
+    if set(expected) != set(actual):
+        raise RuntimeError(
+            "Participant-country index country set differs from "
+            "canonical eligibility data."
+        )
+
+    for code in expected:
+        if expected[code] != actual[code]:
+            raise RuntimeError(f"Participant-country index mismatch for {code}.")
+
+        for opportunity_id in actual[code]:
+            if opportunity_id not in canonical_by_id:
+                raise RuntimeError(
+                    f"Index {code} references unknown " f"opportunity {opportunity_id}."
+                )
+
+    morocco_count = len(actual.get("MA", set()))
+
+    if morocco_count == 0:
+        raise RuntimeError("Morocco (MA) has no indexed opportunities.")
+
+    if len(actual) < 2:
+        raise RuntimeError("Participant-country index is not country-agnostic.")
+
+    print(f"Indexed participant countries: {len(actual)}")
+    print(f"Indexed opportunities: {len(canonical_by_id)}")
+    print(f"Morocco (MA) indexed opportunities: {morocco_count}")
     print(
         "PASS: participant-country index exactly matches " "canonical eligibility data."
     )
 
+    published_index = load_json(PUBLISHED_PARTICIPANT_INDEX)
 
-def validate_morocco_index(index):
-    print("\nValidating Morocco index entry...")
+    if published_index != index:
+        raise RuntimeError(
+            "data/participant_country_index.json and "
+            "web/participant_country_index.json differ."
+        )
 
-    countries = index.get("countries", {})
+    print("PASS: published participant-country index is synchronized.")
 
-    morocco_ids = countries.get("MA", [])
+    return index
 
-    if not isinstance(
-        morocco_ids,
-        list,
-    ):
-        raise RuntimeError("Morocco index entry is not a list.")
 
-    print(f"Morocco (MA) indexed opportunities: " f"{len(morocco_ids)}")
+def remove_all_index_url_declarations(source):
+    """
+    Make the transformation idempotent.
 
-    if not morocco_ids:
-        raise RuntimeError("Morocco (MA) has no indexed opportunities.")
+    Previous failed attempts may already have inserted the same
+    const declaration one or more times. Remove every declaration
+    before inserting exactly one canonical declaration.
+    """
 
-    print(
-        "PASS: Morocco is represented through the " "generic participant-country index."
+    pattern = re.compile(
+        r"^[ \t]*const\s+PARTICIPANT_COUNTRY_INDEX_URL\s*=\s*"
+        r'"participant_country_index\.json";[ \t]*\n?',
+        re.MULTILINE,
     )
 
+    updated, count = pattern.subn(
+        "",
+        source,
+    )
 
-def update_manifest(
-    canonical_data,
-    index,
+    if count:
+        print(
+            f"Removed {count} existing " "PARTICIPANT_COUNTRY_INDEX_URL declaration(s)."
+        )
+
+    marker = 'const EXPIRED_DATA_URL = "expired.json";'
+
+    if marker not in updated:
+        raise RuntimeError("Could not locate EXPIRED_DATA_URL.")
+
+    replacement = (
+        marker + "\n" + "const PARTICIPANT_COUNTRY_INDEX_URL = "
+        '"participant_country_index.json";'
+    )
+
+    updated = updated.replace(
+        marker,
+        replacement,
+        1,
+    )
+
+    return updated
+
+
+def remove_all_index_state_declarations(source):
+    pattern = re.compile(
+        r"^[ \t]*let\s+participantCountryIndex\s*=\s*null;[ \t]*\n?",
+        re.MULTILINE,
+    )
+
+    updated, count = pattern.subn(
+        "",
+        source,
+    )
+
+    if count:
+        print(f"Removed {count} existing " "participantCountryIndex declaration(s).")
+
+    marker = "let currentActiveData = null;"
+
+    if marker not in updated:
+        raise RuntimeError("Could not locate currentActiveData declaration.")
+
+    updated = updated.replace(
+        marker,
+        marker + "\n" + "let participantCountryIndex = null;",
+        1,
+    )
+
+    return updated
+
+
+def replace_section(
+    source,
+    start_marker,
+    end_marker,
+    replacement,
 ):
-    print("\nUpdating cache manifest...")
+    start = source.find(start_marker)
 
-    existing = {}
+    if start == -1:
+        raise RuntimeError(
+            f"Could not locate section start: "
+            f"{start_marker.splitlines()[1] if start_marker.splitlines() else start_marker}"
+        )
 
-    if MANIFEST.exists():
-        try:
-            existing = load_json(MANIFEST)
+    end = source.find(
+        end_marker,
+        start + len(start_marker),
+    )
 
-            if not isinstance(
-                existing,
-                dict,
-            ):
-                existing = {}
-        except RuntimeError:
-            existing = {}
+    if end == -1:
+        raise RuntimeError(f"Could not locate section end.")
 
-    manifest = dict(existing)
+    return source[:start] + replacement.rstrip() + "\n" + source[end:]
 
-    manifest["cache_schema_version"] = canonical_data.get(
-        "cache_schema_version",
-        canonical_data.get(
-            "schema_version",
-            1,
+
+def replace_participant_country_section(source):
+    participant_section = (
+        r"""// ============================================================
+// PARTICIPANT COUNTRY FILTER
+// ============================================================
+
+const PARTICIPANT_COUNTRY_STORAGE_KEY =
+  "esc_participant_country";
+
+const participantCountryFilter =
+  document.getElementById(
+    "participant-country",
+  );
+
+const applyParticipantCountryButton =
+  document.getElementById(
+    "apply-participant-country",
+  );
+
+let selectedParticipantCountry = "";
+let participantCountryDraft = "";
+let participantSearchApplied = false;
+
+function normalizeParticipantCountry(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase();
+}
+
+function getParticipantCountryCode(name) {
+  const normalizedName =
+    normalizeParticipantCountry(name);
+
+  const country =
+    ESC_PARTICIPANT_COUNTRIES.find(
+      (item) =>
+        normalizeParticipantCountry(
+          item.name,
+        ) === normalizedName,
+    );
+
+  if (!country) {
+    return "";
+  }
+
+  const regionalIndicators =
+    [...country.flag]
+      .map((character) =>
+        character.codePointAt(0),
+      )
+      .filter(
+        (codePoint) =>
+          codePoint >= 0x1f1e6 &&
+          codePoint <= 0x1f1ff,
+      );
+
+  if (
+    regionalIndicators.length !== 2
+  ) {
+    return "";
+  }
+
+  return regionalIndicators
+    .map(
+      (codePoint) =>
+        String.fromCharCode(
+          codePoint - 0x1f1e6 + 65,
         ),
     )
+    .join("");
+}
 
-    manifest["opportunities"] = len(
-        canonical_data.get(
-            "opportunities",
-            [],
-        )
+function getParticipantCountryOpportunityIds() {
+  if (!selectedParticipantCountry) {
+    return null;
+  }
+
+  if (
+    !participantCountryIndex ||
+    typeof participantCountryIndex.countries !==
+      "object"
+  ) {
+    return new Set();
+  }
+
+  const countryCode =
+    getParticipantCountryCode(
+      selectedParticipantCountry,
+    );
+
+  if (!countryCode) {
+    return new Set();
+  }
+
+  const ids =
+    participantCountryIndex.countries[
+      countryCode
+    ];
+
+  if (!Array.isArray(ids)) {
+    return new Set();
+  }
+
+  return new Set(
+    ids.map((id) =>
+      String(id),
+    ),
+  );
+}
+
+async function ensureParticipantCountryIndex() {
+  if (
+    participantCountryIndex &&
+    typeof participantCountryIndex.countries ===
+      "object"
+  ) {
+    return participantCountryIndex;
+  }
+
+  const data = await fetchJson(
+    PARTICIPANT_COUNTRY_INDEX_URL,
+  );
+
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !data.countries ||
+    typeof data.countries !== "object"
+  ) {
+    throw new Error(
+      "Participant-country index has an invalid structure.",
+    );
+  }
+
+  participantCountryIndex = data;
+
+  return participantCountryIndex;
+}
+
+function populateParticipantCountries() {
+  if (!participantCountryFilter) {
+    return;
+  }
+
+  const currentValue =
+    participantCountryFilter.value;
+
+  participantCountryFilter.innerHTML = "";
+
+  const placeholder =
+    document.createElement("option");
+
+  placeholder.value = "";
+  placeholder.textContent =
+    t("selectParticipantCountry");
+
+  participantCountryFilter.appendChild(
+    placeholder,
+  );
+
+  ESC_PARTICIPANT_COUNTRIES.forEach(
+    (country) => {
+      const option =
+        document.createElement("option");
+
+      option.value =
+        country.name;
+
+      option.textContent =
+        `${country.flag} ${country.name}`;
+
+      participantCountryFilter.appendChild(
+        option,
+      );
+    },
+  );
+
+  const exists =
+    [...participantCountryFilter.options]
+      .some(
+        (option) =>
+          option.value === currentValue,
+      );
+
+  participantCountryFilter.value =
+    exists ? currentValue : "";
+}
+
+async function applyParticipantCountry() {
+  if (!participantCountryFilter) {
+    return;
+  }
+
+  selectedParticipantCountry =
+    participantCountryFilter.value.trim();
+
+  participantCountryDraft =
+    selectedParticipantCountry;
+
+  participantSearchApplied =
+    Boolean(
+      selectedParticipantCountry,
+    );
+
+  if (!participantSearchApplied) {
+    resetParticipantSearchDisplay();
+    return;
+  }
+
+  loadingMessage.classList.remove(
+    "hidden",
+  );
+
+  errorMessage.classList.add(
+    "hidden",
+  );
+
+  try {
+    await ensureParticipantCountryIndex();
+
+    renderActive();
+    updateHeaderForParticipantSearch();
+  } catch (error) {
+    console.error(
+      "Could not load participant-country index:",
+      error,
+    );
+
+    opportunitiesBody.innerHTML = "";
+
+    opportunityCount.textContent = "—";
+    activeResultCount.textContent = "—";
+    lastUpdated.textContent = "—";
+
+    emptyMessage.classList.add("hidden");
+    errorMessage.classList.remove("hidden");
+  } finally {
+    loadingMessage.classList.add(
+      "hidden",
+    );
+  }
+}
+
+if (participantCountryFilter) {
+  participantCountryFilter.addEventListener(
+    "change",
+    () => {
+      participantCountryDraft =
+        participantCountryFilter.value;
+    },
+  );
+}
+
+if (applyParticipantCountryButton) {
+  applyParticipantCountryButton.addEventListener(
+    "click",
+    applyParticipantCountry,
+  );
+}
+""".strip()
     )
 
-    manifest["participant_countries"] = index.get(
-        "participant_country_count",
-        0,
-    )
-
-    manifest["participant_country_index_schema_version"] = INDEX_SCHEMA_VERSION
-
-    manifest["participant_country_index_file"] = "participant_country_index.json"
-
-    manifest["participant_country_index_generated_at"] = index.get("generated_at")
-
-    atomic_write_json(
-        MANIFEST,
-        manifest,
-    )
-
-    print(f"  Opportunities: {manifest['opportunities']}")
-    print("  Participant countries: " f"{manifest['participant_countries']}")
-    print("PASS: cache manifest updated.")
-
-
-def update_backend_cache():
-    print("\nUpdating backend cache layer...")
-
-    content = '''import json
-from pathlib import Path
-
-
-ROOT = Path(__file__).resolve().parent.parent
-
-DATA_DIR = ROOT / "data"
-
-CACHE_FILE = DATA_DIR / "opportunities.json"
-INDEX_FILE = DATA_DIR / "participant_country_index.json"
-MANIFEST_FILE = DATA_DIR / "cache_manifest.json"
-
-
-class CacheError(RuntimeError):
-    """Raised when the opportunity cache cannot be served safely."""
-
-
-def load_json(path):
-    try:
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as handle:
-            return json.load(handle)
-
-    except FileNotFoundError as exc:
-        raise CacheError(
-            f"Cache file does not exist: {path}"
-        ) from exc
-
-    except json.JSONDecodeError as exc:
-        raise CacheError(
-            f"Invalid JSON in cache file: {path}"
-        ) from exc
-
-
-def load_cache():
-    data = load_json(CACHE_FILE)
-
-    if not isinstance(
-        data,
-        dict,
-    ):
-        raise CacheError(
-            "Opportunity cache must be a JSON object."
-        )
-
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
-
-    if not isinstance(
-        opportunities,
-        list,
-    ):
-        raise CacheError(
-            "Opportunity cache contains an invalid opportunities list."
-        )
-
-    return data
-
-
-def load_participant_country_index():
-    data = load_json(INDEX_FILE)
-
-    if not isinstance(
-        data,
-        dict,
-    ):
-        raise CacheError(
-            "Participant-country index must be a JSON object."
-        )
-
-    countries = data.get(
-        "countries",
-        {}
-    )
-
-    if not isinstance(
-        countries,
-        dict,
-    ):
-        raise CacheError(
-            "Participant-country index contains an invalid countries object."
-        )
-
-    return data
-
-
-def load_manifest():
-    if not MANIFEST_FILE.exists():
-        return None
-
-    return load_json(
-        MANIFEST_FILE
+    return replace_section(
+        source,
+        PARTICIPANT_SECTION_START,
+        FILTER_OPTIONS_SECTION,
+        participant_section,
     )
 
 
-def normalize_country_code(value):
-    if value is None:
-        return ""
-
-    value = str(value).strip().upper()
-
-    if len(value) != 2:
-        return ""
-
-    if not value.isalpha():
-        return ""
-
-    return value
-
-
-def opportunity_matches_country(
-    opportunity,
-    country_code,
-):
-    """
-    Return True when an opportunity is eligible for
-    the requested participant country.
-
-    This helper remains available for validation and
-    backward compatibility. Production search uses
-    the participant-country index.
-    """
-
-    if not isinstance(
-        opportunity,
-        dict,
-    ):
-        return False
-
-    requested = normalize_country_code(
-        country_code
+def replace_get_filtered_active(source):
+    pattern = re.compile(
+        r"function getFilteredActive\(\)\s*\{.*?"
+        r"(?=^// ============================================================\n"
+        r"// SORTING\n"
+        r"// ============================================================\n)",
+        re.MULTILINE | re.DOTALL,
     )
 
-    if not requested:
-        return False
+    replacement = r"""function getFilteredActive() {
+  const search =
+    searchInput.value
+      .trim()
+      .toLowerCase();
 
-    eligible = opportunity.get(
-        "eligible_countries",
-        [],
-    )
+  const country =
+    countryFilter.value;
 
-    if not isinstance(
-        eligible,
-        list,
-    ):
-        return False
+  const type =
+    typeFilter.value;
 
-    return requested in {
-        str(value).strip().upper()
-        for value in eligible
-        if isinstance(
-            value,
-            str,
+  const participantOpportunityIds =
+    getParticipantCountryOpportunityIds();
+
+  return activeOpportunities.filter(
+    (opportunity) => {
+      const searchable = [
+        opportunity.title,
+        opportunity.location,
+        opportunity.town,
+        getCountryName(
+          opportunity.country,
+        ),
+        opportunity.activity_type,
+        ...(opportunity.topics || []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (
+        search &&
+        !searchable.includes(search)
+      ) {
+        return false;
+      }
+
+      if (
+        country &&
+        opportunity.country !== country
+      ) {
+        return false;
+      }
+
+      if (
+        participantOpportunityIds !==
+          null &&
+        !participantOpportunityIds.has(
+          String(opportunity.id),
         )
-    }
+      ) {
+        return false;
+      }
 
+      if (
+        type &&
+        opportunity.activity_type !==
+          type
+      ) {
+        return false;
+      }
 
-def search_cache(country_code):
-    country_code = normalize_country_code(
-        country_code
-    )
-
-    if not country_code:
-        raise ValueError(
-            "A valid two-letter participant country code is required."
-        )
-
-    data = load_cache()
-    index = load_participant_country_index()
-
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
-
-    opportunities_by_id = {}
-
-    for opportunity in opportunities:
-        if not isinstance(
-            opportunity,
-            dict,
-        ):
-            continue
-
-        opportunity_id = opportunity.get(
-            "id"
-        )
-
-        if opportunity_id is None:
-            continue
-
-        opportunities_by_id[
-            str(opportunity_id)
-        ] = opportunity
-
-    indexed_ids = index.get(
-        "countries",
-        {}
-    ).get(
-        country_code,
-        []
-    )
-
-    if not isinstance(
-        indexed_ids,
-        list,
-    ):
-        raise CacheError(
-            f"Invalid index entry for participant country {country_code}."
-        )
-
-    matches = []
-
-    seen = set()
-
-    for opportunity_id in indexed_ids:
-        identity = str(
-            opportunity_id
-        )
-
-        if identity in seen:
-            continue
-
-        opportunity = opportunities_by_id.get(
-            identity
-        )
-
-        if opportunity is None:
-            raise CacheError(
-                "Participant-country index references "
-                f"missing opportunity {opportunity_id}."
-            )
-
-        if not opportunity_matches_country(
-            opportunity,
-            country_code,
-        ):
-            raise CacheError(
-                "Participant-country index contains an "
-                f"incorrect mapping for opportunity {opportunity_id}."
-            )
-
-        matches.append(
-            opportunity
-        )
-
-        seen.add(identity)
-
-    return {
-        "status": "success",
-        "participant_country": country_code,
-        "count": len(matches),
-        "opportunities": matches,
-        "cache": {
-            "generated_at": data.get(
-                "generated_at"
-            ),
-            "schema_version": data.get(
-                "schema_version"
-            ),
-            "cache_schema_version": data.get(
-                "cache_schema_version"
-            ),
-            "participant_country_index_schema_version": index.get(
-                "schema_version"
-            ),
-            "participant_country_index_generated_at": index.get(
-                "generated_at"
-            ),
-        },
-    }
-'''
-
-    BACKEND_CACHE.write_text(
-        content,
-        encoding="utf-8",
-    )
-
-    print("PASS: backend cache layer now uses " "the participant-country index.")
-
-
-def update_backend_search():
-    print("\nValidating backend search entry point...")
-
-    content = """import json
-import sys
-
-from .cache import search_cache
-
-
-def main():
-    if len(sys.argv) != 2:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": (
-                        "Usage: python -m backend.search "
-                        "<participant-country-code>"
-                    ),
-                    "example": (
-                        "python -m backend.search MA"
-                    ),
-                },
-                ensure_ascii=False,
-            )
-        )
-
-        return 1
-
-    country_code = sys.argv[1]
-
-    try:
-        payload = search_cache(
-            country_code
-        )
-
-    except Exception as exc:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": str(exc),
-                },
-                ensure_ascii=False,
-            )
-        )
-
-        return 1
-
-    print(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-        )
-    )
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(
-        main()
-    )
+      return true;
+    },
+  );
+}
+// ============================================================
+// SORTING
+// ============================================================
 """
 
-    BACKEND_SEARCH.write_text(
-        content,
-        encoding="utf-8",
+    updated, count = pattern.subn(
+        replacement,
+        source,
+        count=1,
     )
 
-    print("PASS: backend search entry point remains " "country-agnostic.")
+    if count != 1:
+        raise RuntimeError("Could not safely replace getFilteredActive().")
+
+    return updated
 
 
-def update_backend_tests():
-    print("\nUpdating backend index tests...")
+def replace_load_data(source):
+    pattern = re.compile(
+        r"async function loadData\(\)\s*\{.*?"
+        r"(?=^// ============================================================\n"
+        r"// REFRESH BUTTON\n"
+        r"// ============================================================\n)",
+        re.MULTILINE | re.DOTALL,
+    )
 
-    content = """import unittest
+    replacement = r"""async function loadData() {
+  loadingMessage.classList.remove(
+    "hidden",
+  );
 
-from .cache import (
-    load_cache,
-    load_participant_country_index,
-    opportunity_matches_country,
-    search_cache,
-)
+  errorMessage.classList.add(
+    "hidden",
+  );
 
+  try {
+    const [
+      activeData,
+      indexData,
+    ] = await Promise.all([
+      fetchJson(DATA_URL),
+      fetchJson(
+        PARTICIPANT_COUNTRY_INDEX_URL,
+      ),
+    ]);
 
-class CacheTests(unittest.TestCase):
+    if (
+      !activeData ||
+      !Array.isArray(
+        activeData.opportunities,
+      )
+    ) {
+      throw new Error(
+        "Published opportunity cache has an invalid structure.",
+      );
+    }
 
-    def test_cache_loads(self):
-        data = load_cache()
+    if (
+      !indexData ||
+      typeof indexData !== "object" ||
+      !indexData.countries ||
+      typeof indexData.countries !==
+        "object"
+    ) {
+      throw new Error(
+        "Participant-country index has an invalid structure.",
+      );
+    }
 
-        self.assertIsInstance(
-            data,
-            dict,
+    currentActiveData =
+      activeData;
+
+    activeOpportunities =
+      activeData.opportunities;
+
+    participantCountryIndex =
+      indexData;
+
+    calculateNewOpportunities(
+      activeOpportunities,
+    );
+
+    try {
+      const expiredData =
+        await fetchJson(
+          EXPIRED_DATA_URL,
+        );
+
+      expiredOpportunities =
+        Array.isArray(
+          expiredData?.opportunities,
         )
+          ? expiredData.opportunities
+          : [];
+    } catch {
+      expiredOpportunities = [];
+    }
 
-        self.assertIsInstance(
-            data.get("opportunities"),
-            list,
-        )
+    populateFilters();
+    populateParticipantCountries();
 
-    def test_participant_country_index_loads(self):
-        index = load_participant_country_index()
+    resetParticipantSearchDisplay();
 
-        self.assertIsInstance(
-            index,
-            dict,
-        )
+    renderExpired();
+  } catch (error) {
+    console.error(
+      "Could not load opportunities:",
+      error,
+    );
 
-        self.assertIsInstance(
-            index.get("countries"),
-            dict,
-        )
+    activeOpportunities = [];
+    currentActiveData = null;
+    participantCountryIndex = null;
 
-    def test_opportunity_country_matching(self):
-        opportunity = {
-            "id": "TEST-1",
-            "eligible_countries": [
-                "MA",
-                "FR",
-            ],
-        }
+    opportunityCount.textContent = "—";
+    activeResultCount.textContent = "—";
+    lastUpdated.textContent = "—";
 
-        self.assertTrue(
-            opportunity_matches_country(
-                opportunity,
-                "MA",
-            )
-        )
+    errorMessage.classList.remove(
+      "hidden",
+    );
+  } finally {
+    loadingMessage.classList.add(
+      "hidden",
+    );
+  }
+}
 
-        self.assertTrue(
-            opportunity_matches_country(
-                opportunity,
-                "FR",
-            )
-        )
+// ============================================================
+// REFRESH BUTTON
+// ============================================================
+"""
 
-        self.assertFalse(
-            opportunity_matches_country(
-                opportunity,
-                "DE",
-            )
-        )
+    updated, count = pattern.subn(
+        replacement,
+        source,
+        count=1,
+    )
 
-    def test_country_code_is_case_insensitive(self):
-        opportunity = {
-            "id": "TEST-2",
-            "eligible_countries": [
-                "MA",
-            ],
-        }
+    if count != 1:
+        raise RuntimeError("Could not safely replace loadData().")
 
-        self.assertTrue(
-            opportunity_matches_country(
-                opportunity,
-                "ma",
-            )
-        )
+    return updated
 
-    def test_invalid_country_is_rejected(self):
-        with self.assertRaises(
-            ValueError
-        ):
-            search_cache(
-                "MOR"
-            )
 
-    def test_search_returns_expected_shape(self):
-        payload = search_cache(
-            "MA"
-        )
+def remove_phase_two_tail(source):
+    start = source.find(
+        PHASE_TWO_SECTION,
+    )
 
-        self.assertEqual(
-            payload["status"],
-            "success",
-        )
+    if start == -1:
+        print("No obsolete Phase Two tail found.")
+        return source
 
-        self.assertEqual(
-            payload["participant_country"],
-            "MA",
-        )
+    print("Removing obsolete Phase Two frontend tail.")
 
-        self.assertIsInstance(
-            payload["count"],
-            int,
-        )
+    return source[:start].rstrip() + "\n"
 
-        self.assertIsInstance(
-            payload["opportunities"],
-            list,
-        )
 
-    def test_index_search_matches_direct_scan(self):
-        data = load_cache()
+def update_frontend():
+    print("\nUpdating frontend participant-country index integration...")
 
-        direct_matches = [
-            opportunity
-            for opportunity in data.get(
-                "opportunities",
-                [],
-            )
-            if opportunity_matches_country(
-                opportunity,
-                "MA",
-            )
-        ]
+    app = read_text(
+        APP_FILE,
+    )
 
-        indexed_result = search_cache(
-            "MA"
-        )
+    # This is the critical idempotency repair. Previous failed updater
+    # executions may have inserted this declaration already, so never
+    # blindly append another one.
+    app = remove_all_index_url_declarations(
+        app,
+    )
 
-        self.assertEqual(
-            len(direct_matches),
-            indexed_result["count"],
-        )
+    app = remove_all_index_state_declarations(
+        app,
+    )
 
-        direct_ids = {
-            str(item["id"])
-            for item in direct_matches
-        }
+    app = replace_participant_country_section(
+        app,
+    )
 
-        indexed_ids = {
-            str(item["id"])
-            for item in indexed_result["opportunities"]
-        }
+    app = replace_get_filtered_active(
+        app,
+    )
 
-        self.assertEqual(
-            direct_ids,
-            indexed_ids,
-        )
+    app = replace_load_data(
+        app,
+    )
 
-    def test_index_search_is_country_agnostic(self):
-        index = load_participant_country_index()
+    app = remove_phase_two_tail(
+        app,
+    )
 
-        countries = index.get(
-            "countries",
-            {},
-        )
+    # Add a single descriptive Phase Five marker before INITIAL LOAD.
+    initial_load_marker = (
+        "// ============================================================\n"
+        "// INITIAL LOAD\n"
+        "// ============================================================\n"
+    )
 
-        self.assertIn(
-            "MA",
-            countries,
-        )
+    if "PHASE FIVE — PARTICIPANT-COUNTRY INDEX" not in app:
+        if initial_load_marker not in app:
+            raise RuntimeError("Could not locate INITIAL LOAD section.")
 
-        self.assertGreater(
-            len(countries),
+        phase_five_note = """// ============================================================
+// PHASE FIVE — PARTICIPANT-COUNTRY INDEX
+// ============================================================
+//
+// The frontend reads the published country index and canonical
+// opportunity cache directly from GitHub Pages.
+//
+// Participant countries are represented by country codes.
+// No country, including Morocco, is hard-coded as a special case.
+// ============================================================
+
+"""
+
+        app = app.replace(
+            initial_load_marker,
+            phase_five_note + initial_load_marker,
             1,
         )
 
-        for country_code in list(countries)[:3]:
-            payload = search_cache(
-                country_code
-            )
-
-            self.assertEqual(
-                payload["status"],
-                "success",
-            )
-
-            self.assertEqual(
-                payload["participant_country"],
-                country_code,
-            )
-
-
-if __name__ == "__main__":
-    unittest.main()
-"""
-
-    BACKEND_TESTS.write_text(
-        content,
-        encoding="utf-8",
-    )
-
-    print("PASS: backend participant-country index tests updated.")
-
-
-def publish_index(index):
-    print("\nPublishing participant-country index...")
-
-    atomic_write_json(
-        PARTICIPANT_INDEX,
-        index,
-    )
-
-    atomic_write_json(
-        PUBLISHED_PARTICIPANT_INDEX,
-        index,
-    )
-
-    print("PASS: participant-country index published " "to data/ and web/.")
-
-
-def validate_published_index():
-    print("\nValidating published participant-country index...")
-
-    data_index = load_json(PARTICIPANT_INDEX)
-
-    web_index = load_json(PUBLISHED_PARTICIPANT_INDEX)
-
-    if data_index != web_index:
-        raise RuntimeError("Data and web participant-country indexes differ.")
-
-    print("PASS: data and web participant-country indexes are identical.")
-
-
-def validate_index_against_published_cache():
-    print("\nValidating index against published opportunity cache...")
-
-    index = load_json(PUBLISHED_PARTICIPANT_INDEX)
-
-    published = load_json(PUBLISHED_CACHE)
-
-    validate_index(
-        index,
-        published,
+    write_text(
+        APP_FILE,
+        app,
     )
 
     print(
-        "PASS: published participant-country index "
-        "matches published opportunity cache."
+        "PASS: frontend participant-country filtering "
+        "now uses the published country index."
     )
 
 
-def validate_python():
-    print("\nRunning Python syntax validation...")
+def bump_cache_version():
+    print("\nUpdating frontend cache-busting...")
 
-    python_files = [
-        "backend/__init__.py",
-        "backend/cache.py",
-        "backend/search.py",
-        "backend/test_search.py",
-        "scraper/scraper.py",
-        "update.py",
+    html = read_text(
+        INDEX_HTML_FILE,
+    )
+
+    matches = re.findall(
+        r"app\.js\?v=(\d+)",
+        html,
+    )
+
+    if len(matches) != 1:
+        raise RuntimeError(
+            "Expected exactly one app.js cache-busting " "version in web/index.html."
+        )
+
+    current = int(matches[0])
+    new_version = current + 1
+
+    updated = re.sub(
+        r"app\.js\?v=\d+",
+        f"app.js?v={new_version}",
+        html,
+        count=1,
+    )
+
+    write_text(
+        INDEX_HTML_FILE,
+        updated,
+    )
+
+    print(f"PASS: app.js cache version bumped " f"v{current} -> v{new_version}.")
+
+
+def normalize_frontend_eof():
+    print("\nNormalizing frontend file endings...")
+
+    for path in [
+        APP_FILE,
+        INDEX_HTML_FILE,
+    ]:
+        content = read_text(path)
+
+        normalized = content.rstrip("\r\n") + "\n"
+
+        if content != normalized:
+            write_text(
+                path,
+                normalized,
+            )
+
+            print(f"PASS: normalized " f"{path.relative_to(ROOT)}.")
+        else:
+            print(f"PASS: " f"{path.relative_to(ROOT)} already has a clean EOF.")
+
+
+def validate_frontend_contract():
+    print("\nValidating frontend integration...")
+
+    html = read_text(
+        INDEX_HTML_FILE,
+    )
+
+    app = read_text(
+        APP_FILE,
+    )
+
+    required_html = [
+        'id="participant-country"',
+        'id="apply-participant-country"',
+        "app.js?v=",
     ]
+
+    missing_html = [marker for marker in required_html if marker not in html]
+
+    if missing_html:
+        raise RuntimeError(
+            "Frontend HTML contract failed:\n"
+            + "\n".join(f"  - {item}" for item in missing_html)
+        )
+
+    required_app = [
+        "const PARTICIPANT_COUNTRY_INDEX_URL = " '"participant_country_index.json";',
+        "let participantCountryIndex = null;",
+        "async function ensureParticipantCountryIndex()",
+        "fetchJson(\n    PARTICIPANT_COUNTRY_INDEX_URL,",
+        "getParticipantCountryOpportunityIds",
+        "participantCountryIndex.countries",
+        "participantOpportunityIds",
+        "async function applyParticipantCountry()",
+        "async function loadData()",
+    ]
+
+    missing_app = [marker for marker in required_app if marker not in app]
+
+    if missing_app:
+        raise RuntimeError(
+            "Frontend JavaScript contract failed:\n"
+            + "\n".join(f"  - {item}" for item in missing_app)
+        )
+
+    declaration_count = len(
+        re.findall(
+            r"const\s+PARTICIPANT_COUNTRY_INDEX_URL\s*=\s*"
+            r'"participant_country_index\.json";',
+            app,
+        )
+    )
+
+    if declaration_count != 1:
+        raise RuntimeError(
+            "Expected exactly one "
+            "PARTICIPANT_COUNTRY_INDEX_URL declaration; "
+            f"found {declaration_count}."
+        )
+
+    state_count = len(
+        re.findall(
+            r"let\s+participantCountryIndex\s*=\s*null;",
+            app,
+        )
+    )
+
+    if state_count != 1:
+        raise RuntimeError(
+            "Expected exactly one participantCountryIndex state "
+            f"declaration; found {state_count}."
+        )
+
+    forbidden = [
+        "PHASE_TWO_PARTICIPANT_COUNTRIES",
+        "phaseTwoCountryCodeFromName",
+        "phaseTwoLoadParticipantCountryResults",
+        "phaseTwoHandleParticipantCountrySearch",
+        "phaseTwoInstallParticipantCountrySearch",
+        'selectedNormalized !== "morocco"',
+        'normalizeParticipantCountry("Morocco")',
+        "backend currently contains cached",
+        "country-specific backend scraping",
+        "Backend support is currently Morocco-only.",
+    ]
+
+    stale = [marker for marker in forbidden if marker in app]
+
+    if stale:
+        raise RuntimeError(
+            "Obsolete Morocco-only/Phase Two frontend logic remains:\n"
+            + "\n".join(f"  - {item}" for item in stale)
+        )
+
+    print(
+        "PASS: frontend is country-agnostic "
+        "and uses the published participant-country index."
+    )
+
+
+def validate_frontend_index_relationship():
+    print("\nValidating frontend index/cache relationship...")
+
+    index = load_json(
+        PUBLISHED_PARTICIPANT_INDEX,
+    )
+
+    cache = load_json(
+        PUBLISHED_CACHE,
+    )
+
+    opportunities = cache.get(
+        "opportunities",
+        [],
+    )
+
+    opportunity_ids = {
+        str(item["id"])
+        for item in opportunities
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+
+    countries = index.get(
+        "countries",
+        {},
+    )
+
+    total_ma = len(countries.get("MA", []))
+
+    if total_ma == 0:
+        raise RuntimeError("Published frontend index contains no MA results.")
+
+    for country, ids in countries.items():
+        if not isinstance(ids, list):
+            raise RuntimeError(f"Published index entry {country} is not a list.")
+
+        for opportunity_id in ids:
+            if str(opportunity_id) not in opportunity_ids:
+                raise RuntimeError(
+                    f"Published index {country} references unknown "
+                    f"opportunity {opportunity_id}."
+                )
+
+    print(f"Morocco frontend results: {total_ma}")
+    print(f"Published opportunities: " f"{len(opportunity_ids)}")
+    print(
+        "PASS: every published participant-country index ID "
+        "resolves to a published opportunity."
+    )
+
+
+def run_node_check():
+    print("\nRunning JavaScript syntax validation...")
+
+    run(
+        [
+            "node",
+            "--check",
+            "web/app.js",
+        ]
+    )
+
+    print("PASS: web/app.js syntax is valid.")
+
+
+def run_python_check():
+    print("\nRunning Python syntax validation...")
 
     run(
         [
             sys.executable,
             "-m",
             "py_compile",
-            *[str(ROOT / path) for path in python_files],
+            "scraper/scraper.py",
+            "backend/cache.py",
+            "backend/search.py",
+            "backend/test_search.py",
+            "update.py",
         ]
     )
 
@@ -1632,11 +1371,11 @@ def run_backend_tests():
         ]
     )
 
-    print("PASS: backend participant-country index tests passed.")
+    print("PASS: backend tests passed.")
 
 
-def validate_country_search():
-    print("\nValidating Morocco cache-first indexed search...")
+def validate_backend_ma():
+    print("\nValidating Morocco backend search...")
 
     result = run(
         [
@@ -1651,91 +1390,25 @@ def validate_country_search():
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("Morocco indexed search did not return valid JSON.") from exc
+        raise RuntimeError("backend.search MA returned invalid JSON.") from exc
 
     if payload.get("status") != "success":
-        raise RuntimeError(f"Morocco indexed search failed: {payload!r}")
+        raise RuntimeError("backend.search MA did not return success.")
 
     if payload.get("participant_country") != "MA":
-        raise RuntimeError(
-            "Morocco indexed search returned the wrong participant country."
-        )
+        raise RuntimeError("backend.search MA returned the wrong country.")
 
     count = payload.get("count")
 
-    if not isinstance(
-        count,
-        int,
-    ):
-        raise RuntimeError("Morocco indexed search count is not an integer.")
+    if not isinstance(count, int) or count <= 0:
+        raise RuntimeError("backend.search MA returned zero opportunities.")
 
-    if count <= 0:
-        raise RuntimeError("Morocco indexed search returned zero opportunities.")
+    print(f"Morocco backend results: {count}")
 
-    print(f"  Morocco (MA) results: {count}")
-
-    print("PASS: Morocco indexed cache-first search works.")
+    print("PASS: backend indexed Morocco search remains operational.")
 
 
-def validate_country_independence():
-    print("\nValidating country-agnostic index design...")
-
-    index = load_json(PARTICIPANT_INDEX)
-
-    countries = index.get("countries", {})
-
-    if "MA" not in countries:
-        raise RuntimeError(
-            "Morocco (MA) is missing from the participant-country index."
-        )
-
-    if len(countries) < 2:
-        raise RuntimeError(
-            "Participant-country index contains only one country. "
-            "The index must remain country-agnostic."
-        )
-
-    print(f"Indexed participant countries: {len(countries)}")
-
-    print("PASS: participant-country index is country-agnostic.")
-
-
-def validate_frontend_compatibility():
-    print("\nValidating frontend cache compatibility...")
-
-    app = read_text(ROOT / "web" / "app.js")
-
-    if "opportunities.json" not in app:
-        raise RuntimeError(
-            "Frontend no longer references the published opportunity cache."
-        )
-
-    published = load_json(PUBLISHED_CACHE)
-
-    opportunities = published.get("opportunities", [])
-
-    for opportunity in opportunities:
-        if not isinstance(
-            opportunity,
-            dict,
-        ):
-            raise RuntimeError("Published cache contains a non-object opportunity.")
-
-        if not isinstance(
-            opportunity.get("eligible_countries"),
-            list,
-        ):
-            raise RuntimeError(
-                "Published cache contains an opportunity without " "eligible_countries."
-            )
-
-    print(
-        "PASS: existing frontend remains compatible with "
-        "the canonical opportunity cache."
-    )
-
-
-def whitespace_check():
+def git_whitespace_check():
     print("\nRunning Git whitespace check...")
 
     run(
@@ -1750,11 +1423,16 @@ def whitespace_check():
 
 
 def selective_commit_and_push():
-    print("\nPreparing selective Phase Four commit...")
+    print("\nPreparing selective Phase Five commit...")
 
-    run(["git", "reset"])
+    run(
+        [
+            "git",
+            "reset",
+        ]
+    )
 
-    for relative in PHASE_FOUR_FILES:
+    for relative in MANAGED_FILES:
         path = ROOT / relative
 
         if path.exists():
@@ -1777,7 +1455,7 @@ def selective_commit_and_push():
         capture=True,
     ).stdout.splitlines()
 
-    unexpected = sorted(set(staged) - set(PHASE_FOUR_FILES))
+    unexpected = sorted(set(staged) - set(MANAGED_FILES))
 
     if unexpected:
         raise RuntimeError(
@@ -1786,14 +1464,12 @@ def selective_commit_and_push():
         )
 
     if not staged:
-        raise RuntimeError("No Phase Four changes are staged.")
+        raise RuntimeError("No Phase Five changes are staged.")
 
-    print("Files staged for Phase Four:")
+    print("Files staged for Phase Five:")
 
     for path in staged:
         print(f"  {path}")
-
-    print("\nReviewing staged diff statistics...")
 
     run(
         [
@@ -1804,18 +1480,18 @@ def selective_commit_and_push():
         ]
     )
 
-    print("\nCreating Phase Four commit...")
+    print("\nCreating Phase Five commit...")
 
     run(
         [
             "git",
             "commit",
             "-m",
-            "feat: add participant-country index",
+            "feat: connect frontend to participant-country index",
         ]
     )
 
-    print("\nPushing Phase Four commit...")
+    print("\nPushing Phase Five commit...")
 
     run(
         [
@@ -1826,29 +1502,27 @@ def selective_commit_and_push():
         ]
     )
 
-    print("\nPASS: Phase Four commit pushed successfully.")
+    print("\nPASS: Phase Five commit pushed successfully.")
 
 
 def main():
-    print("=" * 72)
-    print("ESC Opportunity Finder — Phase Four " "participant-country index")
-    print("=" * 72)
+    banner("ESC Opportunity Finder — " "Phase Five frontend participant-country index")
 
     print("""This update will:
-  - preserve the existing background scraper architecture
-  - preserve the hourly GitHub Actions workflow
+  - preserve the background scraper and hourly workflow
   - preserve the canonical opportunity cache
-  - normalize legacy participant-country cache values safely
-  - build a country-agnostic participant-country index
-  - index opportunities by stable opportunity ID
-  - publish the index to both data/ and web/
-  - make backend country search use the index
-  - retain direct country matching for validation
-  - validate index/cache consistency
-  - validate Morocco through the generic MA index entry
-  - validate multiple countries exist in the index
-  - run backend and Python validation
-  - selectively commit and push only Phase Four files
+  - validate the participant-country index
+  - repair previous partial Phase Five edits idempotently
+  - remove duplicate index declarations
+  - remove obsolete Morocco-only frontend logic
+  - load participant_country_index.json from GitHub Pages
+  - resolve selected countries to indexed opportunity IDs
+  - keep opportunity objects sourced from opportunities.json
+  - preserve the participant-country selector UI
+  - bump frontend cache-busting
+  - validate JavaScript with node --check
+  - validate Python/backend/cache/index consistency
+  - selectively commit and push only Phase Five files
 """)
 
     try:
@@ -1858,92 +1532,40 @@ def main():
         check_remote()
 
         validate_scraper()
-        validate_hourly_workflow()
+        validate_workflow()
 
-        canonical_data = load_canonical_cache()
-        published_data = load_published_cache()
+        canonical = validate_cache()
+        validate_index(canonical)
 
-        validate_canonical_published_ids(
-            canonical_data,
-            published_data,
-        )
+        update_frontend()
+        bump_cache_version()
+        normalize_frontend_eof()
 
-        print("\nNormalizing canonical participant-country values...")
+        validate_frontend_contract()
+        validate_frontend_index_relationship()
 
-        canonical_data, unmapped = normalize_opportunity_country_values(canonical_data)
-
-        if unmapped:
-            print(
-                "WARNING: some participant-country values "
-                "could not be mapped to ISO-style codes."
-            )
-            print("They remain recorded in " "eligible_countries_unmapped.")
-
-        atomic_write_json(
-            CANONICAL_CACHE,
-            canonical_data,
-        )
-
-        # Keep the published opportunity cache synchronized with the
-        # normalized canonical cache. This is deliberately done before
-        # generating the index so both sources use exactly the same
-        # participant-country representation.
-        atomic_write_json(
-            PUBLISHED_CACHE,
-            canonical_data,
-        )
-
-        index = build_participant_country_index(canonical_data)
-
-        validate_index(
-            index,
-            canonical_data,
-        )
-
-        validate_morocco_index(index)
-
-        publish_index(index)
-
-        validate_published_index()
-
-        update_manifest(
-            canonical_data,
-            index,
-        )
-
-        update_backend_cache()
-        update_backend_search()
-        update_backend_tests()
-
-        validate_index_against_published_cache()
-        validate_country_independence()
-        validate_frontend_compatibility()
-
-        validate_python()
+        run_node_check()
+        run_python_check()
         run_backend_tests()
-        validate_country_search()
+        validate_backend_ma()
 
-        whitespace_check()
+        git_whitespace_check()
 
         selective_commit_and_push()
 
-        print("\n" + "=" * 72)
-        print("PHASE FOUR COMPLETE")
-        print("=" * 72)
+        banner("PHASE FIVE COMPLETE")
 
-        print()
         print(
-            "The participant-country index is now the " "backend search lookup layer."
+            "The frontend now uses the country-agnostic " "participant-country index."
         )
 
     except Exception as exc:
-        print("\n" + "=" * 72)
-        print("UPDATE FAILED")
-        print("=" * 72)
-        print()
+        banner("UPDATE FAILED")
+
         print(str(exc))
         print()
-        print("No commit or push was performed.")
+        print("No Phase Five commit or push was performed.")
+
         sys.exit(1)
 
 

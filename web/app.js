@@ -75,6 +75,7 @@ const ESC_PARTICIPANT_COUNTRIES = [
 
 const DATA_URL = "opportunities.json";
 const EXPIRED_DATA_URL = "expired.json";
+const PARTICIPANT_COUNTRY_INDEX_URL = "participant_country_index.json";
 
 // ============================================================
 // STATE
@@ -84,6 +85,7 @@ let activeOpportunities = [];
 let expiredOpportunities = [];
 let currentLanguage = 'en';
 let currentActiveData = null;
+let participantCountryIndex = null;
 
 // ============================================================
 // DOM ELEMENTS
@@ -1419,15 +1421,7 @@ function renderTopics(topics) {
 const PARTICIPANT_COUNTRY_STORAGE_KEY =
   "esc_participant_country";
 
-const // Complete participant-country list exposed by the ESC API.
-// The frontend can display all countries even while the
-// backend currently has cached data only for Morocco.
-// Complete participant-country list exposed by the ESC API.
-// The backend currently has cached data only for Morocco.
-// Complete participant-country list exposed by the ESC API.
-// The backend currently has cached data only for Morocco.
-
-participantCountryFilter =
+const participantCountryFilter =
   document.getElementById(
     "participant-country",
   );
@@ -1448,110 +1442,114 @@ function normalizeParticipantCountry(value) {
     .toLocaleLowerCase();
 }
 
-const participantCountryAliases = {
-  "kosovo * un resolution": "kosovo",
-  "kosovo": "kosovo",
-  "sint maarten": "sint maarten (dutch part)",
-  "sint maarten (dutch part)": "sint maarten (dutch part)",
-  "türkiye": "türkiye",
-  "turkiye": "türkiye",
-};
+function getParticipantCountryCode(name) {
+  const normalizedName =
+    normalizeParticipantCountry(name);
 
-function normalizeParticipantCountryName(value) {
-  const normalized =
-    normalizeParticipantCountry(value);
-
-  return (
-    participantCountryAliases[normalized] ||
-    normalized
-  );
-}
-
-function participantCountryMatches(
-  value,
-  selected,
-) {
-  if (!value || !selected) {
-    return false;
-  }
-
-  const selectedNormalized =
-    normalizeParticipantCountryName(selected);
-
-  // At this stage the scraper/cache only contains Morocco's participant
-  // country results. Other countries intentionally return zero results
-  // until the backend and update.yml pipeline are extended.
-  if (selectedNormalized !== "morocco") {
-    return false;
-  }
-
-  return (
-    normalizeParticipantCountryName(value) ===
-    selectedNormalized
-  );
-}
-
-function getParticipantCountryFlag(country) {
-  const code =
-    participantCountryCodeMap[
-      normalizeParticipantCountry(country)
-    ];
-
-  return code
-    ? getCountryFlag(code)
-    : "🌍";
-}
-
-function getParticipantCountries(data) {
-  const fromMetadata =
-    Array.isArray(data?.participant_countries)
-      ? data.participant_countries
-      : [];
-
-  const fromOpportunities =
-    activeOpportunities.flatMap(
-      (opportunity) =>
-        Array.isArray(
-          opportunity.eligible_countries,
-        )
-          ? opportunity.eligible_countries
-          : [],
+  const country =
+    ESC_PARTICIPANT_COUNTRIES.find(
+      (item) =>
+        normalizeParticipantCountry(
+          item.name,
+        ) === normalizedName,
     );
 
-  const source =
-    fromMetadata.length > 0
-      ? fromMetadata
-      : fromOpportunities;
+  if (!country) {
+    return "";
+  }
 
-  const unique = new Map();
+  const regionalIndicators =
+    [...country.flag]
+      .map((character) =>
+        character.codePointAt(0),
+      )
+      .filter(
+        (codePoint) =>
+          codePoint >= 0x1f1e6 &&
+          codePoint <= 0x1f1ff,
+      );
 
-  source.forEach((country) => {
-    const value =
-      String(country || "").trim();
+  if (
+    regionalIndicators.length !== 2
+  ) {
+    return "";
+  }
 
-    if (!value) {
-      return;
-    }
+  return regionalIndicators
+    .map(
+      (codePoint) =>
+        String.fromCharCode(
+          codePoint - 0x1f1e6 + 65,
+        ),
+    )
+    .join("");
+}
 
-    const key =
-      normalizeParticipantCountryName(value);
+function getParticipantCountryOpportunityIds() {
+  if (!selectedParticipantCountry) {
+    return null;
+  }
 
-    if (!unique.has(key)) {
-      unique.set(key, value);
-    }
-  });
+  if (
+    !participantCountryIndex ||
+    typeof participantCountryIndex.countries !==
+      "object"
+  ) {
+    return new Set();
+  }
 
-  return [...unique.values()].sort(
-    (a, b) =>
-      String(a).localeCompare(
-        String(b),
-        currentLanguage === "fr"
-          ? "fr"
-          : currentLanguage === "ar"
-            ? "ar"
-            : "en",
-      ),
+  const countryCode =
+    getParticipantCountryCode(
+      selectedParticipantCountry,
+    );
+
+  if (!countryCode) {
+    return new Set();
+  }
+
+  const ids =
+    participantCountryIndex.countries[
+      countryCode
+    ];
+
+  if (!Array.isArray(ids)) {
+    return new Set();
+  }
+
+  return new Set(
+    ids.map((id) =>
+      String(id),
+    ),
   );
+}
+
+async function ensureParticipantCountryIndex() {
+  if (
+    participantCountryIndex &&
+    typeof participantCountryIndex.countries ===
+      "object"
+  ) {
+    return participantCountryIndex;
+  }
+
+  const data = await fetchJson(
+    PARTICIPANT_COUNTRY_INDEX_URL,
+  );
+
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !data.countries ||
+    typeof data.countries !== "object"
+  ) {
+    throw new Error(
+      "Participant-country index has an invalid structure.",
+    );
+  }
+
+  participantCountryIndex = data;
+
+  return participantCountryIndex;
 }
 
 function populateParticipantCountries() {
@@ -1559,27 +1557,51 @@ function populateParticipantCountries() {
     return;
   }
 
+  const currentValue =
+    participantCountryFilter.value;
+
   participantCountryFilter.innerHTML = "";
 
-  const placeholder = document.createElement("option");
+  const placeholder =
+    document.createElement("option");
+
   placeholder.value = "";
-  placeholder.textContent = t("selectParticipantCountry");
+  placeholder.textContent =
+    t("selectParticipantCountry");
 
-  participantCountryFilter.appendChild(placeholder);
+  participantCountryFilter.appendChild(
+    placeholder,
+  );
 
-  ESC_PARTICIPANT_COUNTRIES.forEach((country) => {
-    const option = document.createElement("option");
+  ESC_PARTICIPANT_COUNTRIES.forEach(
+    (country) => {
+      const option =
+        document.createElement("option");
 
-    option.value = country.name;
-    option.textContent = `${country.flag} ${country.name}`;
+      option.value =
+        country.name;
 
-    participantCountryFilter.appendChild(option);
-  });
+      option.textContent =
+        `${country.flag} ${country.name}`;
 
-  participantCountryFilter.value = "";
+      participantCountryFilter.appendChild(
+        option,
+      );
+    },
+  );
+
+  const exists =
+    [...participantCountryFilter.options]
+      .some(
+        (option) =>
+          option.value === currentValue,
+      );
+
+  participantCountryFilter.value =
+    exists ? currentValue : "";
 }
 
-function applyParticipantCountry() {
+async function applyParticipantCountry() {
   if (!participantCountryFilter) {
     return;
   }
@@ -1590,15 +1612,47 @@ function applyParticipantCountry() {
   participantCountryDraft =
     selectedParticipantCountry;
 
-  participantSearchApplied = Boolean(
-    selectedParticipantCountry,
+  participantSearchApplied =
+    Boolean(
+      selectedParticipantCountry,
+    );
+
+  if (!participantSearchApplied) {
+    resetParticipantSearchDisplay();
+    return;
+  }
+
+  loadingMessage.classList.remove(
+    "hidden",
   );
 
-  if (participantSearchApplied) {
+  errorMessage.classList.add(
+    "hidden",
+  );
+
+  try {
+    await ensureParticipantCountryIndex();
+
     renderActive();
     updateHeaderForParticipantSearch();
-  } else {
-    resetParticipantSearchDisplay();
+  } catch (error) {
+    console.error(
+      "Could not load participant-country index:",
+      error,
+    );
+
+    opportunitiesBody.innerHTML = "";
+
+    opportunityCount.textContent = "—";
+    activeResultCount.textContent = "—";
+    lastUpdated.textContent = "—";
+
+    emptyMessage.classList.add("hidden");
+    errorMessage.classList.remove("hidden");
+  } finally {
+    loadingMessage.classList.add(
+      "hidden",
+    );
   }
 }
 
@@ -1618,8 +1672,6 @@ if (applyParticipantCountryButton) {
     applyParticipantCountry,
   );
 }
-
-
 // ============================================================
 // FILTER OPTIONS
 // ============================================================
@@ -1681,104 +1733,78 @@ function populateFilters() {
 // ============================================================
 
 function getFilteredActive() {
-  /*
-   * The frontend exposes all participant countries,
-   * but the backend currently contains cached
-   * opportunity data only for Morocco.
-   *
-   * Non-Morocco selections intentionally return no
-   * results until country-specific backend scraping
-   * is implemented.
-   */
-  if (
-    selectedParticipantCountry &&
-    normalizeParticipantCountry(
-      selectedParticipantCountry,
-    ) !==
-    normalizeParticipantCountry("Morocco")
-  ) {
-    return [];
-  }
-
-
-  /*
-   * Backend support is currently Morocco-only.
-   *
-   * Morocco continues to use the existing scraper cache.
-   * Other countries are deliberately exposed in the UI but return
-   * zero results until country-specific scraper/update.yml support
-   * is implemented.
-   */
-  if (
-    selectedParticipantCountry &&
-    normalizeParticipantCountry(
-      selectedParticipantCountry,
-    ) !==
-    normalizeParticipantCountry("Morocco")
-  ) {
-    return [];
-  }
-
-
-  const search = searchInput.value.trim().toLowerCase();
-
-  const country = countryFilter.value;
-
-  const type = typeFilter.value;
-
-  return activeOpportunities.filter((opportunity) => {
-    const searchable = [
-      opportunity.title,
-
-      opportunity.location,
-
-      opportunity.town,
-
-      getCountryName(opportunity.country),
-
-      opportunity.activity_type,
-
-      ...(opportunity.topics || []),
-    ]
-      .filter(Boolean)
-      .join(" ")
+  const search =
+    searchInput.value
+      .trim()
       .toLowerCase();
 
-    if (search && !searchable.includes(search)) {
-      return false;
-    }
+  const country =
+    countryFilter.value;
 
-    if (country && opportunity.country !== country) {
-      return false;
-    }
+  const type =
+    typeFilter.value;
 
-    if (
-      selectedParticipantCountry &&
-      !(
-        Array.isArray(
-          opportunity.eligible_countries,
-        ) &&
-        opportunity.eligible_countries.some(
-          (country) =>
-            participantCountryMatches(
-              country,
-              selectedParticipantCountry,
-            ),
+  const participantOpportunityIds =
+    getParticipantCountryOpportunityIds();
+
+  return activeOpportunities.filter(
+    (opportunity) => {
+      const searchable = [
+        opportunity.title,
+        opportunity.location,
+        opportunity.town,
+        getCountryName(
+          opportunity.country,
+        ),
+        opportunity.activity_type,
+        ...(opportunity.topics || []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (
+        search &&
+        !searchable.includes(search)
+      ) {
+        return false;
+      }
+
+      if (
+        country &&
+        opportunity.country !== country
+      ) {
+        return false;
+      }
+
+      if (
+        participantOpportunityIds !==
+          null &&
+        !participantOpportunityIds.has(
+          String(opportunity.id),
         )
-      )
-    ) {
-      return false;
-    }
+      ) {
+        return false;
+      }
 
+      if (
+        type &&
+        opportunity.activity_type !==
+          type
+      ) {
+        return false;
+      }
 
-    if (type && opportunity.activity_type !== type) {
-      return false;
-    }
-
-    return true;
-  });
+      return true;
+    },
+  );
 }
-
+// ============================================================
+// SORTING
+// ============================================================
+// ============================================================
+// SORTING
+// ============================================================
 // ============================================================
 // SORTING
 // ============================================================
@@ -2223,56 +2249,110 @@ async function fetchJson(url) {
 // ============================================================
 
 async function loadData() {
-  loadingMessage.classList.remove("hidden");
+  loadingMessage.classList.remove(
+    "hidden",
+  );
 
-  errorMessage.classList.add("hidden");
+  errorMessage.classList.add(
+    "hidden",
+  );
 
   try {
-    const activeData = await fetchJson(DATA_URL);
+    const [
+      activeData,
+      indexData,
+    ] = await Promise.all([
+      fetchJson(DATA_URL),
+      fetchJson(
+        PARTICIPANT_COUNTRY_INDEX_URL,
+      ),
+    ]);
 
-    currentActiveData = activeData;
+    if (
+      !activeData ||
+      !Array.isArray(
+        activeData.opportunities,
+      )
+    ) {
+      throw new Error(
+        "Published opportunity cache has an invalid structure.",
+      );
+    }
 
-    activeOpportunities = Array.isArray(activeData?.opportunities)
-      ? activeData.opportunities
-      : [];
+    if (
+      !indexData ||
+      typeof indexData !== "object" ||
+      !indexData.countries ||
+      typeof indexData.countries !==
+        "object"
+    ) {
+      throw new Error(
+        "Participant-country index has an invalid structure.",
+      );
+    }
 
-    calculateNewOpportunities(activeOpportunities);
+    currentActiveData =
+      activeData;
+
+    activeOpportunities =
+      activeData.opportunities;
+
+    participantCountryIndex =
+      indexData;
+
+    calculateNewOpportunities(
+      activeOpportunities,
+    );
 
     try {
-      const expiredData = await fetchJson(EXPIRED_DATA_URL);
+      const expiredData =
+        await fetchJson(
+          EXPIRED_DATA_URL,
+        );
 
-      expiredOpportunities = Array.isArray(expiredData?.opportunities)
-        ? expiredData.opportunities
-        : [];
+      expiredOpportunities =
+        Array.isArray(
+          expiredData?.opportunities,
+        )
+          ? expiredData.opportunities
+          : [];
     } catch {
       expiredOpportunities = [];
     }
 
     populateFilters();
-
-    populateParticipantCountries(currentActiveData);
+    populateParticipantCountries();
 
     resetParticipantSearchDisplay();
 
-
     renderExpired();
   } catch (error) {
-    console.error("Could not load opportunities:", error);
+    console.error(
+      "Could not load opportunities:",
+      error,
+    );
 
     activeOpportunities = [];
-
     currentActiveData = null;
+    participantCountryIndex = null;
 
     opportunityCount.textContent = "—";
-
+    activeResultCount.textContent = "—";
     lastUpdated.textContent = "—";
 
-    errorMessage.classList.remove("hidden");
+    errorMessage.classList.remove(
+      "hidden",
+    );
   } finally {
-    loadingMessage.classList.add("hidden");
+    loadingMessage.classList.add(
+      "hidden",
+    );
   }
 }
 
+// ============================================================
+// REFRESH BUTTON
+// ============================================================
 // ============================================================
 // REFRESH BUTTON
 // ============================================================
@@ -2342,242 +2422,19 @@ startCountdownRefresh();
 
 
 // ============================================================
-// PHASE TWO CACHE-FIRST SEARCH INTEGRATION
+// PHASE FIVE — PARTICIPANT-COUNTRY INDEX INTEGRATION
 // ============================================================
 //
-// GitHub Pages is a static frontend. The browser therefore reads the
-// published JSON cache directly rather than attempting to execute Python.
+// GitHub Pages is a static frontend.
 //
-// The participant-country Search button uses the same authoritative
-// published cache as the backend. The hourly GitHub Action refreshes
-// that cache through scraper/scraper.py.
+// The browser reads:
 //
-// This keeps searches fast and reliable:
-//   1. Load published cache.
-//   2. Filter by normalized participant-country code.
-//   3. Render matching opportunities.
-//   4. Never make the search depend on a live ESC request.
+//   1. opportunities.json
+//   2. participant_country_index.json
 //
-// Live freshness is handled by the scheduled scraper workflow.
+// The participant-country index maps a normalized country code
+// to opportunity IDs. The canonical opportunity cache remains
+// the authoritative source for the full opportunity objects.
+//
+// No Morocco-specific filtering is performed here.
 // ============================================================
-
-const PHASE_TWO_PARTICIPANT_COUNTRIES = {
-  "Morocco": "MA",
-};
-
-function phaseTwoCountryCodeFromName(name) {
-  if (!name) {
-    return "";
-  }
-
-  const normalized = String(name)
-    .trim()
-    .toLowerCase();
-
-  if (normalized === "morocco") {
-    return "MA";
-  }
-
-  return "";
-}
-
-function phaseTwoOpportunityMatchesCountry(
-  opportunity,
-  countryCode
-) {
-  if (!opportunity || !Array.isArray(opportunity.eligible_countries)) {
-    return false;
-  }
-
-  const requested = String(countryCode || "")
-    .trim()
-    .toUpperCase();
-
-  if (!requested) {
-    return false;
-  }
-
-  return opportunity.eligible_countries.some(
-    (value) =>
-      typeof value === "string" &&
-      value.trim().toUpperCase() === requested
-  );
-}
-
-function phaseTwoApplyParticipantCountryFilter(
-  opportunities,
-  countryCode
-) {
-  if (!countryCode) {
-    return opportunities;
-  }
-
-  return opportunities.filter((opportunity) =>
-    phaseTwoOpportunityMatchesCountry(
-      opportunity,
-      countryCode
-    )
-  );
-}
-
-async function phaseTwoLoadParticipantCountryResults(
-  countryCode
-) {
-  const response = await fetch(
-    `${DATA_URL}?t=${Date.now()}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Published opportunity cache returned HTTP ${response.status}.`
-    );
-  }
-
-  const data = await response.json();
-
-  if (
-    !data ||
-    !Array.isArray(data.opportunities)
-  ) {
-    throw new Error(
-      "Published opportunity cache has an invalid structure."
-    );
-  }
-
-  return {
-    ...data,
-    opportunities:
-      phaseTwoApplyParticipantCountryFilter(
-        data.opportunities,
-        countryCode
-      ),
-  };
-}
-
-async function phaseTwoHandleParticipantCountrySearch() {
-  const selector =
-    document.getElementById(
-      "participant-country"
-    );
-
-  if (!selector) {
-    return;
-  }
-
-  const countryCode =
-    phaseTwoCountryCodeFromName(
-      selector.value
-    );
-
-  if (!countryCode) {
-    return;
-  }
-
-  const originalText =
-    opportunityCount
-      ? opportunityCount.textContent
-      : null;
-
-  try {
-    if (loadingMessage) {
-      loadingMessage.classList.remove(
-        "hidden"
-      );
-    }
-
-    if (errorMessage) {
-      errorMessage.classList.add(
-        "hidden"
-      );
-    }
-
-    const data =
-      await phaseTwoLoadParticipantCountryResults(
-        countryCode
-      );
-
-    currentActiveData = data;
-    activeOpportunities = data.opportunities || [];
-
-    if (opportunityCount) {
-      opportunityCount.textContent =
-        activeOpportunities.length;
-    }
-
-    if (lastUpdated) {
-      lastUpdated.textContent =
-        data.generated_at
-          ? formatDateTime(data.generated_at)
-          : "—";
-    }
-
-    renderOpportunities();
-
-  } catch (error) {
-    console.error(
-      "Phase Two participant-country search failed:",
-      error
-    );
-
-    if (errorMessage) {
-      errorMessage.classList.remove(
-        "hidden"
-      );
-    }
-
-    if (
-      originalText !== null &&
-      opportunityCount
-    ) {
-      opportunityCount.textContent =
-        originalText;
-    }
-  } finally {
-    if (loadingMessage) {
-      loadingMessage.classList.add(
-        "hidden"
-      );
-    }
-  }
-}
-
-function phaseTwoInstallParticipantCountrySearch() {
-  const button =
-    document.getElementById(
-      "apply-participant-country"
-    );
-
-  if (!button) {
-    return;
-  }
-
-  if (
-    button.dataset.phaseTwoBound ===
-    "true"
-  ) {
-    return;
-  }
-
-  button.dataset.phaseTwoBound =
-    "true";
-
-  button.addEventListener(
-    "click",
-    phaseTwoHandleParticipantCountrySearch
-  );
-}
-
-if (
-  document.readyState ===
-  "loading"
-) {
-  document.addEventListener(
-    "DOMContentLoaded",
-    phaseTwoInstallParticipantCountrySearch
-  );
-} else {
-  phaseTwoInstallParticipantCountrySearch();
-}
