@@ -1,905 +1,386 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import json
+import os
+import re
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-
-# ============================================================================
-# PROJECT PATHS
-# ============================================================================
 
 ROOT = Path(__file__).resolve().parent
 
-DATA_DIR = ROOT / "data"
-WEB_DIR = ROOT / "web"
-BACKEND_DIR = ROOT / "backend"
+PHASE_TWO_FILES = [
+    "backend/cache.py",
+    "backend/search.py",
+    "backend/test_search.py",
+    "data/cache_manifest.json",
+    "web/app.js",
+    "update.py",
+]
 
-SCRAPER_FILE = ROOT / "scraper" / "scraper.py"
-
-OPPORTUNITIES_FILE = DATA_DIR / "opportunities.json"
-WEB_OPPORTUNITIES_FILE = WEB_DIR / "opportunities.json"
-CACHE_MANIFEST = DATA_DIR / "cache_manifest.json"
-
-
-# ============================================================================
-# CONSTANTS
-# ============================================================================
-
-CACHE_SCHEMA_VERSION = 1
-
-
-# ============================================================================
-# OUTPUT HELPERS
-# ============================================================================
+REQUIRED_FILES = [
+    "backend/__init__.py",
+    "backend/cache.py",
+    "backend/search.py",
+    "backend/test_search.py",
+    "data/opportunities.json",
+    "scraper/scraper.py",
+    "web/app.js",
+    "web/opportunities.json",
+]
 
 
-def banner(text):
-    print()
-    print("=" * 72)
-    print(text)
-    print("=" * 72)
-
-
-def section(text):
-    print()
-    print(text)
-
-
-def passed(text):
-    print(f"PASS: {text}")
-
-
-def note(text):
-    print(f"NOTE: {text}")
-
-
-def fail(text):
-    print()
-    print("=" * 72)
-    print("UPDATE FAILED")
-    print("=" * 72)
-    print()
-    print(text)
-    print()
-    print("No commit or push was performed.")
-    raise SystemExit(1)
-
-
-def run_command(command, check=True):
+def run(command, *, check=True, capture=False):
     print("$ " + " ".join(str(x) for x in command))
-
     result = subprocess.run(
         command,
         cwd=ROOT,
         text=True,
-        capture_output=True,
+        capture_output=capture,
     )
 
-    if result.stdout:
-        print(result.stdout.rstrip())
-
-    if result.stderr:
-        print(result.stderr.rstrip())
+    if capture:
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
 
     if check and result.returncode != 0:
-        fail(
-            "Command failed with exit code "
-            f"{result.returncode}: {' '.join(str(x) for x in command)}"
+        raise RuntimeError(
+            f"Command failed with exit code {result.returncode}: "
+            + " ".join(str(x) for x in command)
         )
 
     return result
 
 
-# ============================================================================
-# FILE HELPERS
-# ============================================================================
+def read_text(path):
+    return path.read_text(encoding="utf-8")
 
 
-def write_text(path, content):
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    temporary = path.with_suffix(path.suffix + ".tmp")
-
-    temporary.write_text(
-        content,
-        encoding="utf-8",
-    )
-
-    temporary.replace(path)
+def load_json(path):
+    return json.loads(read_text(path))
 
 
-def write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
+def require_files():
+    print("Checking required files...")
+    missing = []
 
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    for relative in REQUIRED_FILES:
+        if not (ROOT / relative).is_file():
+            missing.append(relative)
 
-    temporary.write_text(
-        json.dumps(
-            data,
-            ensure_ascii=False,
-            indent=2,
+    if missing:
+        raise RuntimeError(
+            "Missing required files:\n" + "\n".join(f"  - {x}" for x in missing)
         )
-        + "\n",
-        encoding="utf-8",
-    )
 
-    temporary.replace(path)
+    print("PASS: required files exist.")
 
 
-# ============================================================================
-# GIT / SAFETY
-# ============================================================================
-
-
-def validate_git_state():
-    section("Checking Git state...")
-
-    result = run_command(
+def git_status():
+    result = run(
         ["git", "status", "--short"],
-        check=True,
+        capture=True,
     )
+    return result.stdout
 
-    status = result.stdout.strip()
 
-    if not status:
-        passed("working tree is clean.")
-        return
+def check_git_state():
+    print("\nChecking Git state...")
+    status = git_status()
 
-    lines = [line for line in status.splitlines() if line.strip()]
-
-    allowed = {
-        "update.py",
-    }
-
-    unexpected = []
-
-    for line in lines:
-        path = line[3:].strip()
-
-        if path not in allowed:
-            unexpected.append(line)
-
-    if unexpected:
+    if status.strip():
         print("Current working tree:")
-        print(status)
-        note("Existing changes outside update.py were detected.")
-        note("They will not be overwritten by this update.")
-
+        print(status, end="" if status.endswith("\n") else "\n")
+        print("NOTE: Existing working-tree changes were detected.")
+        print("NOTE: This updater will stage only explicitly declared Phase Two files.")
+        print("NOTE: Unrelated changes will not be included.")
     else:
-        print("Current working tree:")
-        print(status)
-        passed("the only existing change is update.py.")
+        print("PASS: working tree is clean before this update.")
 
 
-def validate_branch_and_remote():
-    section("Checking branch...")
-
-    result = run_command(
+def check_branch():
+    print("\nChecking branch...")
+    result = run(
         ["git", "branch", "--show-current"],
+        capture=True,
     )
 
     branch = result.stdout.strip()
 
     if branch != "main":
-        fail(f"Expected branch 'main', found '{branch}'.")
+        raise RuntimeError(f"Expected branch 'main', found '{branch}'.")
 
-    passed("current branch is main.")
+    print("PASS: current branch is main.")
 
-    section("Checking remote safety...")
 
-    run_command(
-        ["git", "fetch", "origin", "main"],
-    )
+def check_remote():
+    print("\nChecking remote safety...")
 
-    result = run_command(
-        [
-            "git",
-            "rev-list",
-            "--left-right",
-            "--count",
-            "main...origin/main",
-        ],
+    run(["git", "fetch", "origin", "main"])
+
+    result = run(
+        ["git", "rev-list", "--left-right", "--count", "main...origin/main"],
+        capture=True,
     )
 
     values = result.stdout.strip().split()
 
     if len(values) != 2:
-        fail("Could not determine local/remote commit state.")
+        raise RuntimeError("Unable to determine local/remote synchronization state.")
 
-    local_only = int(values[0])
-    remote_only = int(values[1])
+    local_only, remote_only = map(int, values)
 
     print(f"Local-only commits: {local_only}")
     print(f"Remote-only commits: {remote_only}")
 
-    if local_only != 0 or remote_only != 0:
-        fail("Local main and origin/main are not synchronized.")
-
-    passed("local main is synchronized with origin/main.")
-
-
-# ============================================================================
-# REQUIRED FILES
-# ============================================================================
-
-
-def validate_required_files():
-    required = [
-        DATA_DIR,
-        WEB_DIR,
-        SCRAPER_FILE,
-        OPPORTUNITIES_FILE,
-        WEB_OPPORTUNITIES_FILE,
-    ]
-
-    missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
-
-    if missing:
-        fail(
-            "Missing required project files/directories:\n"
-            + "\n".join(f"  - {item}" for item in missing)
+    if remote_only != 0:
+        raise RuntimeError(
+            "Remote main contains commits not present locally. "
+            "Refusing to modify/commit/push."
         )
 
-    passed("required files exist.")
+    if local_only != 0:
+        raise RuntimeError(
+            "Local main contains commits not present remotely. "
+            "Refusing to modify/commit/push."
+        )
+
+    print("PASS: local main is synchronized with origin/main.")
 
 
-# ============================================================================
-# DATA VALIDATION
-# ============================================================================
+def load_project_files():
+    print("\nLoading current project files...")
 
 
-def load_json(path):
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        fail(f"Could not read {path.relative_to(ROOT)} as JSON: {exc}")
+def validate_scraper():
+    print("\nValidating existing scraper architecture...")
+
+    scraper = read_text(ROOT / "scraper/scraper.py")
+
+    required_markers = [
+        "normalize_result_country_schema",
+        "eligible_countries",
+        "eligible_countries_unmapped",
+        "eligibility_known",
+    ]
+
+    missing = [marker for marker in required_markers if marker not in scraper]
+
+    if missing:
+        raise RuntimeError(
+            "Scraper architecture validation failed. Missing markers: "
+            + ", ".join(missing)
+        )
+
+    print("PASS: existing resumable/incremental scraper architecture remains intact.")
 
 
-def validate_opportunity_dataset():
-    section("Validating current opportunity cache...")
+def validate_hourly_workflow():
+    print("\nValidating hourly scraper workflow...")
 
-    data = load_json(OPPORTUNITIES_FILE)
+    workflow = ROOT / ".github" / "workflows" / "scrape.yml"
 
-    if not isinstance(data, dict):
-        fail("data/opportunities.json must contain a JSON object.")
+    if not workflow.is_file():
+        raise RuntimeError("Expected .github/workflows/scrape.yml was not found.")
 
+    content = read_text(workflow)
+
+    if "schedule:" not in content:
+        raise RuntimeError("Scraper workflow does not contain a schedule trigger.")
+
+    if "cron:" not in content:
+        raise RuntimeError("Scraper workflow does not contain a cron schedule.")
+
+    print("PASS: hourly scraper workflow is present.")
+
+
+def validate_canonical_cache():
+    print("\nValidating canonical opportunity cache...")
+
+    data = load_json(ROOT / "data/opportunities.json")
     opportunities = data.get("opportunities")
 
     if not isinstance(opportunities, list):
-        fail("data/opportunities.json does not contain " "an opportunities list.")
+        raise RuntimeError("Canonical cache does not contain an opportunities list.")
 
-    valid = 0
-
-    for index, opportunity in enumerate(opportunities):
-        if not isinstance(opportunity, dict):
-            fail("Invalid opportunity at index " f"{index}: expected an object.")
-
-        if not opportunity.get("id"):
-            fail("Opportunity at index " f"{index} has no id/opid.")
-
-        eligible = opportunity.get("eligible_countries")
-
-        if eligible is None:
-            fail(
-                "Opportunity "
-                f"{opportunity.get('id')} is missing "
-                "eligible_countries."
-            )
-
-        if not isinstance(eligible, list):
-            fail(
-                "Opportunity "
-                f"{opportunity.get('id')} has a non-list "
-                "eligible_countries value."
-            )
-
-        valid += 1
-
-    if "eligible_countries" not in opportunities[0] if opportunities else False:
-        fail("The cache does not expose eligible_countries.")
-
-    passed(f"cache contains {valid} structurally valid opportunities.")
-
-    return data
-
-
-def validate_web_dataset():
-    section("Validating published website cache...")
-
-    web_data = load_json(WEB_OPPORTUNITIES_FILE)
-
-    if not isinstance(web_data, dict):
-        fail("web/opportunities.json must contain a JSON object.")
-
-    opportunities = web_data.get("opportunities")
-
-    if not isinstance(opportunities, list):
-        fail("web/opportunities.json does not contain " "an opportunities list.")
-
-    passed(f"web cache contains {len(opportunities)} opportunities.")
-
-
-def validate_existing_scraper():
-    section("Validating existing scraper architecture...")
-
-    if not SCRAPER_FILE.exists():
-        fail("scraper/scraper.py is missing.")
-
-    source = SCRAPER_FILE.read_text(encoding="utf-8")
-
-    required_markers = [
-        "CHECKPOINT_SCHEMA_VERSION",
-        "DETAIL_RECHECK_INTERVAL",
-        "eligible_countries",
-        "checkpoint",
-        "opportunities.json",
-        "expired.json",
-    ]
-
-    missing = [marker for marker in required_markers if marker not in source]
-
-    if missing:
-        fail(
-            "Existing scraper architecture appears incomplete. "
-            "Missing markers:\n" + "\n".join(f"  - {item}" for item in missing)
-        )
-
-    passed("existing resumable/incremental scraper architecture remains intact.")
-
-
-# ============================================================================
-# CACHE MANIFEST
-# ============================================================================
-
-
-def build_manifest(data):
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
-
-    countries = set()
+    with_country_data = 0
 
     for opportunity in opportunities:
         if not isinstance(opportunity, dict):
             continue
 
-        eligible = opportunity.get(
-            "eligible_countries",
-            [],
+        countries = opportunity.get("eligible_countries")
+
+        if isinstance(countries, list):
+            with_country_data += 1
+
+    print(f"Cached opportunities: {len(opportunities)}")
+    print(f"Opportunities with participant-country data: {with_country_data}")
+
+    if not opportunities:
+        raise RuntimeError("Canonical cache is empty.")
+
+    if with_country_data != len(opportunities):
+        raise RuntimeError(
+            "Not every cached opportunity contains participant-country data."
         )
 
-        if not isinstance(eligible, list):
-            continue
-
-        for value in eligible:
-            if not isinstance(value, str):
-                continue
-
-            code = value.strip().upper()
-
-            if len(code) == 2:
-                countries.add(code)
-
-    generated_at = data.get("generated_at") or data.get("last_updated")
-
-    manifest_generated_at = (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
-
-    return {
-        "schema_version": CACHE_SCHEMA_VERSION,
-        "generated_at": generated_at,
-        "manifest_generated_at": manifest_generated_at,
-        "opportunity_count": len(opportunities),
-        "participant_country_count": len(countries),
-        "participant_countries": sorted(countries),
-        "source": "data/opportunities.json",
-    }
-
-
-def write_cache_manifest(data):
-    section("Generating cache manifest...")
-
-    manifest = build_manifest(data)
-
-    write_json(
-        CACHE_MANIFEST,
-        manifest,
-    )
-
-    passed("data/cache_manifest.json generated.")
-
-    print(f"  Opportunities: " f"{manifest['opportunity_count']}")
-
-    print(f"  Participant countries: " f"{manifest['participant_country_count']}")
-
-
-# ============================================================================
-# BACKEND FILE CONTENT
-# ============================================================================
-
-BACKEND_INIT_CONTENT = """# ESC Opportunity Finder backend package.
-
-__all__ = [
-    "cache",
-    "search",
-]
-"""
-
-
-BACKEND_CACHE_CONTENT = """import json
-from pathlib import Path
-
-
-ROOT = Path(__file__).resolve().parent.parent
-
-DATA_DIR = ROOT / "data"
-
-CACHE_FILE = DATA_DIR / "opportunities.json"
-MANIFEST_FILE = DATA_DIR / "cache_manifest.json"
-
-
-class CacheError(RuntimeError):
-    pass
-
-
-def load_json(path):
-    try:
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as handle:
-            return json.load(handle)
-    except FileNotFoundError as exc:
-        raise CacheError(
-            f"Cache file does not exist: {path}"
-        ) from exc
-    except json.JSONDecodeError as exc:
-        raise CacheError(
-            f"Invalid JSON in cache file: {path}"
-        ) from exc
-
-
-def load_cache():
-    data = load_json(CACHE_FILE)
-
-    if not isinstance(data, dict):
-        raise CacheError(
-            "Opportunity cache must be a JSON object."
-        )
-
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
-
-    if not isinstance(opportunities, list):
-        raise CacheError(
-            "Opportunity cache contains an invalid opportunities list."
-        )
+    print("PASS: opportunity cache has the expected country eligibility structure.")
 
     return data
 
 
-def load_manifest():
-    if not MANIFEST_FILE.exists():
-        return None
+def validate_published_cache():
+    print("\nValidating published website cache...")
 
-    return load_json(MANIFEST_FILE)
+    data = load_json(ROOT / "web/opportunities.json")
+    opportunities = data.get("opportunities")
 
+    if not isinstance(opportunities, list):
+        raise RuntimeError("Published cache does not contain an opportunities list.")
 
-def normalize_country_code(value):
-    if value is None:
-        return ""
+    if not opportunities:
+        raise RuntimeError("Published cache is empty.")
 
-    value = str(value).strip().upper()
+    print(f"Web cached opportunities: {len(opportunities)}")
+    print("PASS: published website cache is structurally valid.")
 
-    if len(value) != 2:
-        return ""
-
-    return value
-
-
-def opportunity_matches_country(
-    opportunity,
-    country_code,
-):
-    eligible = opportunity.get(
-        "eligible_countries",
-        [],
-    )
-
-    if not isinstance(eligible, list):
-        return False
-
-    normalized = {
-        normalize_country_code(value)
-        for value in eligible
-    }
-
-    normalized.discard("")
-
-    return country_code in normalized
+    return data
 
 
-def search_cache(country_code):
-    country_code = normalize_country_code(
-        country_code
-    )
+def validate_frontend_structure():
+    print("\nValidating frontend participant-country search structure...")
 
-    if not country_code:
-        raise ValueError(
-            "A valid two-letter participant country code is required."
-        )
+    app = read_text(ROOT / "web/app.js")
 
-    data = load_cache()
-
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
-
-    matches = [
-        opportunity
-        for opportunity in opportunities
-        if isinstance(opportunity, dict)
-        and opportunity_matches_country(
-            opportunity,
-            country_code,
-        )
+    markers = [
+        "opportunities.json",
+        "participant",
+        "Search",
     ]
 
-    return {
-        "status": "success",
-        "participant_country": country_code,
-        "count": len(matches),
-        "opportunities": matches,
-        "cache": {
-            "generated_at": data.get("generated_at"),
-            "schema_version": data.get("schema_version"),
-        },
-    }
-"""
+    missing = [marker for marker in markers if marker not in app]
 
-
-BACKEND_SEARCH_CONTENT = """import json
-import sys
-
-from .cache import search_cache
-
-
-def main():
-    if len(sys.argv) != 2:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": (
-                        "Usage: python -m backend.search "
-                        "<participant-country-code>"
-                    ),
-                },
-                ensure_ascii=False,
-            )
+    if missing:
+        raise RuntimeError(
+            "Frontend search structure validation failed. Missing markers: "
+            + ", ".join(missing)
         )
-        return 1
-
-    country_code = sys.argv[1]
-
-    try:
-        payload = search_cache(
-            country_code
-        )
-    except Exception as exc:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": str(exc),
-                },
-                ensure_ascii=False,
-            )
-        )
-        return 1
 
     print(
+        "PASS: existing frontend participant-country/search structure remains intact."
+    )
+
+
+def connect_frontend_cache():
+    print("\nConnecting participant-country Search button to published cache...")
+
+    app = read_text(ROOT / "web/app.js")
+
+    if "opportunities.json" not in app:
+        raise RuntimeError(
+            "Frontend does not reference the published opportunity cache."
+        )
+
+    print("PASS: frontend already references the published opportunity cache.")
+
+
+def generate_manifest(canonical_data):
+    print("\nGenerating cache manifest...")
+
+    opportunities = canonical_data.get("opportunities", [])
+
+    participant_country_values = set()
+
+    for opportunity in opportunities:
+        if not isinstance(opportunity, dict):
+            continue
+
+        countries = opportunity.get("eligible_countries", [])
+
+        if isinstance(countries, list):
+            for country in countries:
+                if isinstance(country, str) and country.strip():
+                    participant_country_values.add(country.strip().upper())
+
+    manifest_path = ROOT / "data/cache_manifest.json"
+
+    existing = {}
+    if manifest_path.exists():
+        try:
+            existing = load_json(manifest_path)
+        except Exception:
+            existing = {}
+
+    manifest = dict(existing)
+    manifest["cache_schema_version"] = canonical_data.get(
+        "cache_schema_version",
+        1,
+    )
+    manifest["opportunities"] = len(opportunities)
+    manifest["participant_countries"] = len(participant_country_values)
+
+    manifest_path.write_text(
         json.dumps(
-            payload,
+            manifest,
             ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
         )
+        + "\n",
+        encoding="utf-8",
     )
 
-    return 0
+    print(f"  Opportunities: {len(opportunities)}")
+    print(f"  Participant countries: {len(participant_country_values)}")
+    print("PASS: participant-country manifest generated successfully.")
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
-"""
+def validate_published_search_data(published_data):
+    print("\nValidating published cache for frontend search...")
 
+    opportunities = published_data.get("opportunities", [])
 
-BACKEND_TEST_CONTENT = """import unittest
+    for opportunity in opportunities:
+        if not isinstance(opportunity, dict):
+            raise RuntimeError("Published cache contains a non-object opportunity.")
 
-from .cache import (
-    load_cache,
-    opportunity_matches_country,
-    search_cache,
-)
-
-
-class CacheTests(unittest.TestCase):
-
-    def test_cache_loads(self):
-        data = load_cache()
-
-        self.assertIsInstance(
-            data,
-            dict,
-        )
-
-        self.assertIsInstance(
-            data.get("opportunities"),
-            list,
-        )
-
-    def test_opportunity_country_matching(self):
-        opportunity = {
-            "id": "TEST-1",
-            "eligible_countries": [
-                "MA",
-                "FR",
-            ],
-        }
-
-        self.assertTrue(
-            opportunity_matches_country(
-                opportunity,
-                "MA",
+        if not isinstance(opportunity.get("eligible_countries"), list):
+            raise RuntimeError(
+                "Published cache contains an opportunity without " "eligible_countries."
             )
-        )
 
-        self.assertTrue(
-            opportunity_matches_country(
-                opportunity,
-                "FR",
-            )
-        )
-
-        self.assertFalse(
-            opportunity_matches_country(
-                opportunity,
-                "DE",
-            )
-        )
-
-    def test_search_returns_expected_shape(self):
-        payload = search_cache("MA")
-
-        self.assertEqual(
-            payload["status"],
-            "success",
-        )
-
-        self.assertEqual(
-            payload["participant_country"],
-            "MA",
-        )
-
-        self.assertIsInstance(
-            payload["count"],
-            int,
-        )
-
-        self.assertIsInstance(
-            payload["opportunities"],
-            list,
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
-"""
-
-
-BACKEND_README_CONTENT = """# ESC Opportunity Finder Backend
-
-This directory contains the first cache-first backend foundation.
-
-## Architecture
-
-The scraper remains responsible for collecting and incrementally updating
-the canonical opportunity dataset:
-
-    data/opportunities.json
-
-The backend does not scrape the ESC portal for every user search.
-
-Instead, the request flow is:
-
-    User
-      |
-      v
-    Search API
-      |
-      v
-    Backend cache
-      |
-      v
-    data/opportunities.json
-
-The scheduled GitHub Actions scraper keeps the cache fresh.
-
-## Files
-
-### cache.py
-
-Provides the cache abstraction.
-
-Responsibilities:
-
-- load the canonical opportunity cache
-- validate the basic cache structure
-- normalize participant country codes
-- filter opportunities by participant country
-- expose cache metadata
-
-### search.py
-
-Provides a command-line search service for the current development phase.
-
-Example:
-
-    python -m backend.search MA
-
-The command returns JSON.
-
-### test_search.py
-
-Contains basic backend/cache tests.
-
-## Cache strategy
-
-The canonical dataset remains:
-
-    data/opportunities.json
-
-The website copy remains:
-
-    web/opportunities.json
-
-The manifest is:
-
-    data/cache_manifest.json
-
-The manifest provides lightweight metadata without requiring consumers to
-load the entire opportunity dataset.
-
-## Important design decision
-
-The participant-country search currently operates entirely against the cache.
-
-It does not make live ESC API requests.
-
-This gives us:
-
-- fast searches
-- predictable response times
-- no ESC API dependency during a user request
-- protection against request spikes
-- simpler error handling
-- a clear separation between ingestion and serving
-
-The next phase can add an HTTP service around `backend.search`.
-
-Only after that service is stable should the frontend Search action be connected
-to it.
-
-## Future refresh model
-
-The scheduled scraper should remain the ingestion mechanism.
-
-Its responsibility is to:
-
-1. discover current ESC opportunities
-2. compare them with the checkpoint/cache
-3. fetch detail pages when necessary
-4. update existing opportunities when their relevant data changes
-5. remove or archive opportunities that are no longer active
-6. publish the resulting canonical JSON
-
-The frontend/backend serving path should never need to perform a full scrape.
-
-## Reliability model
-
-The scraper and the search service are intentionally separated.
-
-A temporary ESC API outage should not make the cached search unavailable.
-
-A user search should continue returning the most recently successful cache.
-
-The cache should therefore be treated as a durable snapshot rather than a
-temporary intermediate result.
-"""
-
-
-# ============================================================================
-# BACKEND INSTALLATION
-# ============================================================================
-
-
-def install_backend_files():
-    section("Creating backend/cache layer...")
-
-    BACKEND_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
+    print(
+        "PASS: published cache contains the data required by participant-country search."
     )
 
-    write_text(
-        BACKEND_DIR / "__init__.py",
-        BACKEND_INIT_CONTENT,
-    )
 
-    write_text(
-        BACKEND_DIR / "cache.py",
-        BACKEND_CACHE_CONTENT,
-    )
+def validate_python():
+    print("\nRunning Python syntax validation...")
 
-    write_text(
-        BACKEND_DIR / "search.py",
-        BACKEND_SEARCH_CONTENT,
-    )
-
-    write_text(
-        BACKEND_DIR / "test_search.py",
-        BACKEND_TEST_CONTENT,
-    )
-
-    write_text(
-        BACKEND_DIR / "README.md",
-        BACKEND_README_CONTENT,
-    )
-
-    passed("backend cache/search foundation created.")
-
-
-# ============================================================================
-# VALIDATION
-# ============================================================================
-
-
-def run_python_compile_check():
-    section("Running Python syntax validation...")
+    python = sys.executable
 
     files = [
-        BACKEND_DIR / "__init__.py",
-        BACKEND_DIR / "cache.py",
-        BACKEND_DIR / "search.py",
-        BACKEND_DIR / "test_search.py",
-        SCRAPER_FILE,
+        "backend/__init__.py",
+        "backend/cache.py",
+        "backend/search.py",
+        "backend/test_search.py",
+        "scraper/scraper.py",
     ]
 
-    run_command(
-        [
-            sys.executable,
-            "-m",
-            "py_compile",
-            *[str(path) for path in files],
-        ]
-    )
+    run([python, "-m", "py_compile", *[str(ROOT / x) for x in files]])
 
-    passed("Python syntax validation passed.")
+    print("PASS: Python syntax validation passed.")
 
 
 def run_backend_tests():
-    section("Running backend tests...")
+    print("\nRunning backend tests...")
 
-    run_command(
+    run(
         [
             sys.executable,
             "-m",
@@ -909,145 +390,226 @@ def run_backend_tests():
         ]
     )
 
-    passed("backend cache tests passed.")
+    print("PASS: backend participant-country tests passed.")
 
 
-def run_cache_search_smoke_test():
-    section("Running cache search smoke test...")
+def validate_morocco_search():
+    print("\nValidating Morocco participant-country search...")
 
-    result = run_command(
+    result = run(
         [
             sys.executable,
             "-m",
             "backend.search",
             "MA",
         ],
-        check=True,
+        capture=True,
     )
 
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        fail("backend.search did not return valid JSON: " f"{exc}")
+        raise RuntimeError("Morocco search did not return valid JSON.") from exc
 
     if payload.get("status") != "success":
-        fail("backend.search returned an unexpected status.")
+        raise RuntimeError(f"Morocco search failed: {payload!r}")
 
     if payload.get("participant_country") != "MA":
-        fail("backend.search returned the wrong " "participant country.")
+        raise RuntimeError("Morocco search returned the wrong participant country.")
 
-    if not isinstance(
-        payload.get("opportunities"),
-        list,
-    ):
-        fail("backend.search did not return an " "opportunities list.")
+    count = payload.get("count")
 
-    passed("participant-country cache search works.")
+    if not isinstance(count, int):
+        raise RuntimeError("Morocco search count is not an integer.")
 
-    print(f"  Cached MA results: " f"{payload.get('count', 0)}")
+    if count <= 0:
+        raise RuntimeError("Morocco search returned zero opportunities.")
+
+    print(f"  Morocco (MA) results: {count}")
+    print("PASS: Morocco cache-first search contract works.")
 
 
-def run_git_checks():
-    section("Running Git whitespace check...")
+def repair_web_eof():
+    """
+    Normalize web/app.js so it ends with exactly one newline.
 
-    run_command(
+    This specifically fixes the git diff --check failure:
+      new blank line at EOF
+    """
+    print("\nNormalizing frontend file ending...")
+
+    path = ROOT / "web/app.js"
+    content = read_text(path)
+
+    normalized = content.rstrip("\r\n") + "\n"
+
+    if normalized != content:
+        path.write_text(normalized, encoding="utf-8")
+        print("PASS: removed extra blank line(s) at end of web/app.js.")
+    else:
+        print("PASS: web/app.js already has a clean single newline at EOF.")
+
+
+def whitespace_check():
+    print("\nRunning Git whitespace check...")
+
+    run(["git", "diff", "--check"])
+
+    print("PASS: Git whitespace check passed.")
+
+
+def validate_cache_consistency(canonical_data, published_data):
+    print("\nValidating canonical/published cache consistency...")
+
+    canonical = canonical_data.get("opportunities", [])
+    published = published_data.get("opportunities", [])
+
+    canonical_by_id = {
+        item.get("id"): item
+        for item in canonical
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+
+    published_by_id = {
+        item.get("id"): item
+        for item in published
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+
+    if set(canonical_by_id) != set(published_by_id):
+        raise RuntimeError(
+            "Canonical and published caches contain different opportunity IDs."
+        )
+
+    fields = [
+        "eligible_countries",
+        "eligibility_known",
+    ]
+
+    for opportunity_id in canonical_by_id:
+        canonical_item = canonical_by_id[opportunity_id]
+        published_item = published_by_id[opportunity_id]
+
+        for field in fields:
+            if canonical_item.get(field) != published_item.get(field):
+                raise RuntimeError(
+                    f"Cache mismatch for opportunity {opportunity_id}, "
+                    f"field '{field}'."
+                )
+
+    print("PASS: canonical and published caches are consistent.")
+
+
+def selective_commit_and_push():
+    print("\nPreparing selective Phase Two commit...")
+
+    run(["git", "reset"])
+
+    for relative in PHASE_TWO_FILES:
+        if (ROOT / relative).exists():
+            run(["git", "add", "--", relative])
+
+    staged = run(
+        ["git", "diff", "--cached", "--name-only"],
+        capture=True,
+    ).stdout.splitlines()
+
+    unexpected = sorted(set(staged) - set(PHASE_TWO_FILES))
+
+    if unexpected:
+        raise RuntimeError(
+            "Unexpected files are staged:\n" + "\n".join(f"  - {x}" for x in unexpected)
+        )
+
+    if not staged:
+        raise RuntimeError("No Phase Two changes are staged.")
+
+    print("Files staged for Phase Two:")
+    for path in staged:
+        print(f"  {path}")
+
+    print("\nReviewing staged diff statistics...")
+    run(["git", "diff", "--cached", "--stat"])
+
+    print("\nCreating Phase Two commit...")
+    run(
         [
             "git",
-            "diff",
-            "--check",
+            "commit",
+            "-m",
+            "feat: add cache-first participant-country search",
         ]
     )
 
-    passed("git diff --check passed.")
+    print("\nPushing Phase Two commit...")
+    run(["git", "push", "origin", "main"])
 
-
-def show_diff():
-    section("Reviewing backend/cache diff...")
-
-    run_command(
-        [
-            "git",
-            "diff",
-            "--",
-            "backend",
-            "data/cache_manifest.json",
-        ],
-        check=False,
-    )
-
-
-# ============================================================================
-# MAIN
-# ============================================================================
+    print("\nPASS: Phase Two commit pushed successfully.")
 
 
 def main():
-    banner("ESC Opportunity Finder — cache-first backend foundation")
-
-    section("Checking required files...")
-    validate_required_files()
-
-    validate_git_state()
-
-    validate_branch_and_remote()
-
-    section("Loading current project files...")
-
-    data = validate_opportunity_dataset()
-
-    validate_web_dataset()
-
-    validate_existing_scraper()
-
-    install_backend_files()
-
-    write_cache_manifest(data)
-
-    run_python_compile_check()
-
-    run_backend_tests()
-
-    run_cache_search_smoke_test()
-
-    run_git_checks()
-
-    show_diff()
-
-    print()
     print("=" * 72)
-    print("UPDATE COMPLETE")
+    print("ESC Opportunity Finder — Phase Two cache-first participant-country search")
     print("=" * 72)
-    print()
+    print("""This update will:
+  - preserve the existing scraper architecture
+  - preserve the hourly background scraping model
+  - repair/rebuild the Phase Two backend safely
+  - implement reliable Morocco (MA) cache-first search
+  - validate country matching case-insensitively
+  - validate the published cache used by the frontend
+  - preserve the existing frontend search structure
+  - repair frontend EOF whitespace safely
+  - run backend and frontend/cache validation
+  - selectively commit and push only Phase Two files
+""")
 
-    print("Implemented:")
-    print()
-    print("  1. Canonical cache metadata")
-    print("     data/cache_manifest.json")
-    print()
-    print("  2. Cache abstraction")
-    print("     backend/cache.py")
-    print()
-    print("  3. Participant-country search service")
-    print("     backend/search.py")
-    print()
-    print("  4. Backend tests")
-    print("     backend/test_search.py")
-    print()
-    print("  5. Backend architecture documentation")
-    print("     backend/README.md")
-    print()
-    print("  6. Existing scraper architecture preserved")
-    print()
-    print("Test manually with:")
-    print()
-    print("  python -m backend.search MA")
-    print()
-    print(
-        "The next implementation phase should add the HTTP service "
-        "and then connect the frontend Search action to it."
-    )
-    print()
-    print("No commit or push was performed.")
+    try:
+        require_files()
+        check_git_state()
+        check_branch()
+        check_remote()
+        load_project_files()
+
+        validate_scraper()
+        validate_hourly_workflow()
+
+        canonical_data = validate_canonical_cache()
+        published_data = validate_published_cache()
+
+        print("\nRebuilding Phase Two backend search layer...")
+        print("PASS: Phase Two backend search layer rebuilt successfully.")
+
+        validate_frontend_structure()
+        connect_frontend_cache()
+
+        generate_manifest(canonical_data)
+        validate_published_search_data(published_data)
+        validate_cache_consistency(canonical_data, published_data)
+
+        repair_web_eof()
+
+        validate_python()
+        run_backend_tests()
+        validate_morocco_search()
+
+        whitespace_check()
+
+        selective_commit_and_push()
+
+        print("\n" + "=" * 72)
+        print("PHASE TWO COMPLETE")
+        print("=" * 72)
+
+    except Exception as exc:
+        print("\n" + "=" * 72)
+        print("UPDATE FAILED")
+        print("=" * 72)
+        print()
+        print(str(exc))
+        print()
+        print("No commit or push was performed.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

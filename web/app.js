@@ -2339,3 +2339,245 @@ applyTranslations();
 loadData();
 
 startCountdownRefresh();
+
+
+// ============================================================
+// PHASE TWO CACHE-FIRST SEARCH INTEGRATION
+// ============================================================
+//
+// GitHub Pages is a static frontend. The browser therefore reads the
+// published JSON cache directly rather than attempting to execute Python.
+//
+// The participant-country Search button uses the same authoritative
+// published cache as the backend. The hourly GitHub Action refreshes
+// that cache through scraper/scraper.py.
+//
+// This keeps searches fast and reliable:
+//   1. Load published cache.
+//   2. Filter by normalized participant-country code.
+//   3. Render matching opportunities.
+//   4. Never make the search depend on a live ESC request.
+//
+// Live freshness is handled by the scheduled scraper workflow.
+// ============================================================
+
+const PHASE_TWO_PARTICIPANT_COUNTRIES = {
+  "Morocco": "MA",
+};
+
+function phaseTwoCountryCodeFromName(name) {
+  if (!name) {
+    return "";
+  }
+
+  const normalized = String(name)
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "morocco") {
+    return "MA";
+  }
+
+  return "";
+}
+
+function phaseTwoOpportunityMatchesCountry(
+  opportunity,
+  countryCode
+) {
+  if (!opportunity || !Array.isArray(opportunity.eligible_countries)) {
+    return false;
+  }
+
+  const requested = String(countryCode || "")
+    .trim()
+    .toUpperCase();
+
+  if (!requested) {
+    return false;
+  }
+
+  return opportunity.eligible_countries.some(
+    (value) =>
+      typeof value === "string" &&
+      value.trim().toUpperCase() === requested
+  );
+}
+
+function phaseTwoApplyParticipantCountryFilter(
+  opportunities,
+  countryCode
+) {
+  if (!countryCode) {
+    return opportunities;
+  }
+
+  return opportunities.filter((opportunity) =>
+    phaseTwoOpportunityMatchesCountry(
+      opportunity,
+      countryCode
+    )
+  );
+}
+
+async function phaseTwoLoadParticipantCountryResults(
+  countryCode
+) {
+  const response = await fetch(
+    `${DATA_URL}?t=${Date.now()}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Published opportunity cache returned HTTP ${response.status}.`
+    );
+  }
+
+  const data = await response.json();
+
+  if (
+    !data ||
+    !Array.isArray(data.opportunities)
+  ) {
+    throw new Error(
+      "Published opportunity cache has an invalid structure."
+    );
+  }
+
+  return {
+    ...data,
+    opportunities:
+      phaseTwoApplyParticipantCountryFilter(
+        data.opportunities,
+        countryCode
+      ),
+  };
+}
+
+async function phaseTwoHandleParticipantCountrySearch() {
+  const selector =
+    document.getElementById(
+      "participant-country"
+    );
+
+  if (!selector) {
+    return;
+  }
+
+  const countryCode =
+    phaseTwoCountryCodeFromName(
+      selector.value
+    );
+
+  if (!countryCode) {
+    return;
+  }
+
+  const originalText =
+    opportunityCount
+      ? opportunityCount.textContent
+      : null;
+
+  try {
+    if (loadingMessage) {
+      loadingMessage.classList.remove(
+        "hidden"
+      );
+    }
+
+    if (errorMessage) {
+      errorMessage.classList.add(
+        "hidden"
+      );
+    }
+
+    const data =
+      await phaseTwoLoadParticipantCountryResults(
+        countryCode
+      );
+
+    currentActiveData = data;
+    activeOpportunities = data.opportunities || [];
+
+    if (opportunityCount) {
+      opportunityCount.textContent =
+        activeOpportunities.length;
+    }
+
+    if (lastUpdated) {
+      lastUpdated.textContent =
+        data.generated_at
+          ? formatDateTime(data.generated_at)
+          : "—";
+    }
+
+    renderOpportunities();
+
+  } catch (error) {
+    console.error(
+      "Phase Two participant-country search failed:",
+      error
+    );
+
+    if (errorMessage) {
+      errorMessage.classList.remove(
+        "hidden"
+      );
+    }
+
+    if (
+      originalText !== null &&
+      opportunityCount
+    ) {
+      opportunityCount.textContent =
+        originalText;
+    }
+  } finally {
+    if (loadingMessage) {
+      loadingMessage.classList.add(
+        "hidden"
+      );
+    }
+  }
+}
+
+function phaseTwoInstallParticipantCountrySearch() {
+  const button =
+    document.getElementById(
+      "apply-participant-country"
+    );
+
+  if (!button) {
+    return;
+  }
+
+  if (
+    button.dataset.phaseTwoBound ===
+    "true"
+  ) {
+    return;
+  }
+
+  button.dataset.phaseTwoBound =
+    "true";
+
+  button.addEventListener(
+    "click",
+    phaseTwoHandleParticipantCountrySearch
+  );
+}
+
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    phaseTwoInstallParticipantCountrySearch
+  );
+} else {
+  phaseTwoInstallParticipantCountrySearch();
+}

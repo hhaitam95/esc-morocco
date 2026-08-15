@@ -1,111 +1,106 @@
+"""
+Cache access and participant-country matching.
+
+This module is intentionally read-only.
+
+The scraper/GitHub Action owns cache generation.
+The backend only reads the published JSON cache.
+"""
+
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
+DATA_CACHE = ROOT / "data" / "opportunities.json"
+WEB_CACHE = ROOT / "web" / "opportunities.json"
 
-DATA_DIR = ROOT / "data"
-
-CACHE_FILE = DATA_DIR / "opportunities.json"
-
-MANIFEST_FILE = DATA_DIR / "cache_manifest.json"
+CACHE_SCHEMA_VERSION = 1
 
 
-class CacheError(RuntimeError):
-    """Raised when the opportunity cache cannot be served safely."""
-
-
-def load_json(path):
-    try:
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as handle:
-            return json.load(handle)
-
-    except FileNotFoundError as exc:
-        raise CacheError(
+def _load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(
             f"Cache file does not exist: {path}"
-        ) from exc
-
-    except json.JSONDecodeError as exc:
-        raise CacheError(
-            f"Invalid JSON in cache file: {path}"
-        ) from exc
-
-
-def load_cache():
-    data = load_json(
-        CACHE_FILE
-    )
-
-    if not isinstance(
-        data,
-        dict,
-    ):
-        raise CacheError(
-            "Opportunity cache must be a JSON object."
         )
 
-    opportunities = data.get(
-        "opportunities",
-        [],
-    )
+    with path.open(
+        "r",
+        encoding="utf-8",
+    ) as handle:
+        payload = json.load(handle)
 
-    if not isinstance(
-        opportunities,
-        list,
-    ):
-        raise CacheError(
-            "Opportunity cache contains an invalid opportunities list."
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"Cache root must be a JSON object: {path}"
         )
 
-    return data
+    return payload
 
 
-def load_manifest():
-    if not MANIFEST_FILE.exists():
-        return None
+def load_cache(
+    published: bool = True,
+) -> dict[str, Any]:
+    """
+    Load the published cache by default.
 
-    return load_json(
-        MANIFEST_FILE
+    The website/backend contract uses web/opportunities.json because
+    that is the cache published alongside the frontend.
+
+    `published=False` is useful for local/backend tests and explicitly
+    selects the canonical data cache.
+    """
+
+    path = WEB_CACHE if published else DATA_CACHE
+
+    payload = _load_json(path)
+
+    opportunities = payload.get(
+        "opportunities"
     )
 
+    if not isinstance(opportunities, list):
+        raise ValueError(
+            "Cache does not contain an opportunities list."
+        )
 
-def normalize_country_code(value):
-    if value is None:
+    return payload
+
+
+def _normalize_country_code(
+    country: Any,
+) -> str:
+    """
+    Normalize a participant-country code.
+
+    The cache is expected to contain ISO-3166 alpha-2 codes, but the
+    matching function deliberately normalizes the input so callers can
+    use `ma`, `MA`, or ` Ma ` interchangeably.
+    """
+
+    if not isinstance(country, str):
         return ""
 
-    value = str(value).strip().upper()
-
-    if len(value) != 2:
-        return ""
-
-    return value
+    return country.strip().upper()
 
 
 def opportunity_matches_country(
-    opportunity,
-    country_code,
-):
+    opportunity: dict[str, Any],
+    country: str,
+) -> bool:
     """
-    Return True when an opportunity is eligible for
-    the requested participant country.
+    Return True when an opportunity is available to the requested
+    participant country.
 
-    Country matching is deliberately case-insensitive
-    because cached/source data may contain either
-    uppercase or lowercase ISO country codes.
+    Matching is case-insensitive and whitespace-safe.
     """
 
-    if not isinstance(opportunity, dict):
-        return False
+    requested = _normalize_country_code(country)
 
-    if not isinstance(country_code, str):
-        return False
-
-    requested = country_code.strip().upper()
-
-    if len(requested) != 2 or not requested.isalpha():
+    if not requested:
         return False
 
     eligible = opportunity.get(
@@ -116,60 +111,51 @@ def opportunity_matches_country(
     if not isinstance(eligible, list):
         return False
 
-    for value in eligible:
-        if not isinstance(value, str):
-            continue
+    normalized_eligible = {
+        _normalize_country_code(value)
+        for value in eligible
+        if isinstance(value, str)
+    }
 
-        if value.strip().upper() == requested:
-            return True
+    normalized_eligible.discard("")
 
-    return False
+    return requested in normalized_eligible
 
 
-def search_cache(country_code):
-    country_code = normalize_country_code(
-        country_code
-    )
+def search_country(
+    country: str,
+    *,
+    published: bool = True,
+) -> list[dict[str, Any]]:
+    """
+    Search cached opportunities for a participant country.
 
-    if not country_code:
+    The backend performs no live ESC request here. Live data is brought
+    into the cache by the scheduled scraper workflow.
+    """
+
+    requested = _normalize_country_code(country)
+
+    if len(requested) != 2:
         raise ValueError(
-            "A valid two-letter participant country code is required."
+            "Participant country must be a two-letter ISO country code."
         )
 
-    data = load_cache()
+    payload = load_cache(
+        published=published
+    )
 
-    opportunities = data.get(
+    opportunities = payload.get(
         "opportunities",
         [],
     )
 
-    matches = [
+    return [
         opportunity
         for opportunity in opportunities
-        if isinstance(
-            opportunity,
-            dict,
-        )
+        if isinstance(opportunity, dict)
         and opportunity_matches_country(
             opportunity,
-            country_code,
+            requested,
         )
     ]
-
-    return {
-        "status": "success",
-        "participant_country": country_code,
-        "count": len(matches),
-        "opportunities": matches,
-        "cache": {
-            "generated_at": data.get(
-                "generated_at"
-            ),
-            "schema_version": data.get(
-                "schema_version"
-            ),
-            "cache_schema_version": data.get(
-                "cache_schema_version"
-            ),
-        },
-    }
