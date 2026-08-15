@@ -160,7 +160,6 @@ const translations = {
     selectParticipantCountry: "Select participant country",
     apply: "Apply",
     allParticipantCountries: "All participant countries",
-
   fr: {
     title: "Outil de recherche d’opportunités du CES",
     subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
@@ -264,7 +263,6 @@ const translations = {
     selectParticipantCountry: "Sélectionnez le pays du participant",
     apply: "Appliquer",
     allParticipantCountries: "Tous les pays participants",
-
   ar: {
     title: "البحث عن فرص الفيلق الأوروبي للتضامن",
     subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
@@ -362,6 +360,10 @@ const translations = {
 
      darkMode: "الوضع الداكن",
   },
+    participantCountry: "بلد المشارك",
+    selectParticipantCountry: "اختر بلد المشارك",
+    apply: "تطبيق",
+    allParticipantCountries: "جميع بلدان المشاركين",
 };
 
 // ============================================================
@@ -1294,10 +1296,6 @@ const topicIcons = {
   "Post Disaster relief": "🆘",
 
   "WASH (Water, sanitation and hygiene)": "🚿",
-    participantCountry: "بلد المشارك",
-    selectParticipantCountry: "اختر بلد المشارك",
-    apply: "تطبيق",
-    allParticipantCountries: "جميع بلدان المشاركين",
 
 };
 
@@ -1368,30 +1366,134 @@ let participantCountryDraft =
 function normalizeParticipantCountry(value) {
   return String(value || "")
     .trim()
+    .replace(/\s+/g, " ")
     .toLocaleLowerCase();
 }
 
-function getParticipantCountries(data) {
-  if (
-    Array.isArray(
-      data?.participant_countries,
-    )
-  ) {
-    return [...data.participant_countries]
-      .filter(Boolean)
-      .sort((a, b) =>
-        String(a).localeCompare(
-          String(b),
-          currentLanguage === "fr"
-            ? "fr"
-            : currentLanguage === "ar"
-              ? "ar"
-              : "en",
-        )
-      );
+const participantCountryAliases = {
+  "kosovo * un resolution": "kosovo",
+  "kosovo": "kosovo",
+  "sint maarten": "sint maarten (dutch part)",
+  "sint maarten (dutch part)": "sint maarten (dutch part)",
+  "türkiye": "türkiye",
+  "turkiye": "türkiye",
+};
+
+function normalizeParticipantCountryName(value) {
+  const normalized =
+    normalizeParticipantCountry(value);
+
+  return (
+    participantCountryAliases[normalized] ||
+    normalized
+  );
+}
+
+function participantCountryMatches(
+  value,
+  selected,
+) {
+  if (!value || !selected) {
+    return false;
   }
 
-  const derived =
+  return (
+    normalizeParticipantCountryName(value) ===
+    normalizeParticipantCountryName(selected)
+  );
+}
+
+const participantCountryCodeMap = {
+  albania: "AL",
+  algeria: "DZ",
+  armenia: "AM",
+  aruba: "AW",
+  austria: "AT",
+  azerbaijan: "AZ",
+  belarus: "BY",
+  belgium: "BE",
+  "bonaire sint eustatius and saba": "BQ",
+  "bonaire, sint eustatius and saba": "BQ",
+  "bosnia and herzegovina": "BA",
+  bulgaria: "BG",
+  croatia: "HR",
+  curaçao: "CW",
+  cyprus: "CY",
+  czechia: "CZ",
+  denmark: "DK",
+  egypt: "EG",
+  estonia: "EE",
+  finland: "FI",
+  france: "FR",
+  "french polynesia": "PF",
+  "french southern and antarctic territories": "TF",
+  georgia: "GE",
+  germany: "DE",
+  greece: "EL",
+  greenland: "GL",
+  hungary: "HU",
+  iceland: "IS",
+  ireland: "IE",
+  israel: "IL",
+  italy: "IT",
+  jordan: "JO",
+  "kosovo * un resolution": "XK",
+  kosovo: "XK",
+  latvia: "LV",
+  lebanon: "LB",
+  libya: "LY",
+  liechtenstein: "LI",
+  lithuania: "LT",
+  luxembourg: "LU",
+  malta: "MT",
+  moldova: "MD",
+  montenegro: "ME",
+  morocco: "MA",
+  netherlands: "NL",
+  "new caledonia": "NC",
+  "north macedonia": "MK",
+  norway: "NO",
+  palestine: "PS",
+  poland: "PL",
+  portugal: "PT",
+  romania: "RO",
+  russia: "RU",
+  "saint barthélemy": "BL",
+  serbia: "RS",
+  "sint maarten": "SX",
+  "sint maarten (dutch part)": "SX",
+  slovakia: "SK",
+  slovenia: "SI",
+  spain: "ES",
+  "st pierre and miquelon": "PM",
+  sweden: "SE",
+  syria: "SY",
+  tunisia: "TN",
+  "türkiye": "TR",
+  turkiye: "TR",
+  ukraine: "UA",
+  "wallis and futuna": "WF",
+  "united kingdom": "GB",
+};
+
+function getParticipantCountryFlag(country) {
+  const code =
+    participantCountryCodeMap[
+      normalizeParticipantCountry(country)
+    ];
+
+  return code
+    ? getCountryFlag(code)
+    : "🌍";
+}
+
+function getParticipantCountries(data) {
+  const fromMetadata =
+    Array.isArray(data?.participant_countries)
+      ? data.participant_countries
+      : [];
+
+  const fromOpportunities =
     activeOpportunities.flatMap(
       (opportunity) =>
         Array.isArray(
@@ -1401,23 +1503,39 @@ function getParticipantCountries(data) {
           : [],
     );
 
-  return [
-    ...new Set(
-      derived
-        .map((country) =>
-          String(country).trim()
-        )
-        .filter(Boolean),
-    ),
-  ].sort((a, b) =>
-    String(a).localeCompare(
-      String(b),
-      currentLanguage === "fr"
-        ? "fr"
-        : currentLanguage === "ar"
-          ? "ar"
-          : "en",
-    )
+  const source =
+    fromMetadata.length > 0
+      ? fromMetadata
+      : fromOpportunities;
+
+  const unique = new Map();
+
+  source.forEach((country) => {
+    const value =
+      String(country || "").trim();
+
+    if (!value) {
+      return;
+    }
+
+    const key =
+      normalizeParticipantCountryName(value);
+
+    if (!unique.has(key)) {
+      unique.set(key, value);
+    }
+  });
+
+  return [...unique.values()].sort(
+    (a, b) =>
+      String(a).localeCompare(
+        String(b),
+        currentLanguage === "fr"
+          ? "fr"
+          : currentLanguage === "ar"
+            ? "ar"
+            : "en",
+      ),
   );
 }
 
@@ -1447,7 +1565,9 @@ function populateParticipantCountries(data) {
       document.createElement("option");
 
     option.value = country;
-    option.textContent = country;
+
+    option.textContent =
+      `${getParticipantCountryFlag(country)} ${country}`;
 
     participantCountryFilter.appendChild(
       option,
@@ -1455,14 +1575,11 @@ function populateParticipantCountries(data) {
   });
 
   const saved =
-    countries.find(
-      (country) =>
-        normalizeParticipantCountry(
-          country,
-        ) ===
-        normalizeParticipantCountry(
-          participantCountryDraft,
-        ),
+    countries.find((country) =>
+      participantCountryMatches(
+        country,
+        participantCountryDraft,
+      ),
     );
 
   participantCountryFilter.value =
@@ -1475,7 +1592,7 @@ function applyParticipantCountry() {
   }
 
   selectedParticipantCountry =
-    participantCountryFilter.value;
+    participantCountryFilter.value.trim();
 
   participantCountryDraft =
     selectedParticipantCountry;
@@ -1511,51 +1628,6 @@ if (applyParticipantCountryButton) {
   );
 }
 
-
-const participantCountryNameOverrides = {
-  XK: "Kosovo",
-  BQ: "Bonaire, Sint Eustatius and Saba",
-  SX: "Sint Maarten",
-  CW: "Curaçao",
-  TR: "Türkiye",
-  CZ: "Czechia",
-  MK: "North Macedonia",
-  BA: "Bosnia and Herzegovina",
-};
-
-function normalizeParticipantCountryCode(
-  value,
-) {
-  if (!value) {
-    return "";
-  }
-
-  const code = String(
-    value,
-  ).trim().toUpperCase();
-
-  return normalizeCountryCode(
-    code,
-  );
-}
-
-function getParticipantCountryName(
-  code,
-) {
-  const normalized =
-    normalizeParticipantCountryCode(
-      code,
-    );
-
-  return (
-    participantCountryNameOverrides[
-      normalized
-    ] ||
-    getCountryName(
-      normalized,
-    )
-  );
-}
 
 // ============================================================
 // FILTER OPTIONS
@@ -1658,10 +1730,8 @@ function getFilteredActive() {
         ) &&
         opportunity.eligible_countries.some(
           (country) =>
-            normalizeParticipantCountry(
+            participantCountryMatches(
               country,
-            ) ===
-            normalizeParticipantCountry(
               selectedParticipantCountry,
             ),
         )
@@ -2179,851 +2249,3 @@ applyTranslations();
 loadData();
 
 startCountdownRefresh();
-
-
-// ============================================================================
-// Definitive Participant Country & Multi-Country Engine
-// ============================================================================
-(function() {
-    const COUNTRIES = [
-  {
-    "code": "MA",
-    "name": "Morocco",
-    "flag": "🇲🇦"
-  },
-  {
-    "code": "DE",
-    "name": "Germany",
-    "flag": "🇩🇪"
-  },
-  {
-    "code": "FR",
-    "name": "France",
-    "flag": "🇫🇷"
-  },
-  {
-    "code": "ES",
-    "name": "Spain",
-    "flag": "🇪🇸"
-  },
-  {
-    "code": "IT",
-    "name": "Italy",
-    "flag": "🇮🇹"
-  },
-  {
-    "code": "TR",
-    "name": "Türkiye",
-    "flag": "🇹🇷"
-  },
-  {
-    "code": "EL",
-    "name": "Greece",
-    "flag": "🇬🇷"
-  },
-  {
-    "code": "PT",
-    "name": "Portugal",
-    "flag": "🇵🇹"
-  },
-  {
-    "code": "BE",
-    "name": "Belgium",
-    "flag": "🇧🇪"
-  },
-  {
-    "code": "NL",
-    "name": "Netherlands",
-    "flag": "🇳🇱"
-  },
-  {
-    "code": "PL",
-    "name": "Poland",
-    "flag": "🇵🇱"
-  },
-  {
-    "code": "RO",
-    "name": "Romania",
-    "flag": "🇷🇴"
-  },
-  {
-    "code": "CZ",
-    "name": "Czechia",
-    "flag": "🇨🇿"
-  },
-  {
-    "code": "HU",
-    "name": "Hungary",
-    "flag": "🇭🇺"
-  },
-  {
-    "code": "SE",
-    "name": "Sweden",
-    "flag": "🇸🇪"
-  },
-  {
-    "code": "AT",
-    "name": "Austria",
-    "flag": "🇦🇹"
-  },
-  {
-    "code": "BG",
-    "name": "Bulgaria",
-    "flag": "🇧🇬"
-  },
-  {
-    "code": "HR",
-    "name": "Croatia",
-    "flag": "🇭🇷"
-  },
-  {
-    "code": "CY",
-    "name": "Cyprus",
-    "flag": "🇨🇾"
-  },
-  {
-    "code": "DK",
-    "name": "Denmark",
-    "flag": "🇩🇰"
-  },
-  {
-    "code": "EE",
-    "name": "Estonia",
-    "flag": "🇪🇪"
-  },
-  {
-    "code": "FI",
-    "name": "Finland",
-    "flag": "🇫🇮"
-  },
-  {
-    "code": "IE",
-    "name": "Ireland",
-    "flag": "🇮🇪"
-  },
-  {
-    "code": "LV",
-    "name": "Latvia",
-    "flag": "🇱🇻"
-  },
-  {
-    "code": "LT",
-    "name": "Lithuania",
-    "flag": "🇱🇹"
-  },
-  {
-    "code": "LU",
-    "name": "Luxembourg",
-    "flag": "🇱🇺"
-  },
-  {
-    "code": "MT",
-    "name": "Malta",
-    "flag": "🇲🇹"
-  },
-  {
-    "code": "SK",
-    "name": "Slovakia",
-    "flag": "🇸🇰"
-  },
-  {
-    "code": "SI",
-    "name": "Slovenia",
-    "flag": "🇸🇮"
-  },
-  {
-    "code": "IS",
-    "name": "Iceland",
-    "flag": "🇮🇸"
-  },
-  {
-    "code": "LI",
-    "name": "Liechtenstein",
-    "flag": "🇱🇮"
-  },
-  {
-    "code": "NO",
-    "name": "Norway",
-    "flag": "🇳🇴"
-  },
-  {
-    "code": "MK",
-    "name": "North Macedonia",
-    "flag": "🇲🇰"
-  },
-  {
-    "code": "BA",
-    "name": "Bosnia and Herzegovina",
-    "flag": "🇧🇦"
-  },
-  {
-    "code": "XK",
-    "name": "Kosovo",
-    "flag": "🇽🇰"
-  },
-  {
-    "code": "AM",
-    "name": "Armenia",
-    "flag": "🇦🇲"
-  },
-  {
-    "code": "AZ",
-    "name": "Azerbaijan",
-    "flag": "🇦🇿"
-  },
-  {
-    "code": "GE",
-    "name": "Georgia",
-    "flag": "🇬🇪"
-  },
-  {
-    "code": "MD",
-    "name": "Moldova",
-    "flag": "🇲🇩"
-  },
-  {
-    "code": "UA",
-    "name": "Ukraine",
-    "flag": "🇺🇦"
-  },
-  {
-    "code": "DZ",
-    "name": "Algeria",
-    "flag": "🇩🇿"
-  },
-  {
-    "code": "EG",
-    "name": "Egypt",
-    "flag": "🇪🇬"
-  },
-  {
-    "code": "IL",
-    "name": "Israel",
-    "flag": "🇮🇱"
-  },
-  {
-    "code": "JO",
-    "name": "Jordan",
-    "flag": "🇯🇴"
-  },
-  {
-    "code": "LB",
-    "name": "Lebanon",
-    "flag": "🇱🇧"
-  },
-  {
-    "code": "LY",
-    "name": "Libya",
-    "flag": "🇱🇾"
-  },
-  {
-    "code": "PS",
-    "name": "Palestine",
-    "flag": "🇵🇸"
-  },
-  {
-    "code": "SY",
-    "name": "Syria",
-    "flag": "🇸🇾"
-  },
-  {
-    "code": "TN",
-    "name": "Tunisia",
-    "flag": "🇹🇳"
-  },
-  {
-    "code": "UK",
-    "name": "United Kingdom",
-    "flag": "🇬🇧"
-  }
-];
-    let currentCode = localStorage.getItem('esc_participant_country') || 'MA';
-    let fetchController = null;
-    let reqSequence = 0;
-
-    function patchTranslations() {
-        const dicts = [];
-        if (typeof translations !== 'undefined') dicts.push(translations);
-        if (typeof i18n !== 'undefined') dicts.push(i18n);
-
-        const newKeys = {
-            en: { participantCountry: "Participant Country", selectParticipantCountry: "Select Participant Country", apply: "Apply" },
-            fr: { participantCountry: "Pays du participant", selectParticipantCountry: "Sélectionner le pays du participant", apply: "Appliquer" },
-            ar: { participantCountry: "بلد المشارك", selectParticipantCountry: "اختر بلد المشارك", apply: "تطبيق" }
-        };
-
-        dicts.forEach(dict => {
-            Object.keys(newKeys).forEach(lang => {
-                if (!dict[lang]) dict[lang] = {};
-                Object.assign(dict[lang], newKeys[lang]);
-            });
-        });
-    }
-
-    async function executeCountryFetch(code) {
-        if (!code) return;
-        const targetCode = code.toUpperCase();
-        const seq = ++reqSequence;
-
-        if (fetchController) fetchController.abort();
-        fetchController = new AbortController();
-
-        localStorage.setItem('esc_participant_country', targetCode);
-        currentCode = targetCode;
-
-        const applyBtn = document.getElementById('apply-participant-country');
-        if (applyBtn) {
-            applyBtn.disabled = true;
-            applyBtn.classList.add('loading');
-        }
-
-        const tableBody = document.querySelector('#opportunities-table tbody') || document.querySelector('tbody');
-        const countryObj = COUNTRIES.find(c => c.code === targetCode) || { name: targetCode, flag: '' };
-
-        if (tableBody) {
-            tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">Loading opportunities for ${countryObj.flag} ${countryObj.name}...</td></tr>`;
-        }
-
-        try {
-            let data = null;
-            const countryFile = `data/${targetCode.toLowerCase()}.json`;
-
-            try {
-                const res = await fetch(countryFile, { signal: fetchController.signal });
-                if (res.ok) data = await res.json();
-            } catch (e) {
-                if (e.name === 'AbortError') return;
-            }
-
-            if (!data) {
-                const res = await fetch('opportunities.json', { signal: fetchController.signal });
-                if (!res.ok) throw new Error('Failed to load dataset');
-                const fullData = await res.json();
-                const opps = Array.isArray(fullData) ? fullData : (fullData.opportunities || []);
-
-                const filtered = opps.filter(opp => {
-                    if (targetCode === 'MA' && !opp.eligible_countries) return true;
-                    if (!opp.eligible_countries) return true;
-                    if (Array.isArray(opp.eligible_countries)) {
-                        return opp.eligible_countries.includes(targetCode) ||
-                               opp.eligible_countries.includes(targetCode.toLowerCase()) ||
-                               (targetCode === 'EL' && opp.eligible_countries.includes('GR')) ||
-                               (targetCode === 'GR' && opp.eligible_countries.includes('EL'));
-                    }
-                    return true;
-                });
-
-                data = Array.isArray(fullData) ? filtered : { ...fullData, opportunities: filtered };
-            }
-
-            if (seq !== reqSequence) return;
-
-            const finalItems = Array.isArray(data) ? data : (data.opportunities || []);
-
-            if (typeof renderOpportunitiesTable === 'function') renderOpportunitiesTable(finalItems);
-            else if (typeof renderTable === 'function') renderTable(finalItems);
-            else if (typeof updateTable === 'function') updateTable(finalItems);
-            else if (typeof displayOpportunities === 'function') displayOpportunities(finalItems);
-
-            if (finalItems.length === 0 && tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">No active opportunities found for ${countryObj.flag} ${countryObj.name}.</td></tr>`;
-            }
-
-        } catch (err) {
-            if (err.name === 'AbortError') return;
-            console.error(err);
-            if (seq === reqSequence && tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger p-4">Unable to load opportunities for ${countryObj.name}. Please try again.</td></tr>`;
-            }
-        } finally {
-            if (seq === reqSequence && applyBtn) {
-                applyBtn.disabled = false;
-                applyBtn.classList.remove('loading');
-            }
-        }
-    }
-
-    function initHandlers() {
-        patchTranslations();
-
-        const selector = document.getElementById('participant-country');
-        if (selector && currentCode) {
-            selector.value = currentCode;
-        }
-
-        const applyBtn = document.getElementById('apply-participant-country');
-        if (applyBtn) {
-            applyBtn.onclick = function(e) {
-                e.preventDefault();
-                const sel = document.getElementById('participant-country');
-                const selectedVal = sel ? sel.value : 'MA';
-                executeCountryFetch(selectedVal);
-            };
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initHandlers);
-    } else {
-        initHandlers();
-    }
-})();
-
-
-// === ESC MULTI-COUNTRY ENGINE ===
-
-(function patchGlobalTranslations() {
-    const extra = {
-        en: { participantCountry: "Participant Country", selectParticipantCountry: "Select Participant Country", apply: "Apply" },
-        fr: { participantCountry: "Pays du participant", selectParticipantCountry: "Sélectionner le pays du participant", apply: "Appliquer" },
-        ar: { participantCountry: "بلد المشارك", selectParticipantCountry: "اختر بلد المشارك", apply: "تطبيق" }
-    };
-
-    const target = (typeof translations !== 'undefined') ? translations : ((typeof i18n !== 'undefined') ? i18n : null);
-    if (target) {
-        Object.keys(extra).forEach(lang => {
-            if (!target[lang]) target[lang] = {};
-            Object.assign(target[lang], extra[lang]);
-        });
-    }
-})();
-
-
-(function initEscMultiCountryEngine() {
-    const COUNTRIES_LIST = [
-  {
-    "code": "MA",
-    "name": "Morocco",
-    "flag": "🇲🇦"
-  },
-  {
-    "code": "DE",
-    "name": "Germany",
-    "flag": "🇩🇪"
-  },
-  {
-    "code": "FR",
-    "name": "France",
-    "flag": "🇫🇷"
-  },
-  {
-    "code": "ES",
-    "name": "Spain",
-    "flag": "🇪🇸"
-  },
-  {
-    "code": "IT",
-    "name": "Italy",
-    "flag": "🇮🇹"
-  },
-  {
-    "code": "TR",
-    "name": "Türkiye",
-    "flag": "🇹🇷"
-  },
-  {
-    "code": "EL",
-    "name": "Greece",
-    "flag": "🇬🇷"
-  },
-  {
-    "code": "PT",
-    "name": "Portugal",
-    "flag": "🇵🇹"
-  },
-  {
-    "code": "BE",
-    "name": "Belgium",
-    "flag": "🇧🇪"
-  },
-  {
-    "code": "NL",
-    "name": "Netherlands",
-    "flag": "🇳🇱"
-  },
-  {
-    "code": "PL",
-    "name": "Poland",
-    "flag": "🇵🇱"
-  },
-  {
-    "code": "RO",
-    "name": "Romania",
-    "flag": "🇷🇴"
-  },
-  {
-    "code": "CZ",
-    "name": "Czechia",
-    "flag": "🇨🇿"
-  },
-  {
-    "code": "HU",
-    "name": "Hungary",
-    "flag": "🇭🇺"
-  },
-  {
-    "code": "SE",
-    "name": "Sweden",
-    "flag": "🇸🇪"
-  },
-  {
-    "code": "AT",
-    "name": "Austria",
-    "flag": "🇦🇹"
-  },
-  {
-    "code": "BG",
-    "name": "Bulgaria",
-    "flag": "🇧🇬"
-  },
-  {
-    "code": "HR",
-    "name": "Croatia",
-    "flag": "🇭🇷"
-  },
-  {
-    "code": "CY",
-    "name": "Cyprus",
-    "flag": "🇨🇾"
-  },
-  {
-    "code": "DK",
-    "name": "Denmark",
-    "flag": "🇩🇰"
-  },
-  {
-    "code": "EE",
-    "name": "Estonia",
-    "flag": "🇪🇪"
-  },
-  {
-    "code": "FI",
-    "name": "Finland",
-    "flag": "🇫🇮"
-  },
-  {
-    "code": "IE",
-    "name": "Ireland",
-    "flag": "🇮🇪"
-  },
-  {
-    "code": "LV",
-    "name": "Latvia",
-    "flag": "🇱🇻"
-  },
-  {
-    "code": "LT",
-    "name": "Lithuania",
-    "flag": "🇱🇹"
-  },
-  {
-    "code": "LU",
-    "name": "Luxembourg",
-    "flag": "🇱🇺"
-  },
-  {
-    "code": "MT",
-    "name": "Malta",
-    "flag": "🇲🇹"
-  },
-  {
-    "code": "SK",
-    "name": "Slovakia",
-    "flag": "🇸🇰"
-  },
-  {
-    "code": "SI",
-    "name": "Slovenia",
-    "flag": "🇸🇮"
-  },
-  {
-    "code": "IS",
-    "name": "Iceland",
-    "flag": "🇮🇸"
-  },
-  {
-    "code": "LI",
-    "name": "Liechtenstein",
-    "flag": "🇱🇮"
-  },
-  {
-    "code": "NO",
-    "name": "Norway",
-    "flag": "🇳🇴"
-  },
-  {
-    "code": "MK",
-    "name": "North Macedonia",
-    "flag": "🇲🇰"
-  },
-  {
-    "code": "BA",
-    "name": "Bosnia and Herzegovina",
-    "flag": "🇧🇦"
-  },
-  {
-    "code": "XK",
-    "name": "Kosovo",
-    "flag": "🇽🇰"
-  },
-  {
-    "code": "AM",
-    "name": "Armenia",
-    "flag": "🇦🇲"
-  },
-  {
-    "code": "AZ",
-    "name": "Azerbaijan",
-    "flag": "🇦🇿"
-  },
-  {
-    "code": "GE",
-    "name": "Georgia",
-    "flag": "🇬🇪"
-  },
-  {
-    "code": "MD",
-    "name": "Moldova",
-    "flag": "🇲🇩"
-  },
-  {
-    "code": "UA",
-    "name": "Ukraine",
-    "flag": "🇺🇦"
-  },
-  {
-    "code": "DZ",
-    "name": "Algeria",
-    "flag": "🇩🇿"
-  },
-  {
-    "code": "EG",
-    "name": "Egypt",
-    "flag": "🇪🇬"
-  },
-  {
-    "code": "IL",
-    "name": "Israel",
-    "flag": "🇮🇱"
-  },
-  {
-    "code": "JO",
-    "name": "Jordan",
-    "flag": "🇯🇴"
-  },
-  {
-    "code": "LB",
-    "name": "Lebanon",
-    "flag": "🇱🇧"
-  },
-  {
-    "code": "LY",
-    "name": "Libya",
-    "flag": "🇱🇾"
-  },
-  {
-    "code": "PS",
-    "name": "Palestine",
-    "flag": "🇵🇸"
-  },
-  {
-    "code": "SY",
-    "name": "Syria",
-    "flag": "🇸🇾"
-  },
-  {
-    "code": "TN",
-    "name": "Tunisia",
-    "flag": "🇹🇳"
-  },
-  {
-    "code": "UK",
-    "name": "United Kingdom",
-    "flag": "🇬🇧"
-  },
-  {
-    "code": "AL",
-    "name": "Albania",
-    "flag": "🇦🇱"
-  },
-  {
-    "code": "RS",
-    "name": "Serbia",
-    "flag": "🇷🇸"
-  },
-  {
-    "code": "ME",
-    "name": "Montenegro",
-    "flag": "🇲🇪"
-  },
-  {
-    "code": "BY",
-    "name": "Belarus",
-    "flag": "🇧🇾"
-  },
-  {
-    "code": "RU",
-    "name": "Russia",
-    "flag": "🇷🇺"
-  }
-];
-
-    let currentCountryCode = localStorage.getItem('esc_participant_country') || 'MA';
-    let currentReqId = 0;
-
-    function getSelectedCountryInfo() {
-        const sel = document.getElementById('participant-country');
-        const code = (sel && sel.value) ? sel.value.toUpperCase() : currentCountryCode.toUpperCase();
-        const info = COUNTRIES_LIST.find(c => c.code === code) || { code: code, name: code, flag: '' };
-        return info;
-    }
-
-    function renderFallbackTable(items, countryInfo) {
-        const tableBody = document.querySelector('#opportunities-table tbody') ||
-                          document.querySelector('table tbody') ||
-                          document.querySelector('tbody');
-        if (!tableBody) return false;
-
-        if (!items || items.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">No active opportunities found for ${countryInfo.flag} ${countryInfo.name}.</td></tr>`;
-            return true;
-        }
-
-        const rows = items.map(item => {
-            const title = item.title || item.name || 'Untitled Opportunity';
-            const org = item.organization || item.organisation || item.host_organization || '';
-            const location = item.location || item.country || '';
-            const dates = item.dates || item.duration || (item.start_date ? `${item.start_date} - ${item.end_date || ''}` : '');
-            const link = item.link || item.url || '#';
-
-            return `<tr>
-                <td><strong><a href="${link}" target="_blank" rel="noopener">${title}</a></strong></td>
-                <td>${org}</td>
-                <td>${location}</td>
-                <td>${dates}</td>
-                <td><a href="${link}" target="_blank" class="btn btn-sm btn-outline-primary" rel="noopener">View</a></td>
-            </tr>`;
-        }).join('');
-
-        tableBody.innerHTML = rows;
-        return true;
-    }
-
-    async function loadCountryOpportunities(code) {
-        const targetCode = (code || 'MA').toUpperCase();
-        const reqId = ++currentReqId;
-        const countryInfo = COUNTRIES_LIST.find(c => c.code === targetCode) || { code: targetCode, name: targetCode, flag: '' };
-
-        localStorage.setItem('esc_participant_country', targetCode);
-        currentCountryCode = targetCode;
-
-        const applyBtn = document.getElementById('apply-participant-country');
-        if (applyBtn) {
-            applyBtn.disabled = true;
-            applyBtn.classList.add('loading');
-        }
-
-        const tableBody = document.querySelector('#opportunities-table tbody') ||
-                          document.querySelector('table tbody') ||
-                          document.querySelector('tbody');
-        if (tableBody) {
-            tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem;">
-                Loading opportunities for ${countryInfo.flag} ${countryInfo.name}...
-            </td></tr>`;
-        }
-
-        try {
-            let data = null;
-            try {
-                const res = await fetch(`data/${targetCode.toLowerCase()}.json`);
-                if (res.ok) data = await res.json();
-            } catch (e) {}
-
-            if (!data) {
-                const res = await fetch('opportunities.json');
-                if (res.ok) {
-                    const full = await res.json();
-                    const list = Array.isArray(full) ? full : (full.opportunities || []);
-                    
-                    const filtered = list.filter(opp => {
-                        if (targetCode === 'MA' && !opp.eligible_countries) return true;
-                        if (!opp.eligible_countries) return true;
-                        if (Array.isArray(opp.eligible_countries)) {
-                            const upperList = opp.eligible_countries.map(c => String(c).toUpperCase());
-                            return upperList.includes(targetCode) ||
-                                   upperList.includes(countryInfo.name.toUpperCase()) ||
-                                   (targetCode === 'EL' && upperList.includes('GR')) ||
-                                   (targetCode === 'GR' && upperList.includes('EL'));
-                        }
-                        return true;
-                    });
-
-                    data = Array.isArray(full) ? filtered : { ...full, opportunities: filtered };
-                }
-            }
-
-            if (reqId !== currentReqId) return;
-
-            const finalItems = Array.isArray(data) ? data : (data ? (data.opportunities || []) : []);
-
-            let rendered = false;
-            const renderFuncs = ['renderOpportunitiesTable', 'renderOpportunities', 'renderTable', 'updateTable', 'displayOpportunities', 'renderData', 'render'];
-            for (const fnName of renderFuncs) {
-                if (typeof window[fnName] === 'function') {
-                    try {
-                        window[fnName](finalItems);
-                        rendered = true;
-                        break;
-                    } catch (err) {
-                        console.warn(`Error running ${fnName}:`, err);
-                    }
-                }
-            }
-
-            if (!rendered) {
-                renderFallbackTable(finalItems, countryInfo);
-            }
-
-            if (typeof updateTranslations === 'function') updateTranslations();
-            else if (typeof setLanguage === 'function') setLanguage();
-            else if (typeof applyTranslations === 'function') applyTranslations();
-
-        } catch (err) {
-            console.error('Error loading country data:', err);
-            if (reqId === currentReqId && tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:red; padding:2rem;">Unable to load opportunities for ${countryInfo.name}.</td></tr>`;
-            }
-        } finally {
-            if (reqId === currentReqId && applyBtn) {
-                applyBtn.disabled = false;
-                applyBtn.classList.remove('loading');
-            }
-        }
-    }
-
-    function bindEvents() {
-        const sel = document.getElementById('participant-country');
-        if (sel) {
-            sel.value = currentCountryCode;
-            sel.onchange = function() {
-                const val = sel.value;
-                if (val) loadCountryOpportunities(val);
-            };
-        }
-
-        const applyBtn = document.getElementById('apply-participant-country');
-        if (applyBtn) {
-            applyBtn.onclick = function(e) {
-                e.preventDefault();
-                const info = getSelectedCountryInfo();
-                if (info.code) loadCountryOpportunities(info.code);
-            };
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bindEvents);
-    } else {
-        bindEvents();
-    }
-})();
