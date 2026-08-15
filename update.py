@@ -3,37 +3,324 @@
 from __future__ import annotations
 
 import json
-import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
-PHASE_TWO_FILES = [
-    "backend/cache.py",
-    "backend/search.py",
-    "backend/test_search.py",
-    "data/cache_manifest.json",
-    "web/app.js",
-    "update.py",
-]
+WORKFLOW_PATH = ROOT / ".github" / "workflows" / "update.yml"
 
 REQUIRED_FILES = [
-    "backend/__init__.py",
-    "backend/cache.py",
-    "backend/search.py",
-    "backend/test_search.py",
-    "data/opportunities.json",
     "scraper/scraper.py",
-    "web/app.js",
+    "data/opportunities.json",
+    "data/checkpoint.json",
+    "data/expired.json",
     "web/opportunities.json",
 ]
 
+MANAGED_FILES = [
+    ".github/workflows/update.yml",
+    "update.py",
+]
+
+
+BACKGROUND_WORKFLOW = """name: Update ESC Opportunities
+
+on:
+  # Run automatically every hour.
+  # Offset from the top of the hour to reduce GitHub Actions scheduling
+  # contention during high-load periods.
+  schedule:
+    - cron: "17 * * * *"
+
+  # Allow manual runs from GitHub Actions.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# The scraper and checkpoint/cache files are repository state.
+# Never allow two background scraper runs to modify them simultaneously.
+concurrency:
+  group: esc-opportunity-cache-writer
+  cancel-in-progress: false
+
+jobs:
+  update-opportunities:
+    runs-on: ubuntu-latest
+
+    # A single invocation processes up to 40 detail pages.
+    # Multiple invocations are used during one workflow run so the
+    # incremental queue can make meaningful progress while remaining
+    # bounded and resumable.
+    timeout-minutes: 90
+
+    steps:
+      # ==============================================================
+      # CHECKOUT
+      # ==============================================================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ==============================================================
+      # PYTHON
+      # ==============================================================
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ==============================================================
+      # DEPENDENCIES
+      #
+      # scraper.py currently requires:
+      #   requests
+      #   beautifulsoup4
+      #   pycountry
+      #
+      # Keep installation explicit for now because the repository does
+      # not currently have a dependency lock/requirements file.
+      # ==============================================================
+
+      - name: Install scraper dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests beautifulsoup4 pycountry
+
+      # ==============================================================
+      # GIT CONFIGURATION
+      # ==============================================================
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # ==============================================================
+      # VALIDATE SCRAPER BEFORE STARTING
+      # ==============================================================
+
+      - name: Validate scraper syntax
+        run: |
+          python -m py_compile scraper/scraper.py
+
+      # ==============================================================
+      # RUN INCREMENTAL SCRAPER BATCHES
+      #
+      # scraper.py itself is responsible for:
+      #
+      #   - retrieving the authoritative ESC opportunity list
+      #   - loading checkpoint.json
+      #   - building the incremental work queue
+      #   - processing at most 40 detail pages
+      #   - waiting between detail requests
+      #   - retrying HTTP failures
+      #   - stopping safely on HTTP 429
+      #   - saving checkpoint progress after each opportunity
+      #   - publishing the canonical JSON cache
+      #
+      # One invocation therefore remains deliberately small.
+      #
+      # Three invocations provide up to 120 detail-page scans per hourly
+      # workflow while keeping the overall request volume bounded.
+      #
+      # Exit codes:
+      #   0 = successful / normal incremental progress
+      #   1 = genuine scraper failure
+      #   2 = rate-limited or safely interrupted
+      # ==============================================================
+
+      - name: Run incremental scraper batches
+        id: scraper
+        continue-on-error: true
+        run: |
+          set +e
+
+          MAX_BATCHES=3
+          BATCH=1
+          OVERALL_EXIT_CODE=0
+
+          while [ "$BATCH" -le "$MAX_BATCHES" ]; do
+            echo ""
+            echo "================================================================"
+            echo "ESC BACKGROUND SCRAPER — BATCH $BATCH / $MAX_BATCHES"
+            echo "================================================================"
+            echo ""
+
+            python scraper/scraper.py
+            EXIT_CODE=$?
+
+            echo ""
+            echo "Batch $BATCH exit code: $EXIT_CODE"
+            echo ""
+
+            # --------------------------------------------------------
+            # Publish the latest canonical cache to the website.
+            #
+            # The scraper writes data/opportunities.json and
+            # data/expired.json. The website consumes read-only copies.
+            #
+            # Never publish an empty or structurally invalid cache.
+            # --------------------------------------------------------
+
+            if [ -f data/opportunities.json ]; then
+              python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("data/opportunities.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+
+          opportunities = data.get("opportunities")
+
+          if not isinstance(opportunities, list):
+              raise SystemExit(
+                  "Canonical cache does not contain an opportunities list."
+              )
+
+          if not opportunities:
+              raise SystemExit(
+                  "Canonical cache is empty; refusing to publish it."
+              )
+
+          print(
+              f"Validated canonical cache: {len(opportunities)} opportunities."
+          )
+          PY
+
+              if [ $? -eq 0 ]; then
+                cp data/opportunities.json web/opportunities.json
+                echo "Published canonical opportunity cache to web/."
+              else
+                echo "Canonical cache validation failed; keeping published cache."
+              fi
+            fi
+
+            if [ -f data/expired.json ]; then
+              cp data/expired.json web/expired.json
+            fi
+
+            # --------------------------------------------------------
+            # Commit only the files produced by the scraper.
+            #
+            # This protects unrelated repository changes.
+            # --------------------------------------------------------
+
+            git reset
+
+            git add -- data/opportunities.json
+            git add -- data/checkpoint.json
+            git add -- data/expired.json
+            git add -- web/opportunities.json
+            git add -- web/expired.json
+
+            STAGED="$(git diff --cached --name-only)"
+
+            if [ -n "$STAGED" ]; then
+              echo "Changes detected:"
+              printf '%s\n' "$STAGED"
+
+              git diff --cached --check
+              if [ $? -ne 0 ]; then
+                echo "Whitespace errors detected in staged cache changes."
+                OVERALL_EXIT_CODE=1
+                break
+              fi
+
+              git commit -m "chore: update ESC opportunity cache"
+
+              if [ $? -ne 0 ]; then
+                echo "Git commit failed."
+                OVERALL_EXIT_CODE=1
+                break
+              fi
+
+              git push origin main
+
+              if [ $? -ne 0 ]; then
+                echo "Git push failed."
+                OVERALL_EXIT_CODE=1
+                break
+              fi
+
+              echo "Cache changes committed and pushed."
+            else
+              echo "No cache changes after this batch."
+            fi
+
+            # --------------------------------------------------------
+            # Genuine scraper failure.
+            # --------------------------------------------------------
+
+            if [ "$EXIT_CODE" -eq 1 ]; then
+              echo ""
+              echo "Genuine scraper failure detected."
+              echo "Stopping the workflow."
+              echo ""
+
+              OVERALL_EXIT_CODE=1
+              break
+            fi
+
+            # --------------------------------------------------------
+            # Rate limiting is expected to be resumable.
+            #
+            # scraper.py saves its checkpoint before returning 2.
+            # The completed progress has already been committed above.
+            # Stop rather than increasing pressure on ESC.
+            # --------------------------------------------------------
+
+            if [ "$EXIT_CODE" -eq 2 ]; then
+              echo ""
+              echo "Rate limit or safe interruption detected."
+              echo "Stopping remaining batches."
+              echo "Checkpoint progress has been preserved."
+              echo ""
+
+              OVERALL_EXIT_CODE=2
+              break
+            fi
+
+            BATCH=$((BATCH + 1))
+          done
+
+          echo "exit_code=$OVERALL_EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          exit "$OVERALL_EXIT_CODE"
+
+      # ==============================================================
+      # FINAL STATUS
+      # ==============================================================
+
+      - name: Report scraper result
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.scraper.outputs.exit_code }}"
+
+          if [ "$EXIT_CODE" = "1" ]; then
+            echo "ESC background scraper encountered a genuine failure."
+            exit 1
+
+          elif [ "$EXIT_CODE" = "2" ]; then
+            echo "ESC background scraper stopped safely after rate limiting."
+            echo "Saved checkpoint progress will be resumed by a future run."
+            exit 0
+
+          else
+            echo "ESC background scraper completed normally."
+            exit 0
+          fi
+"""
+
 
 def run(command, *, check=True, capture=False):
-    print("$ " + " ".join(str(x) for x in command))
+    print("$ " + " ".join(str(item) for item in command))
+
     result = subprocess.run(
         command,
         cwd=ROOT,
@@ -50,37 +337,36 @@ def run(command, *, check=True, capture=False):
     if check and result.returncode != 0:
         raise RuntimeError(
             f"Command failed with exit code {result.returncode}: "
-            + " ".join(str(x) for x in command)
+            + " ".join(str(item) for item in command)
         )
 
     return result
 
 
-def read_text(path):
+def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def load_json(path):
+def load_json(path: Path):
     return json.loads(read_text(path))
 
 
 def require_files():
     print("Checking required files...")
-    missing = []
 
-    for relative in REQUIRED_FILES:
-        if not (ROOT / relative).is_file():
-            missing.append(relative)
+    missing = [
+        relative for relative in REQUIRED_FILES if not (ROOT / relative).is_file()
+    ]
 
     if missing:
         raise RuntimeError(
-            "Missing required files:\n" + "\n".join(f"  - {x}" for x in missing)
+            "Missing required files:\n" + "\n".join(f"  - {item}" for item in missing)
         )
 
     print("PASS: required files exist.")
 
 
-def git_status():
+def git_status() -> str:
     result = run(
         ["git", "status", "--short"],
         capture=True,
@@ -90,13 +376,17 @@ def git_status():
 
 def check_git_state():
     print("\nChecking Git state...")
+
     status = git_status()
 
     if status.strip():
         print("Current working tree:")
         print(status, end="" if status.endswith("\n") else "\n")
         print("NOTE: Existing working-tree changes were detected.")
-        print("NOTE: This updater will stage only explicitly declared Phase Two files.")
+        print(
+            "NOTE: This updater will stage only the explicitly managed "
+            "background-workflow files."
+        )
         print("NOTE: Unrelated changes will not be included.")
     else:
         print("PASS: working tree is clean before this update.")
@@ -104,6 +394,7 @@ def check_git_state():
 
 def check_branch():
     print("\nChecking branch...")
+
     result = run(
         ["git", "branch", "--show-current"],
         capture=True,
@@ -123,7 +414,13 @@ def check_remote():
     run(["git", "fetch", "origin", "main"])
 
     result = run(
-        ["git", "rev-list", "--left-right", "--count", "main...origin/main"],
+        [
+            "git",
+            "rev-list",
+            "--left-right",
+            "--count",
+            "main...origin/main",
+        ],
         capture=True,
     )
 
@@ -152,305 +449,243 @@ def check_remote():
     print("PASS: local main is synchronized with origin/main.")
 
 
-def load_project_files():
-    print("\nLoading current project files...")
-
-
-def validate_scraper():
+def validate_scraper_architecture():
     print("\nValidating existing scraper architecture...")
 
     scraper = read_text(ROOT / "scraper/scraper.py")
 
     required_markers = [
-        "normalize_result_country_schema",
-        "eligible_countries",
-        "eligible_countries_unmapped",
-        "eligibility_known",
+        "API_URL",
+        "CHECKPOINT_FILE",
+        "OPPORTUNITIES_FILE",
+        "BATCH_SIZE",
+        "DETAIL_REQUEST_DELAY",
+        "MAX_RETRIES",
+        "fetch_current_opportunities",
+        "load_checkpoint",
+        "save_checkpoint",
+        "build_work_queue",
+        "fetch_detail_page",
+        "save_public_output",
+        "save_expired_output",
+        "return 2",
     ]
 
     missing = [marker for marker in required_markers if marker not in scraper]
 
     if missing:
         raise RuntimeError(
-            "Scraper architecture validation failed. Missing markers: "
-            + ", ".join(missing)
+            "Existing scraper architecture is missing required markers:\n"
+            + "\n".join(f"  - {item}" for item in missing)
         )
 
-    print("PASS: existing resumable/incremental scraper architecture remains intact.")
+    print(
+        "PASS: existing incremental/resumable country-agnostic "
+        "scraper architecture remains intact."
+    )
 
 
-def validate_hourly_workflow():
-    print("\nValidating hourly scraper workflow...")
+def validate_scraper_is_country_agnostic():
+    print("\nValidating country-agnostic background scraping...")
 
-    workflow = ROOT / ".github" / "workflows" / "scrape.yml"
+    scraper = read_text(ROOT / "scraper/scraper.py")
 
-    if not workflow.is_file():
-        raise RuntimeError("Expected .github/workflows/scrape.yml was not found.")
+    if "filters[participant_country]" in scraper:
+        raise RuntimeError(
+            "Background scraper appears to filter the ESC API by "
+            "participant country. Background discovery must remain global."
+        )
 
-    content = read_text(workflow)
+    if "filters[eligible_country]" in scraper:
+        raise RuntimeError(
+            "Background scraper appears to filter the ESC API by "
+            "eligible country. Background discovery must remain global."
+        )
 
-    if "schedule:" not in content:
-        raise RuntimeError("Scraper workflow does not contain a schedule trigger.")
+    if "DEFAULT_PARTICIPANT_COUNTRY" in scraper:
+        print(
+            "NOTE: scraper.py still contains its historical "
+            "DEFAULT_PARTICIPANT_COUNTRY constant."
+        )
+        print(
+            "PASS: no participant-country filter was detected in the "
+            "background API query."
+        )
+    else:
+        print(
+            "PASS: scraper contains no participant-country-specific "
+            "background configuration."
+        )
 
-    if "cron:" not in content:
-        raise RuntimeError("Scraper workflow does not contain a cron schedule.")
 
-    print("PASS: hourly scraper workflow is present.")
-
-
-def validate_canonical_cache():
-    print("\nValidating canonical opportunity cache...")
+def validate_existing_cache():
+    print("\nValidating existing canonical cache...")
 
     data = load_json(ROOT / "data/opportunities.json")
+
+    if not isinstance(data, dict):
+        raise RuntimeError("data/opportunities.json must contain a JSON object.")
+
     opportunities = data.get("opportunities")
 
     if not isinstance(opportunities, list):
         raise RuntimeError("Canonical cache does not contain an opportunities list.")
 
-    with_country_data = 0
+    print(f"Current cached opportunities: {len(opportunities)}")
 
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            continue
-
-        countries = opportunity.get("eligible_countries")
-
-        if isinstance(countries, list):
-            with_country_data += 1
-
-    print(f"Cached opportunities: {len(opportunities)}")
-    print(f"Opportunities with participant-country data: {with_country_data}")
-
-    if not opportunities:
-        raise RuntimeError("Canonical cache is empty.")
-
-    if with_country_data != len(opportunities):
-        raise RuntimeError(
-            "Not every cached opportunity contains participant-country data."
+    if opportunities:
+        with_country_data = sum(
+            isinstance(item, dict)
+            and isinstance(
+                item.get("eligible_countries"),
+                list,
+            )
+            for item in opportunities
         )
 
-    print("PASS: opportunity cache has the expected country eligibility structure.")
+        print(
+            "Opportunities containing participant-country data: " f"{with_country_data}"
+        )
 
-    return data
-
-
-def validate_published_cache():
-    print("\nValidating published website cache...")
-
-    data = load_json(ROOT / "web/opportunities.json")
-    opportunities = data.get("opportunities")
-
-    if not isinstance(opportunities, list):
-        raise RuntimeError("Published cache does not contain an opportunities list.")
-
-    if not opportunities:
-        raise RuntimeError("Published cache is empty.")
-
-    print(f"Web cached opportunities: {len(opportunities)}")
-    print("PASS: published website cache is structurally valid.")
-
-    return data
+    print("PASS: canonical cache is structurally valid.")
 
 
-def validate_frontend_structure():
-    print("\nValidating frontend participant-country search structure...")
+def validate_workflow():
+    print("\nValidating generated background workflow...")
 
-    app = read_text(ROOT / "web/app.js")
+    content = read_text(WORKFLOW_PATH)
 
-    markers = [
-        "opportunities.json",
-        "participant",
-        "Search",
+    required_fragments = [
+        "name: Update ESC Opportunities",
+        "schedule:",
+        'cron: "17 * * * *"',
+        "workflow_dispatch:",
+        "permissions:",
+        "contents: write",
+        "concurrency:",
+        "group: esc-opportunity-cache-writer",
+        "cancel-in-progress: false",
+        "actions/checkout@v4",
+        "actions/setup-python@v5",
+        'python-version: "3.12"',
+        "requests beautifulsoup4 pycountry",
+        "python scraper/scraper.py",
+        "MAX_BATCHES=3",
+        "git add -- data/opportunities.json",
+        "git add -- data/checkpoint.json",
+        "git add -- data/expired.json",
+        "git add -- web/opportunities.json",
+        "git add -- web/expired.json",
+        "git push origin main",
     ]
 
-    missing = [marker for marker in markers if marker not in app]
+    missing = [fragment for fragment in required_fragments if fragment not in content]
 
     if missing:
         raise RuntimeError(
-            "Frontend search structure validation failed. Missing markers: "
-            + ", ".join(missing)
+            "Generated workflow is missing required elements:\n"
+            + "\n".join(f"  - {item}" for item in missing)
         )
+
+    print("PASS: background workflow contains all required controls.")
+
+
+def validate_workflow_safety():
+    print("\nValidating workflow safety properties...")
+
+    content = read_text(WORKFLOW_PATH)
+
+    if "cancel-in-progress: true" in content:
+        raise RuntimeError(
+            "Background cache workflow must not cancel an active scraper run."
+        )
+
+    if "participant_country" in content.lower():
+        raise RuntimeError(
+            "Background workflow must not contain participant-country "
+            "filtering logic."
+        )
+
+    if "git add ." in content:
+        raise RuntimeError("Background workflow must not stage the entire repository.")
+
+    if "git add --all" in content:
+        raise RuntimeError("Background workflow must not stage the entire repository.")
 
     print(
-        "PASS: existing frontend participant-country/search structure remains intact."
+        "PASS: workflow is country-agnostic and selectively stages "
+        "scraper-generated cache files."
     )
 
 
-def connect_frontend_cache():
-    print("\nConnecting participant-country Search button to published cache...")
+def write_workflow():
+    print("\nBuilding hourly background scraping workflow...")
 
-    app = read_text(ROOT / "web/app.js")
-
-    if "opportunities.json" not in app:
-        raise RuntimeError(
-            "Frontend does not reference the published opportunity cache."
-        )
-
-    print("PASS: frontend already references the published opportunity cache.")
-
-
-def generate_manifest(canonical_data):
-    print("\nGenerating cache manifest...")
-
-    opportunities = canonical_data.get("opportunities", [])
-
-    participant_country_values = set()
-
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            continue
-
-        countries = opportunity.get("eligible_countries", [])
-
-        if isinstance(countries, list):
-            for country in countries:
-                if isinstance(country, str) and country.strip():
-                    participant_country_values.add(country.strip().upper())
-
-    manifest_path = ROOT / "data/cache_manifest.json"
-
-    existing = {}
-    if manifest_path.exists():
-        try:
-            existing = load_json(manifest_path)
-        except Exception:
-            existing = {}
-
-    manifest = dict(existing)
-    manifest["cache_schema_version"] = canonical_data.get(
-        "cache_schema_version",
-        1,
+    WORKFLOW_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
     )
-    manifest["opportunities"] = len(opportunities)
-    manifest["participant_countries"] = len(participant_country_values)
 
-    manifest_path.write_text(
-        json.dumps(
-            manifest,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+    current = (
+        WORKFLOW_PATH.read_text(encoding="utf-8") if WORKFLOW_PATH.exists() else None
+    )
+
+    if current == BACKGROUND_WORKFLOW:
+        print("PASS: update.yml already matches the background architecture.")
+        return
+
+    WORKFLOW_PATH.write_text(
+        BACKGROUND_WORKFLOW,
         encoding="utf-8",
     )
 
-    print(f"  Opportunities: {len(opportunities)}")
-    print(f"  Participant countries: {len(participant_country_values)}")
-    print("PASS: participant-country manifest generated successfully.")
+    print("PASS: .github/workflows/update.yml created/updated.")
 
 
-def validate_published_search_data(published_data):
-    print("\nValidating published cache for frontend search...")
-
-    opportunities = published_data.get("opportunities", [])
-
-    for opportunity in opportunities:
-        if not isinstance(opportunity, dict):
-            raise RuntimeError("Published cache contains a non-object opportunity.")
-
-        if not isinstance(opportunity.get("eligible_countries"), list):
-            raise RuntimeError(
-                "Published cache contains an opportunity without " "eligible_countries."
-            )
-
-    print(
-        "PASS: published cache contains the data required by participant-country search."
-    )
-
-
-def validate_python():
+def validate_python_syntax():
     print("\nRunning Python syntax validation...")
 
-    python = sys.executable
-
-    files = [
-        "backend/__init__.py",
-        "backend/cache.py",
-        "backend/search.py",
-        "backend/test_search.py",
-        "scraper/scraper.py",
+    python_files = [
+        ROOT / "scraper/scraper.py",
+        ROOT / "backend/cache.py",
+        ROOT / "backend/search.py",
+        ROOT / "backend/test_search.py",
+        ROOT / "update.py",
     ]
-
-    run([python, "-m", "py_compile", *[str(ROOT / x) for x in files]])
-
-    print("PASS: Python syntax validation passed.")
-
-
-def run_backend_tests():
-    print("\nRunning backend tests...")
 
     run(
         [
             sys.executable,
             "-m",
-            "unittest",
-            "backend.test_search",
-            "-v",
+            "py_compile",
+            *[str(path) for path in python_files],
         ]
     )
 
-    print("PASS: backend participant-country tests passed.")
+    print("PASS: Python syntax validation passed.")
 
 
-def validate_morocco_search():
-    print("\nValidating Morocco participant-country search...")
+def validate_json_files():
+    print("\nValidating JSON cache files...")
 
-    result = run(
-        [
-            sys.executable,
-            "-m",
-            "backend.search",
-            "MA",
-        ],
-        capture=True,
-    )
+    json_files = [
+        ROOT / "data/opportunities.json",
+        ROOT / "data/checkpoint.json",
+        ROOT / "data/expired.json",
+        ROOT / "web/opportunities.json",
+        ROOT / "web/expired.json",
+    ]
 
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("Morocco search did not return valid JSON.") from exc
+    for path in json_files:
+        if not path.exists():
+            print(f"NOTE: {path.relative_to(ROOT)} does not currently exist.")
+            continue
 
-    if payload.get("status") != "success":
-        raise RuntimeError(f"Morocco search failed: {payload!r}")
-
-    if payload.get("participant_country") != "MA":
-        raise RuntimeError("Morocco search returned the wrong participant country.")
-
-    count = payload.get("count")
-
-    if not isinstance(count, int):
-        raise RuntimeError("Morocco search count is not an integer.")
-
-    if count <= 0:
-        raise RuntimeError("Morocco search returned zero opportunities.")
-
-    print(f"  Morocco (MA) results: {count}")
-    print("PASS: Morocco cache-first search contract works.")
+        load_json(path)
+        print(f"PASS: {path.relative_to(ROOT)} is valid JSON.")
 
 
-def repair_web_eof():
-    """
-    Normalize web/app.js so it ends with exactly one newline.
-
-    This specifically fixes the git diff --check failure:
-      new blank line at EOF
-    """
-    print("\nNormalizing frontend file ending...")
-
-    path = ROOT / "web/app.js"
-    content = read_text(path)
-
-    normalized = content.rstrip("\r\n") + "\n"
-
-    if normalized != content:
-        path.write_text(normalized, encoding="utf-8")
-        print("PASS: removed extra blank line(s) at end of web/app.js.")
-    else:
-        print("PASS: web/app.js already has a clean single newline at EOF.")
-
-
-def whitespace_check():
+def validate_whitespace():
     print("\nRunning Git whitespace check...")
 
     run(["git", "diff", "--check"])
@@ -458,55 +693,15 @@ def whitespace_check():
     print("PASS: Git whitespace check passed.")
 
 
-def validate_cache_consistency(canonical_data, published_data):
-    print("\nValidating canonical/published cache consistency...")
-
-    canonical = canonical_data.get("opportunities", [])
-    published = published_data.get("opportunities", [])
-
-    canonical_by_id = {
-        item.get("id"): item
-        for item in canonical
-        if isinstance(item, dict) and item.get("id") is not None
-    }
-
-    published_by_id = {
-        item.get("id"): item
-        for item in published
-        if isinstance(item, dict) and item.get("id") is not None
-    }
-
-    if set(canonical_by_id) != set(published_by_id):
-        raise RuntimeError(
-            "Canonical and published caches contain different opportunity IDs."
-        )
-
-    fields = [
-        "eligible_countries",
-        "eligibility_known",
-    ]
-
-    for opportunity_id in canonical_by_id:
-        canonical_item = canonical_by_id[opportunity_id]
-        published_item = published_by_id[opportunity_id]
-
-        for field in fields:
-            if canonical_item.get(field) != published_item.get(field):
-                raise RuntimeError(
-                    f"Cache mismatch for opportunity {opportunity_id}, "
-                    f"field '{field}'."
-                )
-
-    print("PASS: canonical and published caches are consistent.")
-
-
-def selective_commit_and_push():
-    print("\nPreparing selective Phase Two commit...")
+def stage_managed_files():
+    print("\nPreparing selective background-scraper commit...")
 
     run(["git", "reset"])
 
-    for relative in PHASE_TWO_FILES:
-        if (ROOT / relative).exists():
+    for relative in MANAGED_FILES:
+        path = ROOT / relative
+
+        if path.exists():
             run(["git", "add", "--", relative])
 
     staged = run(
@@ -514,54 +709,80 @@ def selective_commit_and_push():
         capture=True,
     ).stdout.splitlines()
 
-    unexpected = sorted(set(staged) - set(PHASE_TWO_FILES))
+    unexpected = sorted(set(staged) - set(MANAGED_FILES))
 
     if unexpected:
         raise RuntimeError(
-            "Unexpected files are staged:\n" + "\n".join(f"  - {x}" for x in unexpected)
+            "Unexpected files are staged:\n"
+            + "\n".join(f"  - {item}" for item in unexpected)
         )
 
-    if not staged:
-        raise RuntimeError("No Phase Two changes are staged.")
+    print("Files staged for this phase:")
 
-    print("Files staged for Phase Two:")
-    for path in staged:
-        print(f"  {path}")
+    for item in staged:
+        print(f"  {item}")
+
+    return staged
+
+
+def commit_and_push(staged):
+    if not staged:
+        print(
+            "\nNo changes are required. " "Background workflow is already configured."
+        )
+        return False
 
     print("\nReviewing staged diff statistics...")
     run(["git", "diff", "--cached", "--stat"])
 
-    print("\nCreating Phase Two commit...")
+    print("\nCreating background scraper commit...")
+
     run(
         [
             "git",
             "commit",
             "-m",
-            "feat: add cache-first participant-country search",
+            "feat: enable hourly ESC background scraping",
         ]
     )
 
-    print("\nPushing Phase Two commit...")
-    run(["git", "push", "origin", "main"])
+    print("\nPushing background scraper workflow...")
 
-    print("\nPASS: Phase Two commit pushed successfully.")
+    run(
+        [
+            "git",
+            "push",
+            "origin",
+            "main",
+        ]
+    )
+
+    print(
+        "\nPASS: background scraping workflow configuration "
+        "committed and pushed successfully."
+    )
+
+    return True
 
 
 def main():
     print("=" * 72)
-    print("ESC Opportunity Finder — Phase Two cache-first participant-country search")
+    print("ESC Opportunity Finder — Background Discovery Workflow")
     print("=" * 72)
+
     print("""This update will:
-  - preserve the existing scraper architecture
-  - preserve the hourly background scraping model
-  - repair/rebuild the Phase Two backend safely
-  - implement reliable Morocco (MA) cache-first search
-  - validate country matching case-insensitively
-  - validate the published cache used by the frontend
-  - preserve the existing frontend search structure
-  - repair frontend EOF whitespace safely
-  - run backend and frontend/cache validation
-  - selectively commit and push only Phase Two files
+  - preserve the existing ESC scraper implementation
+  - keep background discovery country-agnostic
+  - run the scraper automatically every hour
+  - use controlled incremental batches
+  - install all scraper dependencies in GitHub Actions
+  - preserve checkpoint/resumable scraping
+  - stop safely when ESC rate-limits the scraper
+  - publish the canonical cache to the website
+  - serialize cache-writing workflow runs
+  - stage only background-workflow files
+  - validate Python and JSON files
+  - commit and push the workflow configuration
 """)
 
     try:
@@ -569,37 +790,40 @@ def main():
         check_git_state()
         check_branch()
         check_remote()
-        load_project_files()
 
-        validate_scraper()
-        validate_hourly_workflow()
+        validate_scraper_architecture()
+        validate_scraper_is_country_agnostic()
 
-        canonical_data = validate_canonical_cache()
-        published_data = validate_published_cache()
+        validate_existing_cache()
 
-        print("\nRebuilding Phase Two backend search layer...")
-        print("PASS: Phase Two backend search layer rebuilt successfully.")
+        write_workflow()
 
-        validate_frontend_structure()
-        connect_frontend_cache()
+        validate_workflow()
+        validate_workflow_safety()
 
-        generate_manifest(canonical_data)
-        validate_published_search_data(published_data)
-        validate_cache_consistency(canonical_data, published_data)
+        validate_python_syntax()
+        validate_json_files()
+        validate_whitespace()
 
-        repair_web_eof()
-
-        validate_python()
-        run_backend_tests()
-        validate_morocco_search()
-
-        whitespace_check()
-
-        selective_commit_and_push()
+        staged = stage_managed_files()
+        commit_and_push(staged)
 
         print("\n" + "=" * 72)
-        print("PHASE TWO COMPLETE")
+        print("BACKGROUND SCRAPING PHASE COMPLETE")
         print("=" * 72)
+        print()
+        print(
+            "GitHub Actions is now configured to run the ESC "
+            "background scraper hourly."
+        )
+        print(
+            "The scraper will continue accumulating data through "
+            "data/checkpoint.json."
+        )
+        print(
+            "The next phase can build on the resulting dataset "
+            "without changing the discovery architecture."
+        )
 
     except Exception as exc:
         print("\n" + "=" * 72)
