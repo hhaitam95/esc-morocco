@@ -1,71 +1,71 @@
 // Complete participant-country list exposed // by the ESC API.
 // The backend currently has cached opportunity // data only for Morocco.
 const ESC_PARTICIPANT_COUNTRIES = [
-  { name: 'Albania', flag: '🇦🇱' },
-  { name: 'Algeria', flag: '🇩🇿' },
-  { name: 'Armenia', flag: '🇦🇲' },
-  { name: 'Aruba', flag: '🇦🇼' },
-  { name: 'Austria', flag: '🇦🇹' },
-  { name: 'Azerbaijan', flag: '🇦🇿' },
-  { name: 'Belarus', flag: '🇧🇾' },
-  { name: 'Belgium', flag: '🇧🇪' },
-  { name: 'Bonaire Sint Eustatius and Saba', flag: '🇧🇶' },
-  { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
-  { name: 'Bulgaria', flag: '🇧🇬' },
-  { name: 'Croatia', flag: '🇭🇷' },
-  { name: 'Curaçao', flag: '🇨🇼' },
-  { name: 'Cyprus', flag: '🇨🇾' },
-  { name: 'Czechia', flag: '🇨🇿' },
-  { name: 'Denmark', flag: '🇩🇰' },
-  { name: 'Egypt', flag: '🇪🇬' },
-  { name: 'Estonia', flag: '🇪🇪' },
-  { name: 'Finland', flag: '🇫🇮' },
-  { name: 'France', flag: '🇫🇷' },
-  { name: 'French Polynesia', flag: '🇵🇫' },
-  { name: 'French Southern and Antarctic Territories', flag: '🇹🇫' },
-  { name: 'Georgia', flag: '🇬🇪' },
-  { name: 'Germany', flag: '🇩🇪' },
-  { name: 'Greece', flag: '🇬🇷' },
-  { name: 'Greenland', flag: '🇬🇱' },
-  { name: 'Hungary', flag: '🇭🇺' },
-  { name: 'Iceland', flag: '🇮🇸' },
-  { name: 'Ireland', flag: '🇮🇪' },
-  { name: 'Israel', flag: '🇮🇱' },
-  { name: 'Italy', flag: '🇮🇹' },
-  { name: 'Jordan', flag: '🇯🇴' },
-  { name: 'Kosovo * UN resolution', flag: '🇽🇰' },
-  { name: 'Latvia', flag: '🇱🇻' },
-  { name: 'Lebanon', flag: '🇱🇧' },
-  { name: 'Libya', flag: '🇱🇾' },
-  { name: 'Liechtenstein', flag: '🇱🇮' },
-  { name: 'Lithuania', flag: '🇱🇹' },
-  { name: 'Luxembourg', flag: '🇱🇺' },
-  { name: 'Malta', flag: '🇲🇹' },
-  { name: 'Moldova', flag: '🇲🇩' },
-  { name: 'Montenegro', flag: '🇲🇪' },
-  { name: 'Morocco', flag: '🇲🇦' },
-  { name: 'Netherlands', flag: '🇳🇱' },
-  { name: 'New Caledonia', flag: '🇳🇨' },
-  { name: 'North Macedonia', flag: '🇲🇰' },
-  { name: 'Norway', flag: '🇳🇴' },
-  { name: 'Palestine', flag: '🇵🇸' },
-  { name: 'Poland', flag: '🇵🇱' },
-  { name: 'Portugal', flag: '🇵🇹' },
-  { name: 'Romania', flag: '🇷🇴' },
-  { name: 'Russia', flag: '🇷🇺' },
-  { name: 'Saint Barthélemy', flag: '🇧🇱' },
-  { name: 'Serbia', flag: '🇷🇸' },
-  { name: 'Sint Maarten (dutch part)', flag: '🇸🇽' },
-  { name: 'Slovakia', flag: '🇸🇰' },
-  { name: 'Slovenia', flag: '🇸🇮' },
-  { name: 'Spain', flag: '🇪🇸' },
-  { name: 'St Pierre and Miquelon', flag: '🇵🇲' },
-  { name: 'Sweden', flag: '🇸🇪' },
-  { name: 'Syria', flag: '🇸🇾' },
-  { name: 'Tunisia', flag: '🇹🇳' },
-  { name: 'Türkiye', flag: '🇹🇷' },
-  { name: 'Ukraine', flag: '🇺🇦' },
-  { name: 'Wallis and Futuna', flag: '🇼🇫' },
+  { name: "Albania", flag: "🇦🇱" },
+  { name: "Algeria", flag: "🇩🇿" },
+  { name: "Armenia", flag: "🇦🇲" },
+  { name: "Aruba", flag: "🇦🇼" },
+  { name: "Austria", flag: "🇦🇹" },
+  { name: "Azerbaijan", flag: "🇦🇿" },
+  { name: "Belarus", flag: "🇧🇾" },
+  { name: "Belgium", flag: "🇧🇪" },
+  { name: "Bonaire Sint Eustatius and Saba", flag: "🇧🇶" },
+  { name: "Bosnia and Herzegovina", flag: "🇧🇦" },
+  { name: "Bulgaria", flag: "🇧🇬" },
+  { name: "Croatia", flag: "🇭🇷" },
+  { name: "Curaçao", flag: "🇨🇼" },
+  { name: "Cyprus", flag: "🇨🇾" },
+  { name: "Czechia", flag: "🇨🇿" },
+  { name: "Denmark", flag: "🇩🇰" },
+  { name: "Egypt", flag: "🇪🇬" },
+  { name: "Estonia", flag: "🇪🇪" },
+  { name: "Finland", flag: "🇫🇮" },
+  { name: "France", flag: "🇫🇷" },
+  { name: "French Polynesia", flag: "🇵🇫" },
+  { name: "French Southern and Antarctic Territories", flag: "🇹🇫" },
+  { name: "Georgia", flag: "🇬🇪" },
+  { name: "Germany", flag: "🇩🇪" },
+  { name: "Greece", flag: "🇬🇷" },
+  { name: "Greenland", flag: "🇬🇱" },
+  { name: "Hungary", flag: "🇭🇺" },
+  { name: "Iceland", flag: "🇮🇸" },
+  { name: "Ireland", flag: "🇮🇪" },
+  { name: "Israel", flag: "🇮🇱" },
+  { name: "Italy", flag: "🇮🇹" },
+  { name: "Jordan", flag: "🇯🇴" },
+  { name: "Kosovo * UN resolution", flag: "🇽🇰" },
+  { name: "Latvia", flag: "🇱🇻" },
+  { name: "Lebanon", flag: "🇱🇧" },
+  { name: "Libya", flag: "🇱🇾" },
+  { name: "Liechtenstein", flag: "🇱🇮" },
+  { name: "Lithuania", flag: "🇱🇹" },
+  { name: "Luxembourg", flag: "🇱🇺" },
+  { name: "Malta", flag: "🇲🇹" },
+  { name: "Moldova", flag: "🇲🇩" },
+  { name: "Montenegro", flag: "🇲🇪" },
+  { name: "Morocco", flag: "🇸🇦" },
+  { name: "Netherlands", flag: "🇳🇱" },
+  { name: "New Caledonia", flag: "🇳🇨" },
+  { name: "North Macedonia", flag: "🇲🇰" },
+  { name: "Norway", flag: "🇳🇴" },
+  { name: "Palestine", flag: "🇵🇸" },
+  { name: "Poland", flag: "🇵🇱" },
+  { name: "Portugal", flag: "🇵🇹" },
+  { name: "Romania", flag: "🇷🇴" },
+  { name: "Russia", flag: "🇷🇺" },
+  { name: "Saint Barthélemy", flag: "🇧🇱" },
+  { name: "Serbia", flag: "🇷🇸" },
+  { name: "Sint Maarten (dutch part)", flag: "🇸🇽" },
+  { name: "Slovakia", flag: "🇸🇰" },
+  { name: "Slovenia", flag: "🇸🇮" },
+  { name: "Spain", flag: "🇪🇸" },
+  { name: "St Pierre and Miquelon", flag: "🇵🇲" },
+  { name: "Sweden", flag: "🇸🇪" },
+  { name: "Syria", flag: "🇸🇾" },
+  { name: "Tunisia", flag: "🇹🇳" },
+  { name: "Türkiye", flag: "🇹🇷" },
+  { name: "Ukraine", flag: "🇺🇦" },
+  { name: "Wallis and Futuna", flag: "🇼🇫" },
 ];
 
 // ============================================================
@@ -82,7 +82,7 @@ const EXPIRED_DATA_URL = "expired.json";
 
 let activeOpportunities = [];
 let expiredOpportunities = [];
-let currentLanguage = "en";
+let currentLanguage = 'en';
 let currentActiveData = null;
 
 // ============================================================
@@ -129,6 +129,10 @@ const refreshButton = document.getElementById("refresh-button");
 
 const translations = {
   en: {
+    participantCountry: "Participant Country",
+    selectParticipantCountry: "Select Participant Country",
+    apply: "Apply",
+    allParticipantCountries: "All participant countries",
     title: "ESC Opportunity Finder",
     subtitle: "Find European Solidarity Corps volunteering opportunities open to participants from your country",
     activeOpportunities: "Active opportunities",
@@ -225,12 +229,13 @@ const translations = {
      lightMode: "Light mode",
 
      darkMode: "Dark mode",
-    participantCountry: "Participant Country",
-    selectParticipantCountry: "Select Participant Country",
-    apply: "Apply",
-    allParticipantCountries: "All participant countries",
+
 },
   fr: {
+    participantCountry: "Pays du participant",
+    selectParticipantCountry: "Sélectionnez le pays du participant",
+    apply: "Appliquer",
+    allParticipantCountries: "Tous les pays participants",
     title: "Outil de recherche d’opportunités du CES",
     subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
     activeOpportunities: "Opportunités actives",
@@ -328,12 +333,13 @@ const translations = {
      lightMode: "Mode clair",
 
      darkMode: "Mode sombre",
-    participantCountry: "Pays du participant",
-    selectParticipantCountry: "Sélectionnez le pays du participant",
-    apply: "Appliquer",
-    allParticipantCountries: "Tous les pays participants",
+
 },
   ar: {
+    participantCountry: "بلد المشارك",
+    selectParticipantCountry: "اختر بلد المشارك",
+    apply: "تطبيق",
+    allParticipantCountries: "جميع بلدان المشاركين",
     title: "البحث عن فرص الفيلق الأوروبي للتضامن",
     subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
     activeOpportunities: "الفرص المتاحة",
@@ -429,15 +435,9 @@ const translations = {
      lightMode: "الوضع الفاتح",
 
      darkMode: "الوضع الداكن",
-    participantCountry: "بلد المشارك",
-    selectParticipantCountry: "اختر بلد المشارك",
-    apply: "تطبيق",
-    allParticipantCountries: "جميع بلدان المشاركين",
+
 },
-    participantCountry: "بلد المشارك",
-    selectParticipantCountry: "اختر بلد المشارك",
-    apply: "تطبيق",
-    allParticipantCountries: "جميع بلدان المشاركين",
+
 };
 
 // ============================================================
@@ -520,7 +520,7 @@ const languageDropdownLabel =
 const languageFlags = {
   en: "🇬🇧",
   fr: "🇫🇷",
-  ar: "🇲🇦",
+  ar: "🇸🇦",
 };
 
 const languageNames = {
@@ -1567,47 +1567,29 @@ function populateParticipantCountries() {
 
   const placeholder = document.createElement("option");
   placeholder.value = "";
+  placeholder.textContent = t("selectParticipantCountry");
 
-  if (typeof t === "function") {
-    placeholder.textContent =
-      t("selectParticipantCountry");
-  } else {
-    placeholder.textContent =
-      "Select Participant Country";
-  }
-
-  participantCountryFilter.appendChild(
-    placeholder,
-  );
+  participantCountryFilter.appendChild(placeholder);
 
   ESC_PARTICIPANT_COUNTRIES.forEach((country) => {
     const option = document.createElement("option");
 
     option.value = country.name;
-    option.textContent =
-      `${country.flag} ${country.name}`;
+    option.textContent = `${country.flag} ${country.name}`;
 
-    participantCountryFilter.appendChild(
-      option,
-    );
+    participantCountryFilter.appendChild(option);
   });
 
   if (participantCountryDraft) {
     const matchingCountry =
       ESC_PARTICIPANT_COUNTRIES.find(
         (country) =>
-          normalizeParticipantCountry(
-            country.name,
-          ) ===
-          normalizeParticipantCountry(
-            participantCountryDraft,
-          ),
+          normalizeParticipantCountry(country.name) ===
+          normalizeParticipantCountry(participantCountryDraft),
       );
 
     participantCountryFilter.value =
-      matchingCountry
-        ? matchingCountry.name
-        : "";
+      matchingCountry ? matchingCountry.name : "";
   }
 }
 
