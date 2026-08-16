@@ -1626,6 +1626,17 @@ function getTranslatedCountryName(code, fallback) {
       SY: "Syrie",
       TN: "Tunisie",
       TR: "Türkiye",
+      BQ: "Bonaire, Saint-Eustache et Saba",
+      CW: "Curaçao",
+      PF: "Polynésie française",
+      TF: "Terres australes et antarctiques françaises",
+      GL: "Groenland",
+      XK: "Kosovo * résolution de l’ONU",
+      NC: "Nouvelle-Calédonie",
+      BL: "Saint-Barthélemy",
+      SX: "Saint-Martin (partie néerlandaise)",
+      PM: "Saint-Pierre-et-Miquelon",
+      WF: "Wallis-et-Futuna",
       UA: "Ukraine"
     },
     ar: {
@@ -1682,6 +1693,17 @@ function getTranslatedCountryName(code, fallback) {
       SY: "سوريا",
       TN: "تونس",
       TR: "تركيا",
+      BQ: "بونير وسينت أوستاتيوس وسابا",
+      CW: "كوراساو",
+      PF: "بولينيزيا الفرنسية",
+      TF: "الأراضي الفرنسية الجنوبية والأنتارتيكية",
+      GL: "غرينلاند",
+      XK: "كوسوفو * قرار الأمم المتحدة",
+      NC: "كاليدونيا الجديدة",
+      BL: "سان بارتيلمي",
+      SX: "سينت مارتن (الجزء الهولندي)",
+      PM: "سان بيير وميكلون",
+      WF: "واليس وفوتونا",
       UA: "أوكرانيا"
     }
   };
