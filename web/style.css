@@ -1610,3 +1610,137 @@ html[dir="rtl"] .participant-selector {
     width: 100%;
   }
 }
+
+/* ================================================================
+   Responsive mobile layout
+   ================================================================ */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .container,
+  main {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  header {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Header controls must remain inside the viewport. */
+  header > *,
+  header .header-inner,
+  header .site-header,
+  header .nav-inner {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Language selector */
+  #language-selector,
+  .language-selector,
+  .language-switcher,
+  .language-select {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* All native selects stay inside the viewport. */
+  select {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Search / filter controls */
+  .search-controls,
+  .search-form,
+  .filters,
+  .filter-controls {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .search-controls,
+  .search-form {
+    flex-wrap: wrap;
+  }
+
+  .search-controls > *,
+  .search-form > *,
+  .filters > *,
+  .filter-controls > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Status card */
+  .status-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .status-item {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Tables scroll horizontally instead of breaking the page. */
+  .table-container,
+  .table-wrapper,
+  .opportunity-table-wrapper,
+  .results-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 700px;
+  }
+}
+
+
+@media (max-width: 480px) {
+  main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    line-height: 1.25;
+  }
+
+  .status-card {
+    flex-direction: column;
+  }
+
+  .status-item {
+    width: 100%;
+  }
+
+  #language-selector,
+  .language-selector,
+  .language-switcher,
+  .language-select,
+  select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
