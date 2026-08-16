@@ -1690,31 +1690,6 @@ function getTranslatedCountryName(code, fallback) {
   return translations[language]?.[code] || fallback;
 }
 
-function getTranslatedParticipantCountry(countryName) {
-  if (currentLanguage === "en") {
-    return countryName;
-  }
-
-  const countryCode =
-    getParticipantCountryCode(countryName);
-
-  if (!countryCode) {
-    return countryName;
-  }
-
-  try {
-    return (
-      new Intl.DisplayNames(
-        [currentLanguage],
-        { type: "region" },
-      ).of(countryCode) ||
-      countryName
-    );
-  } catch {
-    return countryName;
-  }
-}
-
 function populateParticipantCountries() {
   if (!participantCountryFilter) {
     return;
@@ -1745,7 +1720,10 @@ function populateParticipantCountries() {
         country.name;
 
       option.textContent =
-        `${country.flag} ${getTranslatedParticipantCountry(country.name)}`;
+        `${country.flag} ${getTranslatedCountryName(
+          getParticipantCountryCode(country.name),
+          country.name
+        )}`;
 
 
       participantCountryFilter.appendChild(
