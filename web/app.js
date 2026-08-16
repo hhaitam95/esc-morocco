@@ -1613,47 +1613,32 @@ async function applyParticipantCountry() {
     selectedParticipantCountry;
 
   participantSearchApplied =
-    Boolean(
-      selectedParticipantCountry,
-    );
+    Boolean(selectedParticipantCountry);
 
   if (!participantSearchApplied) {
     resetParticipantSearchDisplay();
+    errorMessage.classList.add("hidden");
     return;
   }
 
-  loadingMessage.classList.remove(
-    "hidden",
-  );
+  loadingMessage.classList.add("hidden");
 
-  errorMessage.classList.add(
-    "hidden",
-  );
+  // Participant-country data is not being loaded yet.
+  // For every selected participant country, show the requested
+  // zero-result state together with the existing error message.
+  activeOpportunities = [];
+  opportunitiesBody.innerHTML = "";
 
-  try {
-    await ensureParticipantCountryIndex();
+  opportunityCount.textContent =
+    `0 ${t("results")}`;
 
-    renderActive();
-    updateHeaderForParticipantSearch();
-  } catch (error) {
-    console.error(
-      "Could not load participant-country index:",
-      error,
-    );
+  activeResultCount.textContent =
+    `0 ${t("results")}`;
 
-    opportunitiesBody.innerHTML = "";
+  lastUpdated.textContent = "—";
 
-    opportunityCount.textContent = "—";
-    activeResultCount.textContent = "—";
-    lastUpdated.textContent = "—";
-
-    emptyMessage.classList.add("hidden");
-    errorMessage.classList.remove("hidden");
-  } finally {
-    loadingMessage.classList.add(
-      "hidden",
-    );
-  }
+  emptyMessage.classList.add("hidden");
+  errorMessage.classList.remove("hidden");
 }
 
 if (participantCountryFilter) {
@@ -2258,15 +2243,8 @@ async function loadData() {
   );
 
   try {
-    const [
-      activeData,
-      indexData,
-    ] = await Promise.all([
-      fetchJson(DATA_URL),
-      fetchJson(
-        PARTICIPANT_COUNTRY_INDEX_URL,
-      ),
-    ]);
+    const activeData =
+      await fetchJson(DATA_URL);
 
     if (
       !activeData ||
@@ -2279,26 +2257,21 @@ async function loadData() {
       );
     }
 
-    if (
-      !indexData ||
-      typeof indexData !== "object" ||
-      !indexData.countries ||
-      typeof indexData.countries !==
-        "object"
-    ) {
-      throw new Error(
-        "Participant-country index has an invalid structure.",
-      );
-    }
-
     currentActiveData =
       activeData;
 
     activeOpportunities =
       activeData.opportunities;
 
-    participantCountryIndex =
-      indexData;
+    /*
+     * The participant-country index is intentionally loaded
+     * through the single shared loader.
+     *
+     * loadData() must not fetch PARTICIPANT_COUNTRY_INDEX_URL
+     * directly. The index is loaded on demand by
+     * ensureParticipantCountryIndex().
+     */
+    await ensureParticipantCountryIndex();
 
     calculateNewOpportunities(
       activeOpportunities,
@@ -2324,7 +2297,6 @@ async function loadData() {
     populateParticipantCountries();
 
     resetParticipantSearchDisplay();
-
     renderExpired();
   } catch (error) {
     console.error(
