@@ -679,6 +679,7 @@ if (
           );
 
           applyTranslations();
+          populateParticipantCountries();
 
           closeLanguageDropdown();
         },
