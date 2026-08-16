@@ -481,13 +481,30 @@ function applyTranslations() {
     populateParticipantCountries(currentActiveData);
   }
 
-  renderActive();
+  if (participantSearchApplied) {
+    // Preserve the participant-country zero-result/error state
+    // when switching languages.
+    opportunityCount.textContent =
+      `0 ${t("results")}`;
+
+    activeResultCount.textContent =
+      `0 ${t("results")}`;
+
+    lastUpdated.textContent = "—";
+
+    opportunitiesBody.innerHTML = "";
+
+    emptyMessage.classList.add("hidden");
+    errorMessage.classList.remove("hidden");
+  } else {
+    renderActive();
+
+    if (currentActiveData) {
+      updateHeader(currentActiveData);
+    }
+  }
 
   renderExpired();
-
-  if (currentActiveData) {
-    updateHeader(currentActiveData);
-  }
 
   updateLanguageDropdown();
 
