@@ -78,6 +78,7 @@ const ESC_PARTICIPANT_COUNTRIES = [
 // ============================================================
 
 let activeOpportunities = [];
+let availableActiveOpportunities = [];
 let expiredOpportunities = [];
 let currentLanguage = 'en';
 let currentActiveData = null;
@@ -1708,6 +1709,10 @@ async function applyParticipantCountry() {
     Boolean(selectedParticipantCountry);
 
   if (!participantSearchApplied) {
+    activeOpportunities = [
+      ...availableActiveOpportunities,
+    ];
+
     resetParticipantSearchDisplay();
     errorMessage.classList.add("hidden");
     return;
@@ -1723,15 +1728,28 @@ async function applyParticipantCountry() {
       );
 
     const matchingOpportunities =
-      Array.isArray(activeOpportunities)
-        ? activeOpportunities.filter(
-            (opportunity) =>
-              Array.isArray(
-                opportunity.participant_countries,
-              ) &&
-              opportunity.participant_countries.includes(
-                selectedCode,
-              ),
+      Array.isArray(availableActiveOpportunities)
+        ? availableActiveOpportunities.filter(
+            (opportunity) => {
+              const participantCountries =
+                Array.isArray(
+                  opportunity.participant_countries,
+                )
+                  ? opportunity.participant_countries
+                  : Array.isArray(
+                        opportunity.eligible_countries,
+                      )
+                    ? opportunity.eligible_countries
+                    : [];
+
+              return participantCountries
+                .map((value) =>
+                  String(value || "")
+                    .trim()
+                    .toUpperCase()
+                )
+                .includes(selectedCode);
+            },
           )
         : [];
 
@@ -2364,17 +2382,31 @@ function normalizeLoadedOpportunity(opportunity) {
     opportunity.location || ""
   ).trim();
 
-  let city = "";
-  let country = "";
+  const existingCountry = String(
+    opportunity.country || ""
+  ).trim();
+
+  let city =
+    String(
+      opportunity.town ||
+      opportunity.city ||
+      ""
+    ).trim();
+
+  let inferredCountryName = "";
 
   const locationParts = rawLocation
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
 
-  if (locationParts.length >= 2) {
-    country = locationParts[locationParts.length - 1];
+  if (!city && locationParts.length >= 2) {
     city = locationParts[locationParts.length - 2];
+  }
+
+  if (locationParts.length >= 2) {
+    inferredCountryName =
+      locationParts[locationParts.length - 1];
   }
 
   opportunity.image_url = logo;
@@ -2390,13 +2422,20 @@ function normalizeLoadedOpportunity(opportunity) {
 
   opportunity.town = city;
   opportunity.city = city;
-  opportunity.country = country;
+
+  // Preserve a backend country code such as "TR", "FR", or "MA".
+  // The previous compatibility mapper incorrectly overwrote these
+  // codes with the human-readable country name parsed from location.
+  if (/^[A-Za-z]{2}$/.test(existingCountry)) {
+    opportunity.country =
+      existingCountry.toUpperCase();
+  } else if (!existingCountry && inferredCountryName) {
+    opportunity.country = inferredCountryName;
+  } else {
+    opportunity.country = existingCountry;
+  }
 
   opportunity.location_full = rawLocation;
-
-  if (city && country) {
-    opportunity.location = `${city}, ${country}`;
-  }
 
   return opportunity;
 }
@@ -2443,12 +2482,16 @@ async function loadData() {
     currentActiveData =
       payload?.activeData || null;
 
-    activeOpportunities =
+    availableActiveOpportunities =
       normalizeLoadedOpportunities(
         Array.isArray(payload?.activeData?.opportunities)
           ? payload.activeData.opportunities
           : [],
       );
+
+    activeOpportunities = [
+      ...availableActiveOpportunities,
+    ];
 
     expiredOpportunities =
       Array.isArray(payload?.expiredData?.opportunities)
