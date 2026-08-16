@@ -1569,6 +1569,127 @@ async function ensureParticipantCountryIndex() {
   return participantCountryIndex;
 }
 
+
+function getTranslatedCountryName(code, fallback) {
+  const translations = {
+    fr: {
+      AL: "Albanie",
+      DZ: "Algérie",
+      AM: "Arménie",
+      AW: "Aruba",
+      AT: "Autriche",
+      AZ: "Azerbaïdjan",
+      BY: "Biélorussie",
+      BE: "Belgique",
+      BA: "Bosnie-Herzégovine",
+      BG: "Bulgarie",
+      HR: "Croatie",
+      CY: "Chypre",
+      CZ: "Tchéquie",
+      DK: "Danemark",
+      EG: "Égypte",
+      EE: "Estonie",
+      FI: "Finlande",
+      FR: "France",
+      GE: "Géorgie",
+      DE: "Allemagne",
+      GR: "Grèce",
+      HU: "Hongrie",
+      IS: "Islande",
+      IE: "Irlande",
+      IL: "Israël",
+      IT: "Italie",
+      JO: "Jordanie",
+      LV: "Lettonie",
+      LB: "Liban",
+      LY: "Libye",
+      LI: "Liechtenstein",
+      LT: "Lituanie",
+      LU: "Luxembourg",
+      MT: "Malte",
+      MD: "Moldavie",
+      ME: "Monténégro",
+      MA: "Maroc",
+      NL: "Pays-Bas",
+      MK: "Macédoine du Nord",
+      NO: "Norvège",
+      PS: "Palestine",
+      PL: "Pologne",
+      PT: "Portugal",
+      RO: "Roumanie",
+      RU: "Russie",
+      RS: "Serbie",
+      SK: "Slovaquie",
+      SI: "Slovénie",
+      ES: "Espagne",
+      SE: "Suède",
+      SY: "Syrie",
+      TN: "Tunisie",
+      TR: "Türkiye",
+      UA: "Ukraine"
+    },
+    ar: {
+      AL: "ألبانيا",
+      DZ: "الجزائر",
+      AM: "أرمينيا",
+      AW: "أروبا",
+      AT: "النمسا",
+      AZ: "أذربيجان",
+      BY: "بيلاروسيا",
+      BE: "بلجيكا",
+      BA: "البوسنة والهرسك",
+      BG: "بلغاريا",
+      HR: "كرواتيا",
+      CY: "قبرص",
+      CZ: "التشيك",
+      DK: "الدنمارك",
+      EG: "مصر",
+      EE: "إستونيا",
+      FI: "فنلندا",
+      FR: "فرنسا",
+      GE: "جورجيا",
+      DE: "ألمانيا",
+      GR: "اليونان",
+      HU: "المجر",
+      IS: "آيسلندا",
+      IE: "أيرلندا",
+      IL: "إسرائيل",
+      IT: "إيطاليا",
+      JO: "الأردن",
+      LV: "لاتفيا",
+      LB: "لبنان",
+      LY: "ليبيا",
+      LI: "ليختنشتاين",
+      LT: "ليتوانيا",
+      LU: "لوكسمبورغ",
+      MT: "مالطا",
+      MD: "مولدوفا",
+      ME: "الجبل الأسود",
+      MA: "المغرب",
+      NL: "هولندا",
+      MK: "مقدونيا الشمالية",
+      NO: "النرويج",
+      PS: "فلسطين",
+      PL: "بولندا",
+      PT: "البرتغال",
+      RO: "رومانيا",
+      RU: "روسيا",
+      RS: "صربيا",
+      SK: "سلوفاكيا",
+      SI: "سلوفينيا",
+      ES: "إسبانيا",
+      SE: "السويد",
+      SY: "سوريا",
+      TN: "تونس",
+      TR: "تركيا",
+      UA: "أوكرانيا"
+    }
+  };
+
+  const language = currentLanguage || "en";
+  return translations[language]?.[code] || fallback;
+}
+
 function populateParticipantCountries() {
   if (!participantCountryFilter) {
     return;
@@ -1598,8 +1719,7 @@ function populateParticipantCountries() {
       option.value =
         country.name;
 
-      option.textContent =
-        `${country.flag} ${country.name}`;
+      option.textContent = getTranslatedCountryName(country.code, country.name);
 
       participantCountryFilter.appendChild(
         option,
