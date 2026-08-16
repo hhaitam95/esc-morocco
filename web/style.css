@@ -1611,11 +1611,15 @@ html[dir="rtl"] .participant-selector {
   }
 }
 
-/* ================================================================
-   Responsive mobile language dropdown
-   ================================================================ */
+/* ============================================================
+   MOBILE LANGUAGE DROPDOWN
+   ============================================================ */
 
 @media (max-width: 700px) {
+  .header-actions {
+    width: 100%;
+  }
+
   .language-dropdown {
     position: relative;
   }
@@ -1623,26 +1627,22 @@ html[dir="rtl"] .participant-selector {
   .language-dropdown-menu {
     position: absolute;
     top: calc(100% + 8px);
-
     right: 0;
     left: auto;
 
-    width: max-content;
     min-width: 160px;
-    max-width: calc(100vw - 24px);
+    max-width: calc(100vw - 18px);
 
     box-sizing: border-box;
     z-index: 1000;
   }
 
+  .language-option {
+    white-space: normal;
+  }
+
   html[dir="rtl"] .language-dropdown-menu {
     right: auto;
     left: 0;
-  }
-}
-
-@media (max-width: 450px) {
-  .language-dropdown-menu {
-    max-width: calc(100vw - 16px);
   }
 }
