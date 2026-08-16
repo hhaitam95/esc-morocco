@@ -1621,32 +1621,27 @@ html[dir="rtl"] .participant-selector {
   }
 
   .language-dropdown-menu {
-    position: fixed;
-    top: auto;
-    right: 12px;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
     left: auto;
+
     width: max-content;
     min-width: 160px;
     max-width: calc(100vw - 24px);
+
     box-sizing: border-box;
     z-index: 1000;
   }
 
   html[dir="rtl"] .language-dropdown-menu {
     right: auto;
-    left: 12px;
+    left: 0;
   }
 }
 
 @media (max-width: 450px) {
   .language-dropdown-menu {
-    right: 8px;
-    left: auto;
     max-width: calc(100vw - 16px);
-  }
-
-  html[dir="rtl"] .language-dropdown-menu {
-    right: auto;
-    left: 8px;
   }
 }
