@@ -73,10 +73,6 @@ const ESC_PARTICIPANT_COUNTRIES = [
 // Frontend logic
 // ============================================================
 
-const DATA_URL = "opportunities.json";
-const EXPIRED_DATA_URL = "expired.json";
-const PARTICIPANT_COUNTRY_INDEX_URL = "participant_country_index.json";
-
 // ============================================================
 // STATE
 // ============================================================
@@ -85,7 +81,6 @@ let activeOpportunities = [];
 let expiredOpportunities = [];
 let currentLanguage = 'en';
 let currentActiveData = null;
-let participantCountryIndex = null;
 
 // ============================================================
 // DOM ELEMENTS
@@ -1502,74 +1497,6 @@ function getParticipantCountryCode(name) {
     .join("");
 }
 
-function getParticipantCountryOpportunityIds() {
-  if (!selectedParticipantCountry) {
-    return null;
-  }
-
-  if (
-    !participantCountryIndex ||
-    typeof participantCountryIndex.countries !==
-      "object"
-  ) {
-    return new Set();
-  }
-
-  const countryCode =
-    getParticipantCountryCode(
-      selectedParticipantCountry,
-    );
-
-  if (!countryCode) {
-    return new Set();
-  }
-
-  const ids =
-    participantCountryIndex.countries[
-      countryCode
-    ];
-
-  if (!Array.isArray(ids)) {
-    return new Set();
-  }
-
-  return new Set(
-    ids.map((id) =>
-      String(id),
-    ),
-  );
-}
-
-async function ensureParticipantCountryIndex() {
-  if (
-    participantCountryIndex &&
-    typeof participantCountryIndex.countries ===
-      "object"
-  ) {
-    return participantCountryIndex;
-  }
-
-  const data = await fetchJson(
-    PARTICIPANT_COUNTRY_INDEX_URL,
-  );
-
-  if (
-    !data ||
-    typeof data !== "object" ||
-    !data.countries ||
-    typeof data.countries !== "object"
-  ) {
-    throw new Error(
-      "Participant-country index has an invalid structure.",
-    );
-  }
-
-  participantCountryIndex = data;
-
-  return participantCountryIndex;
-}
-
-
 function getTranslatedCountryName(code, fallback) {
   const translations = {
     fr: {
@@ -1893,8 +1820,6 @@ function getFilteredActive() {
   const type =
     typeFilter.value;
 
-  const participantOpportunityIds =
-    getParticipantCountryOpportunityIds();
 
   return activeOpportunities.filter(
     (opportunity) => {
@@ -1926,15 +1851,6 @@ function getFilteredActive() {
         return false;
       }
 
-      if (
-        participantOpportunityIds !==
-          null &&
-        !participantOpportunityIds.has(
-          String(opportunity.id),
-        )
-      ) {
-        return false;
-      }
 
       if (
         type &&
@@ -2381,81 +2297,47 @@ function updateHeader(data) {
 // DATA FETCHING
 // ============================================================
 
-async function fetchJson(url) {
-  const response = await fetch(`${url}?t=${Date.now()}`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
 // ============================================================
 // LOAD DATA
 // ============================================================
 
 async function loadData() {
-  loadingMessage.classList.remove(
-    "hidden",
-  );
-
-  errorMessage.classList.add(
-    "hidden",
-  );
+  loadingMessage.classList.remove("hidden");
+  errorMessage.classList.add("hidden");
 
   try {
-    const activeData =
-      await fetchJson(DATA_URL);
+    const provider = window.ESC_DATA_PROVIDER;
 
-    if (
-      !activeData ||
-      !Array.isArray(
-        activeData.opportunities,
-      )
-    ) {
-      throw new Error(
-        "Published opportunity cache has an invalid structure.",
-      );
+    if (!provider || provider.enabled !== true) {
+      activeOpportunities = [];
+      expiredOpportunities = [];
+      currentActiveData = null;
+
+      populateFilters();
+      populateParticipantCountries();
+
+      resetParticipantSearchDisplay();
+      renderExpired();
+
+      return;
     }
+
+    const payload = await provider.load();
 
     currentActiveData =
-      activeData;
+      payload?.activeData || null;
 
     activeOpportunities =
-      activeData.opportunities;
+      Array.isArray(payload?.activeData?.opportunities)
+        ? payload.activeData.opportunities
+        : [];
 
-    /*
-     * The participant-country index is intentionally loaded
-     * through the single shared loader.
-     *
-     * loadData() must not fetch PARTICIPANT_COUNTRY_INDEX_URL
-     * directly. The index is loaded on demand by
-     * ensureParticipantCountryIndex().
-     */
-    await ensureParticipantCountryIndex();
+    expiredOpportunities =
+      Array.isArray(payload?.expiredData?.opportunities)
+        ? payload.expiredData.opportunities
+        : [];
 
-    calculateNewOpportunities(
-      activeOpportunities,
-    );
-
-    try {
-      const expiredData =
-        await fetchJson(
-          EXPIRED_DATA_URL,
-        );
-
-      expiredOpportunities =
-        Array.isArray(
-          expiredData?.opportunities,
-        )
-          ? expiredData.opportunities
-          : [];
-    } catch {
-      expiredOpportunities = [];
-    }
+    calculateNewOpportunities(activeOpportunities);
 
     populateFilters();
     populateParticipantCountries();
@@ -2469,22 +2351,20 @@ async function loadData() {
     );
 
     activeOpportunities = [];
+    expiredOpportunities = [];
     currentActiveData = null;
-    participantCountryIndex = null;
 
     opportunityCount.textContent = "—";
     activeResultCount.textContent = "—";
     lastUpdated.textContent = "—";
 
-    errorMessage.classList.remove(
-      "hidden",
-    );
+    errorMessage.classList.remove("hidden");
   } finally {
-    loadingMessage.classList.add(
-      "hidden",
-    );
+    loadingMessage.classList.add("hidden");
   }
 }
+
+
 
 // ============================================================
 // REFRESH BUTTON
