@@ -1646,3 +1646,16 @@ html[dir="rtl"] .participant-selector {
     left: 0;
   }
 }
+
+/* Mobile language dropdown alignment fix */
+@media (max-width: 700px) {
+  .language-dropdown .language-dropdown-menu {
+    left: 0;
+    right: auto;
+  }
+
+  html[dir="rtl"] .language-dropdown .language-dropdown-menu {
+    left: auto;
+    right: 0;
+  }
+}
