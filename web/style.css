@@ -1623,6 +1623,7 @@ html[dir="rtl"] .participant-selector {
   .language-dropdown-menu {
     position: absolute;
     top: calc(100% + 8px);
+
     right: 0;
     left: auto;
 
