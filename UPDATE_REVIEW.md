@@ -1,40 +1,41 @@
-# ESC Opportunity Finder — Scraper to Pages Deployment Fix
+# ESC Opportunity Finder — Phase 2 Production Review
 
-## Root cause
+## Objective
 
-The scraper workflow successfully updated the cache on main.
+Simplify the backend architecture so there is one scraper workflow and one canonical opportunity dataset.
 
-GitHub Pages previously depended on a normal push event, which was
-not reliably triggered by the GitHub Actions cache commit.
+## Baseline
 
-## Fix
+- Canonical opportunities before migration: **1111**
+- Expired opportunities: **30**
+- generated_at: `2026-08-17T10:21:03.741260`
 
-deploy.yml now listens for:
+## Architecture after migration
 
-workflow_run:
-  workflows:
-    - "Update ESC Opportunities"
-  types:
-    - completed
+- `.github/workflows/update.yml` = only scraper/update workflow
+- `.github/workflows/deploy.yml` = only Pages deployment workflow
+- `data/opportunities.json` = canonical opportunity dataset
+- `data/expired.json` = canonical expired dataset
+- `data/checkpoint.json` = scraper progress
+- `web/data-provider.js` = frontend data access
 
-and deploys only after a successful scraper workflow.
+## Changes
 
-## Production flow
+- `.github/workflows/update.yml`
+- `.github/workflows/deploy.yml`
+- `web/data-provider.js`
 
-Update ESC Opportunities
-    -> incremental scraper
-    -> cache publication
-    -> scraper workflow success
-    -> deploy.yml workflow_run
-    -> GitHub Pages
-    -> live website
+## Removed
 
-## Schedule
-
-The scraper remains approximately every 30 minutes:
-
-17,47 * * * *
+- `.github/workflows/scrape.yml`
+- `web/opportunities.json`
+- `web/expired.json`
 
 ## Safety
 
-No protected cache/checkpoint file is modified.
+- `data/opportunities.json` was not rebuilt.
+- `data/checkpoint.json` was not rebuilt.
+- `data/expired.json` was preserved.
+- `data/full_detail_repair_checkpoint.json` was preserved.
+- No scraper execution was performed.
+- No Git history rewrite was performed.

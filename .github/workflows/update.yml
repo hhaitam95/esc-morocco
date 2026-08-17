@@ -167,7 +167,6 @@ jobs:
           PY
 
               if [ $? -eq 0 ]; then
-                cp data/opportunities.json web/opportunities.json
                 echo "Published canonical opportunity cache to web/."
               else
                 echo "Canonical cache validation failed; keeping published cache."
@@ -175,7 +174,6 @@ jobs:
             fi
 
             if [ -f data/expired.json ]; then
-              cp data/expired.json web/expired.json
             fi
 
             # --------------------------------------------------------
@@ -189,8 +187,6 @@ jobs:
             git add -- data/opportunities.json
             git add -- data/checkpoint.json
             git add -- data/expired.json
-            git add -- web/opportunities.json
-            git add -- web/expired.json
 
             STAGED="$(git diff --cached --name-only)"
 

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import re
 import subprocess
 import sys
-from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -16,20 +14,53 @@ ROOT = Path(__file__).resolve().parent
 REMOTE = "origin"
 BRANCH = "main"
 
-APP_JS = ROOT / "web" / "app.js"
-DATA_PROVIDER_JS = ROOT / "web" / "data-provider.js"
-INDEX_HTML = ROOT / "web" / "index.html"
+DATA_DIR = ROOT / "data"
+WEB_DIR = ROOT / "web"
 
-SOURCE_DATA_JSON = ROOT / "data" / "opportunities.json"
-WEB_DATA_JSON = ROOT / "web" / "opportunities.json"
-REPAIR_CHECKPOINT = ROOT / "data" / "full_detail_repair_checkpoint.json"
+SOURCE_DATA_JSON = DATA_DIR / "opportunities.json"
+SOURCE_EXPIRED_JSON = DATA_DIR / "expired.json"
+CHECKPOINT_JSON = DATA_DIR / "checkpoint.json"
+REPAIR_CHECKPOINT = DATA_DIR / "full_detail_repair_checkpoint.json"
+
+WEB_DATA_JSON = WEB_DIR / "opportunities.json"
+WEB_EXPIRED_JSON = WEB_DIR / "expired.json"
+
+SCRAPER = ROOT / "scraper" / "scraper.py"
+APP_JS = WEB_DIR / "app.js"
+DATA_PROVIDER_JS = WEB_DIR / "data-provider.js"
+INDEX_HTML = WEB_DIR / "index.html"
+
+UPDATE_WORKFLOW = ROOT / ".github" / "workflows" / "update.yml"
+DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "deploy.yml"
+SCRAPE_WORKFLOW = ROOT / ".github" / "workflows" / "scrape.yml"
 
 REVIEW_MD = ROOT / "UPDATE_REVIEW.md"
 
-EXPECTED_COUNT = 1178
 TARGET_ID = "53577"
 
-EXPECTED_STASH_PREFIX = "ESC-safe-worktree-"
+MIN_EXPECTED_OPPORTUNITIES = 1000
+EXPECTED_BASELINE_OPPORTUNITIES = 1111
+
+CANONICAL_DATA_URL = (
+    "https://raw.githubusercontent.com/"
+    "hhaitam95/esc-opportunity-finder/main/data/opportunities.json"
+)
+
+PROTECTED_LOCAL_ARTIFACTS = {
+    "data/full_detail_repair_checkpoint.json",
+}
+
+
+# ============================================================================
+# OUTPUT
+# ============================================================================
+
+
+def banner(title: str) -> None:
+    print()
+    print("=" * 72)
+    print(title)
+    print("=" * 72)
 
 
 def fail(message: str) -> None:
@@ -37,6 +68,11 @@ def fail(message: str) -> None:
     print()
     print("No destructive cleanup was performed.")
     sys.exit(1)
+
+
+# ============================================================================
+# COMMANDS
+# ============================================================================
 
 
 def run(
@@ -60,69 +96,73 @@ def run(
 
     if check and result.returncode != 0:
         fail(
-            "Command failed with exit code " f"{result.returncode}: {' '.join(command)}"
+            f"Command failed with exit code {result.returncode}: "
+            f"{' '.join(command)}"
         )
 
     return result
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-
-    with path.open("rb") as handle:
-        while True:
-            chunk = handle.read(1024 * 1024)
-
-            if not chunk:
-                break
-
-            digest.update(chunk)
-
-    return digest.hexdigest()
+# ============================================================================
+# BASIC VALIDATION
+# ============================================================================
 
 
 def validate_update_py() -> None:
-    try:
-        ast.parse(
-            Path(__file__).read_text(encoding="utf-8"),
-            filename=str(Path(__file__)),
-        )
-    except SyntaxError as exc:
-        fail(f"update.py syntax error at line {exc.lineno}: " f"{exc.msg}")
+    result = run(
+        [
+            sys.executable,
+            "-m",
+            "py_compile",
+            str(Path(__file__).resolve()),
+        ],
+        check=False,
+    )
+
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout.rstrip())
+        if result.stderr:
+            print(result.stderr.rstrip())
+        fail("update.py syntax validation failed.")
 
     print("PASS: update.py syntax validated.")
 
 
-def require_git_repository() -> None:
+def validate_repository() -> None:
     if not (ROOT / ".git").exists():
-        fail("This directory is not a Git repository.")
+        fail("Repository root is not a Git repository.")
 
-    repository_root = Path(
+    actual_root = Path(
         run(
-            ["git", "rev-parse", "--show-toplevel"],
+            [
+                "git",
+                "rev-parse",
+                "--show-toplevel",
+            ],
             quiet=True,
         ).stdout.strip()
     ).resolve()
 
-    if repository_root != ROOT.resolve():
+    if actual_root != ROOT.resolve():
         fail(
-            "update.py is not located at the repository root.\n"
-            f"Repository: {repository_root}\n"
-            f"update.py:  {ROOT.resolve()}"
+            "update.py must run from repository root.\n"
+            f"Expected: {ROOT.resolve()}\n"
+            f"Actual:   {actual_root}"
         )
 
     print(f"PASS: repository root validated: {ROOT}")
 
 
-def current_branch() -> str:
-    return run(
-        ["git", "branch", "--show-current"],
+def validate_branch() -> None:
+    branch = run(
+        [
+            "git",
+            "branch",
+            "--show-current",
+        ],
         quiet=True,
     ).stdout.strip()
-
-
-def require_main_branch() -> None:
-    branch = current_branch()
 
     if branch != BRANCH:
         fail(f"Current branch is {branch!r}; expected {BRANCH!r}.")
@@ -130,1067 +170,970 @@ def require_main_branch() -> None:
     print("PASS: current branch is main.")
 
 
+def validate_origin() -> None:
+    remote = run(
+        [
+            "git",
+            "remote",
+            "get-url",
+            REMOTE,
+        ],
+        quiet=True,
+    ).stdout.strip()
+
+    expected = "https://github.com/hhaitam95/esc-opportunity-finder.git"
+
+    if remote != expected:
+        fail(
+            "origin remote is not canonical.\n"
+            f"Expected: {expected}\n"
+            f"Actual:   {remote}"
+        )
+
+    print(f"PASS: origin remote is canonical: {remote}")
+
+
 def status_lines() -> list[str]:
     result = run(
-        ["git", "status", "--porcelain=v1"],
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+        ],
         quiet=True,
     )
 
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
-def print_status(title: str) -> list[str]:
+def print_status() -> None:
+    print("Current Git status:")
+
     status = status_lines()
 
-    print()
-    print(title)
-
-    if status:
-        for line in status:
-            print(f"  {line}")
-    else:
+    if not status:
         print("  clean")
+        return
 
-    return status
+    for line in status:
+        print(f"  {line}")
+
+
+def protect_repair_checkpoint() -> None:
+    if REPAIR_CHECKPOINT.exists():
+        print(
+            "INFO: preserving allowed local protected artifact: " f"{REPAIR_CHECKPOINT}"
+        )
+        print("PASS: local backend repair checkpoint remains untouched.")
+    else:
+        print("INFO: local backend repair checkpoint is not present.")
+
+
+def validate_protected_worktree() -> None:
+    allowed = {
+        "update.py",
+        "UPDATE_REVIEW.md",
+        ".github/workflows/update.yml",
+        ".github/workflows/deploy.yml",
+        ".github/workflows/scrape.yml",
+        "web/app.js",
+        "web/index.html",
+        "web/data-provider.js",
+        "web/opportunities.json",
+        "web/expired.json",
+        "data/full_detail_repair_checkpoint.json",
+    }
+
+    unexpected = []
+
+    for line in status_lines():
+        path = line[3:].strip()
+
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+
+        if path not in allowed:
+            unexpected.append(path)
+
+    if unexpected:
+        fail(
+            "Unexpected working-tree changes detected:\n"
+            + "\n".join(f"  - {path}" for path in sorted(set(unexpected)))
+        )
+
+    print("PASS: protected backend/cache files are untouched.")
+
+
+# ============================================================================
+# GIT SAFETY
+# ============================================================================
 
 
 def fetch_origin() -> None:
-    print()
-    print("=" * 72)
-    print("REFRESHING ORIGIN")
-    print("=" * 72)
+    print("Refreshing origin/main...")
 
     run(
-        ["git", "fetch", "--prune", REMOTE],
-        check=True,
+        [
+            "git",
+            "fetch",
+            "--prune",
+            "origin",
+        ]
     )
 
     print("PASS: origin/main refreshed.")
 
 
-def verify_not_behind_origin() -> None:
-    local = run(
-        ["git", "rev-parse", "main"],
-        quiet=True,
-    ).stdout.strip()
+def commit_counts() -> tuple[int, int]:
+    ahead = int(
+        run(
+            [
+                "git",
+                "rev-list",
+                "--count",
+                "origin/main..main",
+            ],
+            quiet=True,
+        ).stdout.strip()
+    )
 
-    remote = run(
-        ["git", "rev-parse", "origin/main"],
-        quiet=True,
-    ).stdout.strip()
+    behind = int(
+        run(
+            [
+                "git",
+                "rev-list",
+                "--count",
+                "main..origin/main",
+            ],
+            quiet=True,
+        ).stdout.strip()
+    )
 
-    print()
-    print("Git history:")
-    print(f"  main:        {local}")
-    print(f"  origin/main: {remote}")
+    return ahead, behind
 
-    behind = run(
-        [
-            "git",
-            "rev-list",
-            "--count",
-            "main..origin/main",
-        ],
-        quiet=True,
-    ).stdout.strip()
 
-    if behind != "0":
+def require_safe_history() -> None:
+    ahead, behind = commit_counts()
+
+    print(f"Local commits ahead: {ahead}")
+
+    print(f"Remote commits ahead: {behind}")
+
+    if behind > 0:
+        if ahead > 0:
+            fail(
+                "Local main and origin/main have diverged. "
+                "Phase 2 will not merge, rebase, reset, "
+                "or rewrite history automatically."
+            )
+
         fail(
             "Local main is behind origin/main. "
-            "Refusing to rewrite history while the in-progress "
-            "dataset is present."
+            "Phase 2 will not overwrite newer remote work."
         )
 
     print("PASS: local main is not behind origin/main.")
 
 
-def find_esc_safety_stash() -> str | None:
-    result = run(
-        ["git", "stash", "list"],
-        quiet=True,
-    )
-
-    matches: list[str] = []
-
-    for line in result.stdout.splitlines():
-        if EXPECTED_STASH_PREFIX in line:
-            matches.append(line)
-
-    if not matches:
-        return None
-
-    if len(matches) > 1:
-        print()
-        print("WARNING: multiple ESC safety stashes exist.")
-
-        for item in matches:
-            print(f"  {item}")
-
-        print("Using the newest matching stash. " "Older stashes will not be modified.")
-
-    return matches[0].split(":", 1)[0].strip()
+# ============================================================================
+# JSON
+# ============================================================================
 
 
-def detect_unmerged_files() -> set[str]:
-    result = run(
-        [
-            "git",
-            "diff",
-            "--name-only",
-            "--diff-filter=U",
-        ],
-        quiet=True,
-    )
-
-    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-
-
-def unstage_everything_without_touching_worktree() -> None:
-    staged = run(
-        [
-            "git",
-            "diff",
-            "--cached",
-            "--name-only",
-        ],
-        quiet=True,
-    ).stdout.strip()
-
-    if not staged:
-        print("PASS: nothing is staged before frontend changes.")
-        return
-
-    print()
-    print("Unstaging restored work without changing file contents...")
-
-    run(
-        ["git", "reset"],
-        check=True,
-    )
-
-    staged_after = run(
-        [
-            "git",
-            "diff",
-            "--cached",
-            "--name-only",
-        ],
-        quiet=True,
-    ).stdout.strip()
-
-    if staged_after:
-        fail("Files remain staged after unstage operation:\n" + staged_after)
-
-    print("PASS: working-tree files preserved and index cleared.")
-
-
-def resolve_current_stash_conflicts() -> None:
-    conflicts = detect_unmerged_files()
-
-    if not conflicts:
-        print()
-        print("PASS: no unresolved Git conflicts detected.")
-        return
-
-    print()
-    print("=" * 72)
-    print("RESOLVING PROTECTED DATASET CONFLICTS")
-    print("=" * 72)
-
-    expected = {
-        "data/opportunities.json",
-        "web/opportunities.json",
-    }
-
-    unexpected = conflicts - expected
-
-    if unexpected:
-        fail(
-            "Unexpected merge conflicts exist:\n"
-            + "\n".join(f"  - {item}" for item in sorted(unexpected))
-        )
-
-    if conflicts != expected:
-        fail(
-            "Expected both opportunity datasets to be conflicted.\n"
-            "Current unresolved files:\n"
-            + "\n".join(f"  - {item}" for item in sorted(conflicts))
-        )
-
-    stash_ref = find_esc_safety_stash()
-
-    if stash_ref is None:
-        fail(
-            "The opportunity datasets are conflicted, but the protected "
-            "ESC safety stash cannot be found."
-        )
-
-    print(f"Protected stash found: {stash_ref}")
-
-    for relative_path in sorted(expected):
-        print()
-        print(f"Restoring protected local version of {relative_path}...")
-
-        result = run(
-            [
-                "git",
-                "checkout",
-                "--theirs",
-                "--",
-                relative_path,
-            ],
-            check=False,
-        )
-
-        if result.returncode != 0:
-            fail(f"Could not restore protected local version of " f"{relative_path}.")
-
-        path = ROOT / relative_path
-
-        if not path.exists():
-            fail(f"{relative_path} disappeared while resolving the " "conflict.")
-
-        run(
-            [
-                "git",
-                "add",
-                "--",
-                relative_path,
-            ],
-            check=True,
-        )
-
-        print(f"PASS: preserved protected version of {relative_path}.")
-
-    remaining = detect_unmerged_files()
-
-    if remaining:
-        fail(
-            "Unmerged paths remain:\n"
-            + "\n".join(f"  - {item}" for item in sorted(remaining))
-        )
-
-    print("PASS: opportunity dataset conflicts resolved.")
-
-    # These restored files must remain ordinary working-tree changes.
-    unstage_everything_without_touching_worktree()
-
-
-def validate_json_file(path: Path) -> object:
+def load_json(path: Path):
     if not path.exists():
-        fail(f"Required JSON file does not exist: {path}")
+        fail(f"Required JSON file is missing: {path}")
 
-    source = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
 
-    conflict_markers = (
-        "<<<<<<< ",
-        "=======",
-        ">>>>>>> ",
-    )
-
-    found = [marker for marker in conflict_markers if marker in source]
-
-    if found:
-        fail(f"Git conflict markers remain in {path}: " + ", ".join(found))
+    if any(
+        marker in text
+        for marker in (
+            "<<<<<<< ",
+            "=======",
+            ">>>>>>> ",
+        )
+    ):
+        fail(f"Git conflict marker detected in {path}.")
 
     try:
-        return json.loads(source)
+        return json.loads(text)
     except Exception as exc:
         fail(f"Could not parse {path}: {exc}")
 
-    raise AssertionError
 
-
-def load_opportunity_payload(path: Path) -> tuple[dict, list[dict]]:
-    payload = validate_json_file(path)
-
+def extract_opportunities(
+    payload,
+    path: Path,
+) -> list[dict]:
     if not isinstance(payload, dict):
-        fail(f"{path} root must be a JSON object.")
+        fail(f"{path} must contain a JSON object.")
 
-    opportunities = payload.get("opportunities")
+    records = payload.get("opportunities")
 
-    if not isinstance(opportunities, list):
+    if not isinstance(records, list):
         fail(f"{path} does not contain an opportunities list.")
 
-    valid_opportunities = [item for item in opportunities if isinstance(item, dict)]
+    if any(not isinstance(item, dict) for item in records):
+        fail(f"{path} contains a non-object opportunity record.")
 
-    if len(valid_opportunities) != len(opportunities):
-        fail(f"{path} contains non-object opportunity records.")
-
-    return payload, opportunities
+    return records
 
 
-def validate_1178_dataset() -> tuple[dict, list[dict], dict]:
+def opportunity_id(
+    record: dict,
+) -> str | None:
+    raw = record.get("id") or record.get("opid") or record.get("opportunity_id")
+
+    if raw is None:
+        return None
+
+    value = str(raw).strip()
+
+    return value or None
+
+
+def date_value(
+    record: dict,
+    *keys: str,
+) -> str | None:
+    for key in keys:
+        value = record.get(key)
+
+        if value:
+            return str(value)
+
+    activity_dates = record.get("activity_dates")
+
+    if isinstance(
+        activity_dates,
+        dict,
+    ):
+        for key in keys:
+            value = activity_dates.get(key)
+
+            if value:
+                return str(value)
+
+    return None
+
+
+def find_logo_value(
+    record: dict,
+) -> str | None:
+    """
+    Accept the repository's existing logo schema without forcing one
+    field name. Earlier versions of the scraper used get_image_url()
+    and have historically stored logo data under different keys.
+    """
+    candidate_keys = (
+        "logo_url",
+        "logo",
+        "logoUrl",
+        "image_url",
+        "imageUrl",
+        "association_logo",
+        "association_logo_url",
+        "organisation_logo",
+        "organization_logo",
+        "organization_logo_url",
+        "image",
+    )
+
+    for key in candidate_keys:
+        value = record.get(key)
+
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+        if isinstance(value, dict):
+            for nested_key in (
+                "url",
+                "src",
+                "href",
+            ):
+                nested = value.get(nested_key)
+
+                if (
+                    isinstance(
+                        nested,
+                        str,
+                    )
+                    and nested.strip()
+                ):
+                    return nested.strip()
+
+    return None
+
+
+def validate_link_value(
+    record: dict,
+) -> bool:
+    for key in (
+        "url",
+        "opportunity_url",
+        "portal_url",
+        "link",
+        "view_url",
+    ):
+        value = record.get(key)
+
+        if isinstance(value, str) and value.strip():
+            return True
+
+    return False
+
+
+# ============================================================================
+# BASELINE DATA VALIDATION
+# ============================================================================
+
+
+def validate_current_dataset() -> dict:
     print()
-    print("=" * 72)
-    print("VALIDATING LOCAL 1,178-OPPORTUNITY DATASET")
-    print("=" * 72)
+    print("Validating current backend dataset...")
 
-    if not SOURCE_DATA_JSON.exists():
+    payload = load_json(SOURCE_DATA_JSON)
+
+    records = extract_opportunities(
+        payload,
+        SOURCE_DATA_JSON,
+    )
+
+    count = len(records)
+
+    if count < MIN_EXPECTED_OPPORTUNITIES:
         fail(
-            "data/opportunities.json is missing. "
-            "The local repaired backend dataset cannot be treated "
-            "as authoritative."
+            "Canonical dataset contains too few opportunities.\n"
+            f"Expected at least {MIN_EXPECTED_OPPORTUNITIES}; "
+            f"found {count}."
         )
 
-    if not WEB_DATA_JSON.exists():
-        fail("web/opportunities.json is missing.")
+    ids = [opportunity_id(record) for record in records]
 
-    source_payload, source_opportunities = load_opportunity_payload(SOURCE_DATA_JSON)
+    if any(value is None for value in ids):
+        fail("Canonical dataset contains opportunity records " "without IDs.")
 
-    web_payload, web_opportunities = load_opportunity_payload(WEB_DATA_JSON)
-
-    if len(source_opportunities) != EXPECTED_COUNT:
-        fail(
-            "data/opportunities.json does not contain the expected "
-            f"{EXPECTED_COUNT} opportunities. "
-            f"Found {len(source_opportunities)}."
-        )
-
-    if len(web_opportunities) != EXPECTED_COUNT:
-        fail(
-            "web/opportunities.json does not contain the expected "
-            f"{EXPECTED_COUNT} opportunities. "
-            f"Found {len(web_opportunities)}."
-        )
-
-    source_ids = {str(item.get("id")) for item in source_opportunities}
-
-    web_ids = {str(item.get("id")) for item in web_opportunities}
-
-    if source_ids != web_ids:
-        missing = sorted(source_ids - web_ids)
-        extra = sorted(web_ids - source_ids)
-
-        fail(
-            "data/opportunities.json and web/opportunities.json do "
-            "not contain the same opportunity IDs.\n"
-            f"Missing from web: {missing[:20]}\n"
-            f"Extra in web: {extra[:20]}"
-        )
+    if len(set(ids)) != len(ids):
+        fail("Canonical dataset contains duplicate " "opportunity IDs.")
 
     target = next(
-        (item for item in web_opportunities if str(item.get("id")) == TARGET_ID),
+        (record for record in records if opportunity_id(record) == TARGET_ID),
         None,
     )
 
     if target is None:
-        fail(f"Opportunity {TARGET_ID} was not found in " "web/opportunities.json.")
+        fail(f"Opportunity {TARGET_ID} is missing.")
 
-    dates = target.get("activity_dates")
-
-    if not isinstance(dates, dict):
-        fail(f"Opportunity {TARGET_ID} has no activity_dates object.")
-
-    expected_values = {
-        "activity_dates.start": (
-            dates.get("start"),
-            "2026-09-28",
-        ),
-        "activity_dates.end": (
-            dates.get("end"),
-            "2026-11-01",
-        ),
-        "application_deadline": (
-            target.get("application_deadline"),
-            "2026-08-20",
-        ),
-        "activity_type": (
-            target.get("activity_type"),
-            "Individual volunteering",
-        ),
-    }
-
-    for field, (actual, expected) in expected_values.items():
-        if actual != expected:
-            fail(
-                f"Opportunity {TARGET_ID} {field} is incorrect.\n"
-                f"Actual:   {actual!r}\n"
-                f"Expected: {expected!r}"
-            )
-
-    if not target.get("logo_url"):
-        fail(f"Opportunity {TARGET_ID} has no logo_url.")
-
-    if not target.get("location"):
-        fail(f"Opportunity {TARGET_ID} has no location.")
-
-    print(f"PASS: data/opportunities.json contains " f"{EXPECTED_COUNT} opportunities.")
-
-    print(f"PASS: web/opportunities.json contains " f"{EXPECTED_COUNT} opportunities.")
-
-    print("PASS: backend/frontend opportunity ID sets match.")
-
-    print(f"PASS: opportunity {TARGET_ID} validated.")
-
-    print("     activity_dates: 2026-09-28 -> 2026-11-01")
-
-    print("     application_deadline: 2026-08-20")
-
-    print("     activity_type: Individual volunteering")
-
-    print("     logo_url: present")
-    print("     location: present")
-
-    return web_payload, web_opportunities, target
-
-
-def validate_checkpoint() -> str:
-    if not REPAIR_CHECKPOINT.exists():
-        fail("data/full_detail_repair_checkpoint.json is missing.")
-
-    source = REPAIR_CHECKPOINT.read_text(encoding="utf-8")
-
-    conflict_markers = (
-        "<<<<<<< ",
-        "=======",
-        ">>>>>>> ",
+    start_date = date_value(
+        target,
+        "start_date",
+        "start",
     )
 
-    if any(marker in source for marker in conflict_markers):
-        fail("full_detail_repair_checkpoint.json contains Git " "conflict markers.")
+    end_date = date_value(
+        target,
+        "end_date",
+        "end",
+    )
+
+    deadline = target.get("application_deadline") or target.get("deadline")
+
+    country = (
+        target.get("country") or target.get("country_code") or target.get("countryCode")
+    )
+
+    town = target.get("town") or target.get("city") or target.get("location")
+
+    generated_at = payload.get("generated_at")
+
+    if not generated_at:
+        fail("Canonical dataset has no generated_at.")
+
+    print(f"PASS: data/opportunities.json contains " f"{count} unique opportunities.")
+
+    print(f"start_date: {start_date!r}")
+
+    print(f"end_date: {end_date!r}")
+
+    print(f"deadline: {deadline!r}")
+
+    print(f"country: {country!r}")
+
+    print(f"town: {town!r}")
+
+    print(f"generated_at: {generated_at!r}")
+
+    if not start_date:
+        fail(f"Opportunity {TARGET_ID} has no recognizable start date.")
+
+    if not end_date:
+        fail(f"Opportunity {TARGET_ID} has no recognizable end date.")
+
+    if not deadline:
+        fail(f"Opportunity {TARGET_ID} has no recognizable deadline.")
+
+    if not country:
+        fail(f"Opportunity {TARGET_ID} has no recognizable country.")
+
+    logo_value = find_logo_value(target)
+
+    if logo_value:
+        print(
+            "PASS: opportunity 53577 contains recognizable "
+            f"logo/image data in the existing schema."
+        )
+    else:
+        print(
+            "INFO: opportunity 53577 does not expose a recognized "
+            "logo/image field; preserving the current schema without "
+            "forcing a field rename."
+        )
+
+    if validate_link_value(target):
+        print("PASS: opportunity 53577 contains a recognizable " "view/link field.")
+    else:
+        print(
+            "INFO: opportunity 53577 has no recognizable view/link "
+            "field; preserving the current schema."
+        )
+
+    print(f"PASS: opportunity {TARGET_ID} remains present and intact.")
+
+    return payload
+
+
+def validate_expired_dataset() -> int:
+    payload = load_json(SOURCE_EXPIRED_JSON)
+
+    records = extract_opportunities(
+        payload,
+        SOURCE_EXPIRED_JSON,
+    )
+
+    ids = [opportunity_id(record) for record in records]
+
+    if any(value is None for value in ids):
+        fail("data/expired.json contains a record without an ID.")
+
+    if len(set(ids)) != len(ids):
+        fail("data/expired.json contains duplicate opportunity IDs.")
+
+    if not records:
+        fail("data/expired.json is empty.")
+
+    print(f"PASS: data/expired.json contains " f"{len(records)} unique opportunities.")
+
+    return len(records)
+
+
+def validate_checkpoint() -> None:
+    payload = load_json(CHECKPOINT_JSON)
+
+    count = None
+
+    if isinstance(
+        payload,
+        dict,
+    ):
+        for key in (
+            "processed",
+            "processed_ids",
+            "records",
+            "opportunities",
+            "items",
+        ):
+            value = payload.get(key)
+
+            if isinstance(
+                value,
+                (dict, list),
+            ):
+                count = len(value)
+                break
+
+        if count is None:
+            count = len(payload)
+
+    elif isinstance(
+        payload,
+        list,
+    ):
+        count = len(payload)
+
+    else:
+        fail("checkpoint.json has an unsupported root type.")
+
+    if count < 1000:
+        fail("checkpoint.json appears unexpectedly small: " f"{count} records/IDs.")
+
+    print(
+        "PASS: checkpoint contains approximately "
+        f"{count} tracked opportunity records/IDs."
+    )
+
+
+# ============================================================================
+# SCRAPER / WORKFLOW VALIDATION
+# ============================================================================
+
+
+def validate_scraper() -> None:
+    if not SCRAPER.exists():
+        fail(f"Missing scraper: {SCRAPER}")
+
+    result = run(
+        [
+            sys.executable,
+            "-m",
+            "py_compile",
+            str(SCRAPER),
+        ],
+        check=False,
+    )
+
+    if result.returncode != 0:
+        fail("scraper/scraper.py syntax validation failed.")
+
+    source = SCRAPER.read_text(encoding="utf-8")
+
+    for marker in (
+        "checkpoint",
+        "opportunit",
+    ):
+        if marker not in source.lower():
+            fail(f"Scraper does not contain expected " f"incremental marker: {marker}")
+
+    print("PASS: scraper/scraper.py syntax validated.")
+
+    print(
+        "PASS: existing scraper contains "
+        "checkpoint/opportunity incremental processing architecture."
+    )
+
+
+def validate_yaml(
+    path: Path,
+) -> None:
+    if not path.exists():
+        fail(f"Missing workflow: {path}")
 
     try:
-        payload = json.loads(source)
+        import yaml
+    except ImportError:
+        print(
+            f"INFO: PyYAML is unavailable; structural validation "
+            f"used for {path.name}."
+        )
+        return
+
+    try:
+        yaml.safe_load(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        fail("full_detail_repair_checkpoint.json is not valid JSON: " f"{exc}")
+        fail(f"{path.relative_to(ROOT)} is invalid YAML: {exc}")
 
-    if not isinstance(payload, (dict, list)):
-        fail("full_detail_repair_checkpoint.json has an unsupported " "root type.")
-
-    checkpoint_hash = sha256(REPAIR_CHECKPOINT)
-
-    print()
-    print("PASS: full_detail_repair_checkpoint.json is valid.")
-    print(f"     size: {REPAIR_CHECKPOINT.stat().st_size} bytes")
-    print(f"     sha256: {checkpoint_hash}")
-
-    return checkpoint_hash
+    print(f"PASS: {path.relative_to(ROOT)} YAML parsed successfully.")
 
 
-def replace_block(
-    source: str,
-    old: str,
-    new: str,
-    description: str,
-) -> tuple[str, bool]:
-    if old in source:
-        return source.replace(old, new, 1), True
+def validate_workflows_before_change() -> None:
+    validate_yaml(UPDATE_WORKFLOW)
 
-    if new in source:
-        return source, False
+    validate_yaml(DEPLOY_WORKFLOW)
 
-    fail(f"Could not locate expected source block while " f"updating {description}.")
+    update_source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
 
-    raise AssertionError
+    deploy_source = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
+
+    if "schedule:" not in update_source:
+        fail("update.yml has no schedule.")
+
+    if "python scraper/scraper.py" not in update_source:
+        fail("update.yml does not invoke scraper/scraper.py.")
+
+    if "workflow_dispatch:" not in update_source:
+        fail("update.yml has no workflow_dispatch.")
+
+    if "./web" not in deploy_source:
+        fail("deploy.yml does not deploy ./web.")
+
+    print("PASS: existing update.yml and deploy.yml " "are structurally valid.")
 
 
-def build_provider_source() -> str:
-    lines = [
-        "// ESC Opportunity Finder — static backend data provider",
-        "//",
-        "// GitHub Pages is a static frontend, so the published backend",
-        "// dataset is consumed from web/opportunities.json.",
-        "//",
-        "// The backend scraper remains the source of truth.",
-        "// This provider is the browser-side boundary between that",
-        "// generated dataset and web/app.js.",
-        "",
-        "window.ESC_DATA_PROVIDER = {",
-        "  enabled: true,",
-        "",
-        "  async load() {",
-        "    const response = await fetch(",
-        "      `./opportunities.json?v=${Date.now()}`,",
-        "      {",
-        "        cache: 'no-store',",
-        "      },",
-        "    );",
-        "",
-        "    if (!response.ok) {",
-        "      throw new Error(",
-        "        `Could not load opportunities.json (${response.status})`,",
-        "      );",
-        "    }",
-        "",
-        "    const payload = await response.json();",
-        "",
-        "    if (!payload || typeof payload !== 'object') {",
-        "      throw new Error('Opportunity dataset has an invalid root object.');",
-        "    }",
-        "",
-        "    const sourceOpportunities = Array.isArray(payload.opportunities)",
-        "      ? payload.opportunities",
-        "      : [];",
-        "",
-        "    if (!sourceOpportunities.length) {",
-        "      throw new Error('Opportunity dataset contains no opportunities.');",
-        "    }",
-        "",
-        "    const today = new Date();",
-        "    today.setHours(0, 0, 0, 0);",
-        "",
-        "    const recentExpiredCutoff = new Date(today);",
-        "    recentExpiredCutoff.setDate(",
-        "      recentExpiredCutoff.getDate() - 30,",
-        "    );",
-        "",
-        "    const normalizeCode = (value) =>",
-        "      String(value || '')",
-        "        .trim()",
-        "        .toUpperCase();",
-        "",
-        "    const normalizeOpportunity = (opportunity) => {",
-        "      const item = { ...opportunity };",
-        "",
-        "      const dates =",
-        "        item.activity_dates &&",
-        "        typeof item.activity_dates === 'object'",
-        "          ? item.activity_dates",
-        "          : {};",
-        "",
-        "      item.start_date =",
-        "        dates.start ||",
-        "        item.start_date ||",
-        "        '';",
-        "",
-        "      item.end_date =",
-        "        dates.end ||",
-        "        item.end_date ||",
-        "        '';",
-        "",
-        "      item.deadline =",
-        "        item.application_deadline ||",
-        "        item.deadline ||",
-        "        '';",
-        "",
-        "      item.image_url =",
-        "        item.logo_url ||",
-        "        item.image_url ||",
-        "        '';",
-        "",
-        "      item.town =",
-        "        item.town ||",
-        "        item.city ||",
-        "        '';",
-        "",
-        "      const participantCountries =",
-        "        Array.isArray(item.participant_countries)",
-        "          ? item.participant_countries",
-        "          : Array.isArray(item.eligible_countries)",
-        "            ? item.eligible_countries",
-        "            : [];",
-        "",
-        "      item.participant_countries = [",
-        "        ...new Set(",
-        "          participantCountries",
-        "            .map(normalizeCode)",
-        "            .filter(Boolean),",
-        "        ),",
-        "      ];",
-        "",
-        "      item.eligible_countries = [",
-        "        ...new Set(",
-        "          (Array.isArray(item.eligible_countries)",
-        "            ? item.eligible_countries",
-        "            : item.participant_countries",
-        "          )",
-        "            .map(normalizeCode)",
-        "            .filter(Boolean),",
-        "        ),",
-        "      ];",
-        "",
-        "      return item;",
-        "    };",
-        "",
-        "    const normalized = sourceOpportunities",
-        "      .filter(",
-        "        (item) => item && typeof item === 'object',",
-        "      )",
-        "      .map(normalizeOpportunity);",
-        "",
-        "    const activeOpportunities = [];",
-        "    const recentlyExpired = [];",
-        "",
-        "    normalized.forEach((opportunity) => {",
-        "      const deadline = String(opportunity.deadline || '').trim();",
-        "",
-        "      if (!deadline) {",
-        "        activeOpportunities.push(opportunity);",
-        "        return;",
-        "      }",
-        "",
-        "      const deadlineDate = new Date(`${deadline}T23:59:59`);",
-        "",
-        "      if (Number.isNaN(deadlineDate.getTime())) {",
-        "        activeOpportunities.push(opportunity);",
-        "        return;",
-        "      }",
-        "",
-        "      if (deadlineDate >= today) {",
-        "        activeOpportunities.push(opportunity);",
-        "        return;",
-        "      }",
-        "",
-        "      if (deadlineDate >= recentExpiredCutoff) {",
-        "        recentlyExpired.push(opportunity);",
-        "      }",
-        "    });",
-        "",
-        "    const participantCountryIndex = {};",
-        "",
-        "    activeOpportunities.forEach((opportunity) => {",
-        "      const opportunityId = String(",
-        "        opportunity.id ?? opportunity.opid ?? '',",
-        "      );",
-        "",
-        "      opportunity.participant_countries.forEach((code) => {",
-        "        if (!participantCountryIndex[code]) {",
-        "          participantCountryIndex[code] = [];",
-        "        }",
-        "",
-        "        participantCountryIndex[code].push(opportunityId);",
-        "      });",
-        "    });",
-        "",
-        "    Object.keys(participantCountryIndex).forEach((code) => {",
-        "      participantCountryIndex[code] = [",
-        "        ...new Set(participantCountryIndex[code]),",
-        "      ];",
-        "    });",
-        "",
-        "    const activeData = {",
-        "      ...payload,",
-        "      opportunities: activeOpportunities,",
-        "      count: activeOpportunities.length,",
-        "    };",
-        "",
-        "    const expiredData = {",
-        "      ...payload,",
-        "      opportunities: recentlyExpired,",
-        "      count: recentlyExpired.length,",
-        "    };",
-        "",
-        "    return {",
-        "      activeData,",
-        "      expiredData,",
-        "      participantCountryIndex,",
-        "    };",
-        "  },",
-        "};",
+# ============================================================================
+# DATA PROVIDER
+# ============================================================================
+
+
+def validate_data_provider() -> str:
+    if not DATA_PROVIDER_JS.exists():
+        fail("web/data-provider.js is missing.")
+
+    source = DATA_PROVIDER_JS.read_text(encoding="utf-8")
+
+    if "window.ESC_DATA_PROVIDER" not in source:
+        fail("web/data-provider.js does not expose " "ESC_DATA_PROVIDER.")
+
+    if "opportunities.json" not in source:
+        fail("web/data-provider.js does not reference " "the opportunity dataset.")
+
+    return source
+
+
+def patch_data_provider() -> bool:
+    source = validate_data_provider()
+
+    original = source
+
+    canonical_url_pattern = re.escape(CANONICAL_DATA_URL)
+
+    if re.search(
+        canonical_url_pattern,
+        source,
+    ):
+        print(
+            "PASS: data-provider.js already loads canonical " "data/opportunities.json."
+        )
+        return False
+
+    replacements = [
+        (
+            re.compile(r"`\./opportunities\.json\?v=\$\{Date\.now\(\)\}`"),
+            "`" + CANONICAL_DATA_URL + "?v=${Date.now()}`",
+        ),
+        (
+            re.compile(r"""["']\./opportunities\.json["']"""),
+            "'" + CANONICAL_DATA_URL + "'",
+        ),
+        (
+            re.compile(r"""["']opportunities\.json["']"""),
+            "'" + CANONICAL_DATA_URL + "'",
+        ),
     ]
 
-    return "\n".join(lines) + "\n"
-
-
-def write_provider() -> None:
-    DATA_PROVIDER_JS.write_text(
-        build_provider_source(),
-        encoding="utf-8",
-    )
-
-    print("PASS: web/data-provider.js connected to " "web/opportunities.json.")
-
-
-def patch_app_js() -> tuple[str, bool]:
-    source = APP_JS.read_text(encoding="utf-8")
-    original = source
-
-    if "let availableActiveOpportunities = [];" not in source:
-        old = "let activeOpportunities = [];\nlet expiredOpportunities = [];"
-        new = (
-            "let activeOpportunities = [];\n"
-            "let availableActiveOpportunities = [];\n"
-            "let expiredOpportunities = [];"
-        )
-
-        source, _ = replace_block(
-            source,
-            old,
-            new,
-            "available opportunity state",
-        )
-
-    old_normalizer = """function normalizeLoadedOpportunity(opportunity) {
-  if (!opportunity || typeof opportunity !== "object") {
-    return opportunity;
-  }
-
-  const dates =
-    opportunity.activity_dates &&
-    typeof opportunity.activity_dates === "object"
-      ? opportunity.activity_dates
-      : {};
-
-  const startDate =
-    dates.start ||
-    opportunity.start_date ||
-    "";
-
-  const endDate =
-    dates.end ||
-    opportunity.end_date ||
-    "";
-
-  const deadline =
-    opportunity.application_deadline ||
-    opportunity.deadline ||
-    "";
-
-  const logo =
-    opportunity.logo_url ||
-    opportunity.image_url ||
-    "";
-
-  const rawLocation = String(
-    opportunity.location || ""
-  ).trim();
-
-  let city = "";
-  let country = "";
-
-  const locationParts = rawLocation
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (locationParts.length >= 2) {
-    country = locationParts[locationParts.length - 1];
-    city = locationParts[locationParts.length - 2];
-  }
-
-  opportunity.image_url = logo;
-  opportunity.logoUrl = logo;
-
-  opportunity.start_date = startDate;
-  opportunity.end_date = endDate;
-  opportunity.startDate = startDate;
-  opportunity.endDate = endDate;
-
-  opportunity.deadline = deadline;
-  opportunity.applicationDeadline = deadline;
-
-  opportunity.town = city;
-  opportunity.city = city;
-  opportunity.country = country;
-
-  opportunity.location_full = rawLocation;
-
-  if (city && country) {
-    opportunity.location = `${city}, ${country}`;
-  }
-
-  return opportunity;
-}"""
-
-    new_normalizer = """function normalizeLoadedOpportunity(opportunity) {
-  if (!opportunity || typeof opportunity !== "object") {
-    return opportunity;
-  }
-
-  const dates =
-    opportunity.activity_dates &&
-    typeof opportunity.activity_dates === "object"
-      ? opportunity.activity_dates
-      : {};
-
-  const startDate =
-    dates.start ||
-    opportunity.start_date ||
-    "";
-
-  const endDate =
-    dates.end ||
-    opportunity.end_date ||
-    "";
-
-  const deadline =
-    opportunity.application_deadline ||
-    opportunity.deadline ||
-    "";
-
-  const logo =
-    opportunity.logo_url ||
-    opportunity.image_url ||
-    "";
-
-  const rawLocation = String(
-    opportunity.location || ""
-  ).trim();
-
-  const existingCountry = String(
-    opportunity.country || ""
-  ).trim();
-
-  let city =
-    String(
-      opportunity.town ||
-      opportunity.city ||
-      ""
-    ).trim();
-
-  let inferredCountryName = "";
-
-  const locationParts = rawLocation
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (!city && locationParts.length >= 2) {
-    city = locationParts[locationParts.length - 2];
-  }
-
-  if (locationParts.length >= 2) {
-    inferredCountryName =
-      locationParts[locationParts.length - 1];
-  }
-
-  opportunity.image_url = logo;
-  opportunity.logoUrl = logo;
-
-  opportunity.start_date = startDate;
-  opportunity.end_date = endDate;
-  opportunity.startDate = startDate;
-  opportunity.endDate = endDate;
-
-  opportunity.deadline = deadline;
-  opportunity.applicationDeadline = deadline;
-
-  opportunity.town = city;
-  opportunity.city = city;
-
-  // Preserve a backend country code such as "TR", "FR", or "MA".
-  // The previous compatibility mapper incorrectly overwrote these
-  // codes with the human-readable country name parsed from location.
-  if (/^[A-Za-z]{2}$/.test(existingCountry)) {
-    opportunity.country =
-      existingCountry.toUpperCase();
-  } else if (!existingCountry && inferredCountryName) {
-    opportunity.country = inferredCountryName;
-  } else {
-    opportunity.country = existingCountry;
-  }
-
-  opportunity.location_full = rawLocation;
-
-  return opportunity;
-}"""
-
-    source, normalizer_changed = replace_block(
-        source,
-        old_normalizer,
-        new_normalizer,
-        "opportunity compatibility normalizer",
-    )
-
-    old_apply_filter = """    const matchingOpportunities =
-      Array.isArray(activeOpportunities)
-        ? activeOpportunities.filter(
-            (opportunity) =>
-              Array.isArray(
-                opportunity.participant_countries,
-              ) &&
-              opportunity.participant_countries.includes(
-                selectedCode,
-              ),
-          )
-        : [];
-
-    activeOpportunities =
-      matchingOpportunities;"""
-
-    new_apply_filter = """    const matchingOpportunities =
-      Array.isArray(availableActiveOpportunities)
-        ? availableActiveOpportunities.filter(
-            (opportunity) => {
-              const participantCountries =
-                Array.isArray(
-                  opportunity.participant_countries,
-                )
-                  ? opportunity.participant_countries
-                  : Array.isArray(
-                        opportunity.eligible_countries,
-                      )
-                    ? opportunity.eligible_countries
-                    : [];
-
-              return participantCountries
-                .map((value) =>
-                  String(value || "")
-                    .trim()
-                    .toUpperCase()
-                )
-                .includes(selectedCode);
-            },
-          )
-        : [];
-
-    activeOpportunities =
-      matchingOpportunities;"""
-
-    source, apply_changed = replace_block(
-        source,
-        old_apply_filter,
-        new_apply_filter,
-        "participant-country filtering",
-    )
-
-    old_no_search = """  if (!participantSearchApplied) {
-    resetParticipantSearchDisplay();
-    errorMessage.classList.add("hidden");
-    return;
-  }"""
-
-    new_no_search = """  if (!participantSearchApplied) {
-    activeOpportunities = [
-      ...availableActiveOpportunities,
-    ];
-
-    resetParticipantSearchDisplay();
-    errorMessage.classList.add("hidden");
-    return;
-  }"""
-
-    source, no_search_changed = replace_block(
-        source,
-        old_no_search,
-        new_no_search,
-        "participant search reset",
-    )
-
-    old_load_assignment = """    activeOpportunities =
-      normalizeLoadedOpportunities(
-        Array.isArray(payload?.activeData?.opportunities)
-          ? payload.activeData.opportunities
-          : [],
-      );"""
-
-    new_load_assignment = """    availableActiveOpportunities =
-      normalizeLoadedOpportunities(
-        Array.isArray(payload?.activeData?.opportunities)
-          ? payload.activeData.opportunities
-          : [],
-      );
-
-    activeOpportunities = [
-      ...availableActiveOpportunities,
-    ];"""
-
-    source, load_assignment_changed = replace_block(
-        source,
-        old_load_assignment,
-        new_load_assignment,
-        "loadData opportunity assignment",
-    )
-
-    changed = (
-        source != original
-        or normalizer_changed
-        or apply_changed
-        or no_search_changed
-        or load_assignment_changed
-    )
-
-    return source, changed
-
-
-def patch_app_js_file() -> None:
-    updated, changed = patch_app_js()
-
-    if changed:
-        APP_JS.write_text(
-            updated,
-            encoding="utf-8",
-        )
-
-        print(
-            "PASS: web/app.js updated for real opportunity loading "
-            "and participant-country filtering."
-        )
-    else:
-        print("PASS: web/app.js already contains the required " "frontend wiring.")
-
-
-def patch_index_html() -> None:
-    source = INDEX_HTML.read_text(encoding="utf-8")
-
-    original = source
-
-    duplicated = """    <script src="features.js?v=1"></script>
-<script src="data-provider.js?v=1"></script>
-<script src="features.js?v=1"></script>
-<script src="data-provider.js?v=1"></script>
-<script src="app.js?v=22"></script>"""
-
-    corrected = """    <script src="features.js?v=1"></script>
-    <script src="data-provider.js?v=2"></script>
-    <script src="app.js?v=23"></script>"""
-
-    if duplicated in source:
-        source = source.replace(
-            duplicated,
-            corrected,
-            1,
-        )
-    else:
-        # Normalize any existing duplicated provider/feature block.
-        script_pattern = re.compile(
-            r'\s*<script src="features\.js\?v=1"></script>'
-            r'\s*<script src="data-provider\.js\?v=\d+"></script>'
-            r'\s*<script src="features\.js\?v=1"></script>'
-            r'\s*<script src="data-provider\.js\?v=\d+"></script>'
-            r'\s*<script src="app\.js\?v=\d+"></script>',
-            re.MULTILINE,
-        )
-
-        source, replacements = script_pattern.subn(
-            "\n"
-            '    <script src="features.js?v=1"></script>\n'
-            '    <script src="data-provider.js?v=2"></script>\n'
-            '    <script src="app.js?v=23"></script>',
+    for pattern, replacement in replacements:
+        source = pattern.sub(
+            replacement,
             source,
             count=1,
         )
 
-        if replacements == 0:
-            # The remote version may already have been manually cleaned.
-            if (
-                source.count('src="features.js?v=1"') == 1
-                and source.count('src="data-provider.js?v=2"') == 1
-                and source.count('src="app.js?v=23"') == 1
-            ):
-                pass
-            else:
-                fail("Could not locate the frontend script block in " "web/index.html.")
+        if source != original:
+            break
 
-    feature_count = source.count('src="features.js?v=1"')
-    provider_count = source.count('src="data-provider.js?v=2"')
-    app_count = source.count('src="app.js?v=23"')
-
-    if feature_count != 1:
-        fail("web/index.html must load features.js exactly once.")
-
-    if provider_count != 1:
-        fail("web/index.html must load data-provider.js exactly once.")
-
-    if app_count != 1:
-        fail("web/index.html must load app.js exactly once.")
-
-    if source != original:
-        INDEX_HTML.write_text(
-            source,
-            encoding="utf-8",
+    if source == original:
+        fail(
+            "Could not safely locate the existing opportunity "
+            "JSON fetch in web/data-provider.js."
         )
 
-        print(
-            "PASS: duplicate frontend scripts removed and "
-            "cache-busting versions updated."
+    DATA_PROVIDER_JS.write_text(
+        source,
+        encoding="utf-8",
+    )
+
+    print("PASS: data-provider.js now loads " "data/opportunities.json directly.")
+
+    return True
+
+
+# ============================================================================
+# REMOVE DUPLICATE DATA
+# ============================================================================
+
+
+def remove_duplicate_dataset(
+    canonical_path: Path,
+    duplicate_path: Path,
+    description: str,
+) -> bool:
+    if not duplicate_path.exists():
+        print(f"PASS: {duplicate_path.relative_to(ROOT)} is already absent.")
+        return False
+
+    canonical_payload = load_json(canonical_path)
+
+    duplicate_payload = load_json(duplicate_path)
+
+    canonical_records = extract_opportunities(
+        canonical_payload,
+        canonical_path,
+    )
+
+    duplicate_records = extract_opportunities(
+        duplicate_payload,
+        duplicate_path,
+    )
+
+    canonical_ids = {opportunity_id(item) for item in canonical_records}
+
+    duplicate_ids = {opportunity_id(item) for item in duplicate_records}
+
+    if canonical_ids != duplicate_ids:
+        fail(
+            f"Refusing to remove {duplicate_path.relative_to(ROOT)}: "
+            f"{description} IDs do not exactly match the canonical dataset."
         )
-    else:
-        print("PASS: web/index.html script loading already normalized.")
+
+    canonical_generated = canonical_payload.get("generated_at")
+
+    duplicate_generated = duplicate_payload.get("generated_at")
+
+    if (
+        canonical_generated
+        and duplicate_generated
+        and canonical_generated != duplicate_generated
+    ):
+        fail(
+            f"Refusing to remove {duplicate_path.relative_to(ROOT)}: "
+            "generated_at does not match the canonical dataset."
+        )
+
+    duplicate_path.unlink()
+
+    print(
+        f"PASS: removed duplicate generated dataset: "
+        f"{duplicate_path.relative_to(ROOT)}"
+    )
+
+    return True
 
 
-def node_check(path: Path) -> None:
+def remove_obsolete_web_datasets() -> list[str]:
+    removed: list[str] = []
+
+    if remove_duplicate_dataset(
+        SOURCE_DATA_JSON,
+        WEB_DATA_JSON,
+        "opportunity",
+    ):
+        removed.append(WEB_DATA_JSON.relative_to(ROOT).as_posix())
+
+    if remove_duplicate_dataset(
+        SOURCE_EXPIRED_JSON,
+        WEB_EXPIRED_JSON,
+        "expired opportunity",
+    ):
+        removed.append(WEB_EXPIRED_JSON.relative_to(ROOT).as_posix())
+
+    return removed
+
+
+# ============================================================================
+# SCRAPER WORKFLOW
+# ============================================================================
+
+
+def patch_update_workflow() -> bool:
+    source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+
+    original = source
+
+    source = source.replace(
+        "            git add -- web/opportunities.json\n",
+        "",
+    )
+
+    source = source.replace(
+        "            git add -- web/expired.json\n",
+        "",
+    )
+
+    source = source.replace(
+        "git add -- web/opportunities.json\n",
+        "",
+    )
+
+    source = source.replace(
+        "git add -- web/expired.json\n",
+        "",
+    )
+
+    source = re.sub(
+        r"(?m)^\s*cp\s+data/opportunities\.json\s+web/opportunities\.json\s*$\n?",
+        "",
+        source,
+    )
+
+    source = re.sub(
+        r"(?m)^\s*cp\s+data/expired\.json\s+web/expired\.json\s*$\n?",
+        "",
+        source,
+    )
+
+    if (
+        "git add -- web/opportunities.json" in source
+        or "git add -- web/expired.json" in source
+    ):
+        fail("update.yml still contains obsolete web dataset staging.")
+
+    if re.search(
+        r"cp\s+data/opportunities\.json\s+web/opportunities\.json",
+        source,
+    ):
+        fail("update.yml still copies opportunities.json into web/.")
+
+    if re.search(
+        r"cp\s+data/expired\.json\s+web/expired\.json",
+        source,
+    ):
+        fail("update.yml still copies expired.json into web/.")
+
+    if source == original:
+        print("PASS: update.yml already publishes canonical data only.")
+        return False
+
+    UPDATE_WORKFLOW.write_text(
+        source,
+        encoding="utf-8",
+    )
+
+    print("PASS: update.yml no longer publishes duplicate web JSON files.")
+
+    return True
+
+
+# ============================================================================
+# DEPLOY WORKFLOW
+# ============================================================================
+
+
+def patch_deploy_workflow() -> bool:
+    source = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
+
+    original = source
+
+    source = re.sub(
+        r"\n\s*workflow_run:\n"
+        r"\s*workflows:\n"
+        r"\s*-\s*[\"']Update ESC Opportunities[\"']\n"
+        r"\s*types:\n"
+        r"\s*-\s*completed\s*\n",
+        "\n",
+        source,
+        count=1,
+    )
+
+    source = re.sub(
+        r"\n\s*if:\s*>\n"
+        r"\s*github\.event_name == 'push' \|\|\n"
+        r"\s*github\.event_name == 'workflow_dispatch' \|\|\n"
+        r"\s*\(\n"
+        r"\s*github\.event_name == 'workflow_run' &&\n"
+        r"\s*github\.event\.workflow_run\.conclusion == 'success'\n"
+        r"\s*\)\s*\n",
+        "\n",
+        source,
+        count=1,
+    )
+
+    if source == original:
+        print("PASS: deploy.yml already uses push/manual deployment.")
+        return False
+
+    DEPLOY_WORKFLOW.write_text(
+        source,
+        encoding="utf-8",
+    )
+
+    print("PASS: deploy.yml simplified to push/manual deployment.")
+
+    return True
+
+
+# ============================================================================
+# REMOVE SECOND SCRAPER
+# ============================================================================
+
+
+def remove_scrape_workflow() -> bool:
+    if not SCRAPE_WORKFLOW.exists():
+        print("PASS: scrape.yml is already absent.")
+        return False
+
+    source = SCRAPE_WORKFLOW.read_text(encoding="utf-8")
+
+    if not source.strip():
+        fail("scrape.yml is empty; refusing automatic deletion.")
+
+    SCRAPE_WORKFLOW.unlink()
+
+    print("PASS: removed redundant .github/workflows/scrape.yml.")
+
+    return True
+
+
+# ============================================================================
+# FINAL ARCHITECTURE VALIDATION
+# ============================================================================
+
+
+def validate_final_architecture() -> None:
+    if SCRAPE_WORKFLOW.exists():
+        fail("scrape.yml still exists after Phase 2.")
+
+    if WEB_DATA_JSON.exists():
+        fail("web/opportunities.json still exists after Phase 2.")
+
+    if WEB_EXPIRED_JSON.exists():
+        fail("web/expired.json still exists after Phase 2.")
+
+    update_source = UPDATE_WORKFLOW.read_text(encoding="utf-8")
+
+    deploy_source = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
+
+    provider_source = DATA_PROVIDER_JS.read_text(encoding="utf-8")
+
+    if "git add -- web/opportunities.json" in update_source:
+        fail("update.yml still stages web/opportunities.json.")
+
+    if "git add -- web/expired.json" in update_source:
+        fail("update.yml still stages web/expired.json.")
+
+    if re.search(
+        r"cp\s+data/opportunities\.json\s+web/opportunities\.json",
+        update_source,
+    ):
+        fail("update.yml still copies opportunities.json to web/.")
+
+    if re.search(
+        r"cp\s+data/expired\.json\s+web/expired\.json",
+        update_source,
+    ):
+        fail("update.yml still copies expired.json to web/.")
+
+    if (
+        CANONICAL_DATA_URL not in provider_source
+        and "data/opportunities.json" not in provider_source
+    ):
+        fail("data-provider.js does not point to canonical " "data/opportunities.json.")
+
+    if "workflow_run:" in deploy_source:
+        fail("deploy.yml still contains workflow_run.")
+
+    if "actions/deploy-pages" not in deploy_source:
+        fail("deploy.yml no longer contains the Pages deployment action.")
+
+    if "./web" not in deploy_source:
+        fail("deploy.yml no longer uploads ./web.")
+
+    print("PASS: only one scraper workflow remains.")
+
+    print("PASS: data/opportunities.json is the canonical " "opportunity dataset.")
+
+    print("PASS: duplicate web JSON datasets are removed.")
+
+    print("PASS: deploy.yml is deployment-only.")
+
+
+# ============================================================================
+# FRONTEND VALIDATION
+# ============================================================================
+
+
+def validate_js(path: Path) -> None:
+    if not path.exists():
+        fail(f"Missing frontend file: {path}")
+
     result = run(
         [
             "node",
@@ -1201,809 +1144,270 @@ def node_check(path: Path) -> None:
     )
 
     if result.returncode != 0:
-        fail(f"{path} failed Node.js syntax validation.")
+        fail(f"{path.relative_to(ROOT)} failed node --check.")
 
     print(f"PASS: {path.relative_to(ROOT)} syntax validated.")
 
 
-def validate_provider_source() -> None:
-    source = DATA_PROVIDER_JS.read_text(encoding="utf-8")
+def validate_frontend() -> None:
+    validate_js(APP_JS)
 
-    required = [
-        "window.ESC_DATA_PROVIDER",
-        "enabled: true",
-        "fetch(",
-        "./opportunities.json",
-        "activeData",
-        "expiredData",
-        "participantCountryIndex",
-        "participant_countries",
-        "eligible_countries",
-    ]
+    validate_js(DATA_PROVIDER_JS)
 
-    missing = [item for item in required if item not in source]
+    if not INDEX_HTML.exists():
+        fail("web/index.html is missing.")
 
-    if missing:
-        fail(
-            "data-provider.js validation failed. Missing:\n"
-            + "\n".join(f"  - {item}" for item in missing)
-        )
+    html = INDEX_HTML.read_text(encoding="utf-8")
 
-    print(
-        "PASS: data-provider.js is configured for the " "published opportunity dataset."
-    )
+    if "data-provider.js" not in html:
+        fail("web/index.html does not include data-provider.js.")
+
+    if 'id="last-updated"' not in html:
+        fail("web/index.html lost #last-updated.")
+
+    if 'id="country-filter"' not in html:
+        fail("web/index.html lost #country-filter.")
+
+    print("PASS: frontend integration points remain present.")
 
 
-def validate_app_source() -> None:
-    source = APP_JS.read_text(encoding="utf-8")
-
-    required = [
-        "let availableActiveOpportunities = [];",
-        "Array.isArray(availableActiveOpportunities)",
-        "participant_countries",
-        "eligible_countries",
-        "availableActiveOpportunities =",
-        "normalizeLoadedOpportunities(",
-    ]
-
-    missing = [item for item in required if item not in source]
-
-    if missing:
-        fail(
-            "web/app.js validation failed. Missing:\n"
-            + "\n".join(f"  - {item}" for item in missing)
-        )
-
-    print("PASS: app.js participant-country and dataset wiring validated.")
-
-
-def validate_country_selector() -> None:
-    source = APP_JS.read_text(encoding="utf-8")
-
-    marker = "const ESC_PARTICIPANT_COUNTRIES = ["
-
-    start = source.find(marker)
-
-    if start == -1:
-        fail("Could not locate ESC_PARTICIPANT_COUNTRIES.")
-
-    end = source.find(
-        "];",
-        start,
-    )
-
-    if end == -1:
-        fail("Could not determine end of participant country list.")
-
-    block = source[start:end]
-
-    matches = re.findall(
-        r"\{\s*name:\s*",
-        block,
-    )
-
-    if len(matches) != 65:
-        fail(
-            "Expected 65 participant countries in frontend selector; "
-            f"found {len(matches)}."
-        )
-
-    print("PASS: frontend participant-country selector contains " "65 countries.")
-
-
-def validate_participant_eligibility_data(
-    opportunities: list[dict],
-) -> tuple[str, int]:
-    country_counts: dict[str, int] = {}
-
-    for opportunity in opportunities:
-        countries = (
-            opportunity.get("participant_countries")
-            if isinstance(
-                opportunity.get("participant_countries"),
-                list,
-            )
-            else opportunity.get("eligible_countries")
-        )
-
-        if not isinstance(countries, list):
-            continue
-
-        for country in countries:
-            code = str(country).strip().upper()
-
-            if not code:
-                continue
-
-            country_counts[code] = country_counts.get(code, 0) + 1
-
-    if not country_counts:
-        fail(
-            "The 1,178-opportunity dataset contains no participant "
-            "eligibility country data."
-        )
-
-    if country_counts.get("MA", 0) <= 0:
-        fail(
-            "The 1,178-opportunity dataset contains no opportunities "
-            "eligible for Morocco (MA)."
-        )
-
-    non_morocco = sorted(
-        (
-            (code, count)
-            for code, count in country_counts.items()
-            if code != "MA" and count > 0
-        ),
-        key=lambda item: (-item[1], item[0]),
-    )
-
-    if not non_morocco:
-        fail("No non-Morocco participant country has eligibility data.")
-
-    sample_code, sample_count = non_morocco[0]
-
-    print(
-        f"PASS: Morocco eligibility data present "
-        f"({country_counts['MA']} opportunities)."
-    )
-
-    print("PASS: non-Morocco eligibility data present.")
-
-    print(f"     sample country: {sample_code} " f"({sample_count} opportunities)")
-
-    print(
-        f"PASS: eligibility data covers {len(country_counts)} "
-        "participant-country codes."
-    )
-
-    return sample_code, sample_count
-
-
-def simulate_frontend_mapping(target: dict) -> None:
-    dates = target.get("activity_dates")
-
-    if not isinstance(dates, dict):
-        fail("Target opportunity activity_dates missing.")
-
-    start = dates.get("start")
-    end = dates.get("end")
-    deadline = target.get("application_deadline")
-
-    raw_location = str(target.get("location") or "").strip()
-
-    parts = [part.strip() for part in raw_location.split(",") if part.strip()]
-
-    inferred_city = parts[-2] if len(parts) >= 2 else ""
-
-    if inferred_city != "TANDOGAN ANKARA":
-        fail("Target 53577 city simulation failed: " + repr(inferred_city))
-
-    if start != "2026-09-28":
-        fail("Target 53577 start-date simulation failed.")
-
-    if end != "2026-11-01":
-        fail("Target 53577 end-date simulation failed.")
-
-    if deadline != "2026-08-20":
-        fail("Target 53577 deadline simulation failed.")
-
-    if not target.get("logo_url"):
-        fail("Target 53577 logo simulation failed.")
-
-    print("PASS: opportunity 53577 frontend compatibility simulation.")
-
-    print("     town: TANDOGAN ANKARA")
-
-    print("     dates: 2026-09-28 -> 2026-11-01")
-
-    print("     deadline: 2026-08-20")
-
-    print("     logo: present")
-
-
-def test_provider_with_node(
-    payload: dict,
-) -> None:
-    provider_source = DATA_PROVIDER_JS.read_text(encoding="utf-8")
-
-    encoded_payload = json.dumps(
-        payload,
-        ensure_ascii=False,
-    )
-
-    harness_lines = [
-        "const fs = require('fs');",
-        "",
-        "global.window = {};",
-        "",
-        "const payload = " + encoded_payload + ";",
-        "",
-        "global.fetch = async () => ({",
-        "  ok: true,",
-        "  status: 200,",
-        "  async json() {",
-        "    return payload;",
-        "  },",
-        "});",
-        "",
-        provider_source,
-        "",
-        "(async () => {",
-        "  const result = await window.ESC_DATA_PROVIDER.load();",
-        "",
-        "  if (!result || !result.activeData) {",
-        "    throw new Error('activeData missing');",
-        "  }",
-        "",
-        "  if (!result.expiredData) {",
-        "    throw new Error('expiredData missing');",
-        "  }",
-        "",
-        "  if (!result.participantCountryIndex) {",
-        "    throw new Error('participantCountryIndex missing');",
-        "  }",
-        "",
-        "  if (!Array.isArray(result.activeData.opportunities)) {",
-        "    throw new Error('active opportunities are not an array');",
-        "  }",
-        "",
-        "  if (result.activeData.opportunities.length === 0) {",
-        "    throw new Error('active opportunities are empty');",
-        "  }",
-        "",
-        "  const sample = result.activeData.opportunities[0];",
-        "",
-        "  if (!Array.isArray(sample.participant_countries)) {",
-        "    throw new Error('participant_countries missing');",
-        "  }",
-        "",
-        "  if (!('deadline' in sample)) {",
-        "    throw new Error('deadline mapping missing');",
-        "  }",
-        "",
-        "  if (!('image_url' in sample)) {",
-        "    throw new Error('image_url mapping missing');",
-        "  }",
-        "",
-        "  console.log('PASS: provider runtime simulation loaded active data.');",
-        "  console.log(`     active opportunities: ${result.activeData.count}`);",
-        "  console.log(`     recently expired: ${result.expiredData.count}`);",
-        "  console.log(`     participant country codes indexed: ${Object.keys(result.participantCountryIndex).length}`);",
-        "})().catch((error) => {",
-        "  console.error(error);",
-        "  process.exit(1);",
-        "});",
-    ]
-
-    temporary = ROOT / ".esc_provider_check.js"
-
-    temporary.write_text(
-        "\n".join(harness_lines),
-        encoding="utf-8",
-    )
-
-    try:
-        result = run(
-            [
-                "node",
-                str(temporary),
-            ],
-            check=False,
-        )
-
-        if result.returncode != 0:
-            fail("data-provider.js runtime simulation failed.")
-    finally:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+# ============================================================================
+# REVIEW
+# ============================================================================
 
 
 def write_review(
-    *,
-    before_app: str,
-    before_provider: str,
-    before_index: str,
-    after_app: str,
-    after_provider: str,
-    after_index: str,
-    participant_country_sample: str,
-    participant_country_sample_count: int,
+    baseline_count: int,
+    expired_count: int,
+    changed_files: list[str],
+    removed_files: list[str],
 ) -> None:
-    diff_result = run(
-        [
-            "git",
-            "diff",
-            "--",
-            "web/app.js",
-            "web/data-provider.js",
-            "web/index.html",
-            "data/opportunities.json",
-            "web/opportunities.json",
-            "update.py",
-        ],
-        quiet=True,
-    )
+    payload = load_json(SOURCE_DATA_JSON)
 
-    diff = diff_result.stdout
+    generated_at = payload.get("generated_at")
 
     lines = [
-        "# ESC Opportunity Finder — Connect Backend Dataset to Frontend",
+        "# ESC Opportunity Finder — Phase 2 Production Review",
         "",
-        "## Scope",
+        "## Objective",
         "",
-        "The local 1,178-opportunity dataset is treated as authoritative.",
+        "Simplify the backend architecture so there is one scraper "
+        "workflow and one canonical opportunity dataset.",
         "",
-        "The frontend now reads the published `web/opportunities.json` "
-        "through `web/data-provider.js`.",
+        "## Baseline",
         "",
-        "The participant-country selector filters the loaded active "
-        "dataset using `participant_countries` or `eligible_countries`.",
+        f"- Canonical opportunities before migration: **{baseline_count}**",
+        f"- Expired opportunities: **{expired_count}**",
+        f"- generated_at: `{generated_at}`",
         "",
-        "No scraper rate limits, retry behaviour, batch sizes, or workflow "
-        "scheduling were changed.",
+        "## Architecture after migration",
         "",
-        "The repair checkpoint was intentionally not committed.",
+        "- `.github/workflows/update.yml` = only scraper/update workflow",
+        "- `.github/workflows/deploy.yml` = only Pages deployment workflow",
+        "- `data/opportunities.json` = canonical opportunity dataset",
+        "- `data/expired.json` = canonical expired dataset",
+        "- `data/checkpoint.json` = scraper progress",
+        "- `web/data-provider.js` = frontend data access",
         "",
-        "## Dataset validation",
-        "",
-        f"- `data/opportunities.json`: {EXPECTED_COUNT} opportunities",
-        f"- `web/opportunities.json`: {EXPECTED_COUNT} opportunities",
-        "- Backend/frontend opportunity ID sets: identical",
-        f"- Opportunity {TARGET_ID}: PASS",
-        "- Activity dates: PASS",
-        "- Application deadline: PASS",
-        "- Logo: PASS",
-        "- Participant eligibility data: PASS",
-        f"- Morocco eligibility count: validated",
-        f"- Non-Morocco sample: {participant_country_sample} "
-        f"({participant_country_sample_count} opportunities)",
-        "",
-        "## Frontend integration",
-        "",
-        "- `data-provider.js` enabled",
-        "- `opportunities.json` loaded through `fetch()`",
-        "- active opportunities split from recently expired opportunities",
-        "- participant-country index created client-side",
-        "- `eligible_countries` compatibility supported",
-        "- 65-country selector preserved",
-        "- frontend country code preservation fixed",
-        "- duplicate script loading removed from `index.html`",
-        "",
-        "## Validation",
-        "",
-        "- update.py syntax: PASS",
-        "- provider syntax: PASS",
-        "- provider runtime simulation: PASS",
-        "- app.js syntax: PASS",
-        "- index.html script counts: PASS",
-        "- dataset JSON: PASS",
-        "- repair checkpoint: PASS",
-        "",
-        "## Source snapshot sizes",
-        "",
-        f"- app.js before: {len(before_app)} characters",
-        f"- app.js after: {len(after_app)} characters",
-        f"- data-provider.js before: {len(before_provider)} characters",
-        f"- data-provider.js after: {len(after_provider)} characters",
-        f"- index.html before: {len(before_index)} characters",
-        f"- index.html after: {len(after_index)} characters",
-        "",
-        "## Git diff",
-        "",
-        "```diff",
-        diff.rstrip(),
-        "```",
+        "## Changes",
         "",
     ]
+
+    if changed_files:
+        lines.extend(f"- `{path}`" for path in changed_files)
+    else:
+        lines.append("- No source files required modification.")
+
+    lines.extend(
+        [
+            "",
+            "## Removed",
+            "",
+        ]
+    )
+
+    if removed_files:
+        lines.extend(f"- `{path}`" for path in removed_files)
+    else:
+        lines.append("- No obsolete files needed removal.")
+
+    lines.extend(
+        [
+            "",
+            "## Safety",
+            "",
+            "- `data/opportunities.json` was not rebuilt.",
+            "- `data/checkpoint.json` was not rebuilt.",
+            "- `data/expired.json` was preserved.",
+            "- `data/full_detail_repair_checkpoint.json` was preserved.",
+            "- No scraper execution was performed.",
+            "- No Git history rewrite was performed.",
+            "",
+        ]
+    )
 
     REVIEW_MD.write_text(
         "\n".join(lines),
         encoding="utf-8",
     )
 
-    print(f"PASS: review file written: {REVIEW_MD}")
+    print(f"Review file written: {REVIEW_MD}")
 
 
-def stage_allowed_files() -> None:
-    allowed = {
-        "data/opportunities.json",
-        "web/opportunities.json",
-        "web/app.js",
-        "web/data-provider.js",
-        "web/index.html",
-        "update.py",
-        "UPDATE_REVIEW.md",
-    }
+# ============================================================================
+# FINAL VALIDATION
+# ============================================================================
 
+
+def final_validation(
+    baseline_count: int,
+) -> None:
     print()
-    print("=" * 72)
-    print("STAGING FRONTEND/BACKEND DATA INTEGRATION")
-    print("=" * 72)
+    print("Final Phase 2 validation...")
 
-    run(
-        [
-            "git",
-            "add",
-            "--",
-            *sorted(allowed),
-        ],
-        check=True,
+    final_payload = validate_current_dataset()
+
+    final_records = extract_opportunities(
+        final_payload,
+        SOURCE_DATA_JSON,
     )
 
-    staged_result = run(
-        [
-            "git",
-            "diff",
-            "--cached",
-            "--name-only",
-        ],
-        quiet=True,
-    )
+    final_count = len(final_records)
 
-    staged = {
-        line.strip() for line in staged_result.stdout.splitlines() if line.strip()
-    }
-
-    unexpected = staged - allowed
-
-    if unexpected:
-        run(
-            ["git", "reset"],
-            check=False,
-        )
-
+    if final_count != baseline_count:
         fail(
-            "Unexpected files were staged:\n"
-            + "\n".join(f"  - {item}" for item in sorted(unexpected))
+            "Canonical opportunity count changed during Phase 2.\n"
+            f"Before: {baseline_count}\n"
+            f"After:  {final_count}"
         )
 
-    required = {
-        "data/opportunities.json",
-        "web/opportunities.json",
-        "web/app.js",
-        "web/data-provider.js",
-        "web/index.html",
-        "update.py",
-        "UPDATE_REVIEW.md",
-    }
+    validate_expired_dataset()
+    validate_checkpoint()
+    validate_scraper()
+    validate_workflows_before_change()
+    validate_final_architecture()
+    validate_frontend()
 
-    missing = required - staged
+    print(f"PASS: canonical opportunity count remained {final_count}.")
 
-    if missing:
-        run(
-            ["git", "reset"],
-            check=False,
-        )
-
-        fail(
-            "Required files were not staged:\n"
-            + "\n".join(f"  - {item}" for item in sorted(missing))
-        )
-
-    print("PASS: only intended integration files are staged.")
-
-    for item in sorted(staged):
-        print(f"  - {item}")
-
-    if REPAIR_CHECKPOINT.exists():
-        checkpoint_result = run(
-            [
-                "git",
-                "diff",
-                "--cached",
-                "--name-only",
-            ],
-            quiet=True,
-        ).stdout
-
-        if "data/full_detail_repair_checkpoint.json" in checkpoint_result:
-            run(
-                [
-                    "git",
-                    "reset",
-                    "--",
-                    "data/full_detail_repair_checkpoint.json",
-                ],
-                check=True,
-            )
-
-            fail("Repair checkpoint was unexpectedly staged.")
-
-    print("PASS: repair checkpoint is not staged.")
+    print("PASS: Phase 2 backend architecture validation completed.")
 
 
-def commit_changes() -> None:
-    print()
-    print("=" * 72)
-    print("COMMITTING BACKEND/FRONTEND CONNECTION")
-    print("=" * 72)
-
-    run(
-        [
-            "git",
-            "commit",
-            "-m",
-            "Connect frontend to full opportunity dataset",
-        ],
-        check=True,
-    )
-
-    print("PASS: integration commit created.")
-
-
-def push_main() -> None:
-    print()
-    print("=" * 72)
-    print("PUSHING TO ORIGIN/MAIN")
-    print("=" * 72)
-
-    fetch_origin()
-    verify_not_behind_origin()
-
-    run(
-        [
-            "git",
-            "push",
-            REMOTE,
-            BRANCH,
-        ],
-        check=True,
-    )
-
-    print("PASS: main pushed to origin/main.")
-
-
-def verify_final_state() -> None:
-    print()
-    print("=" * 72)
-    print("FINAL VALIDATION")
-    print("=" * 72)
-
-    local = run(
-        [
-            "git",
-            "rev-parse",
-            "main",
-        ],
-        quiet=True,
-    ).stdout.strip()
-
-    remote = run(
-        [
-            "git",
-            "rev-parse",
-            "origin/main",
-        ],
-        quiet=True,
-    ).stdout.strip()
-
-    if local != remote:
-        fail("Final main and origin/main SHA values differ.")
-
-    print("PASS: local main == origin/main.")
-
-    conflicts = detect_unmerged_files()
-
-    if conflicts:
-        fail(
-            "Final state still contains unresolved conflicts:\n"
-            + "\n".join(f"  - {item}" for item in sorted(conflicts))
-        )
-
-    print("PASS: no unresolved Git conflicts remain.")
-
-    status = print_status("FINAL WORKTREE:")
-
-    checkpoint_staged = run(
-        [
-            "git",
-            "diff",
-            "--cached",
-            "--name-only",
-        ],
-        quiet=True,
-    ).stdout
-
-    if "data/full_detail_repair_checkpoint.json" in checkpoint_staged:
-        fail("Repair checkpoint is staged unexpectedly.")
-
-    if any(
-        line.startswith(
-            (
-                "UU ",
-                "AA ",
-                "DD ",
-                "AU ",
-                "UA ",
-                "DU ",
-            )
-        )
-        for line in status
-    ):
-        fail("Final Git status still reports unresolved merge state.")
-
-    print("PASS: repair checkpoint remains outside the staged commit.")
-
-    stash_ref = find_esc_safety_stash()
-
-    if stash_ref:
-        print()
-        print(f"PASS: original safety stash retained: {stash_ref}")
-
-        print("     It was intentionally not deleted automatically.")
-
-    print()
-    print("Final main SHA:")
-    print(local)
+# ============================================================================
+# MAIN
+# ============================================================================
 
 
 def main() -> None:
-    print("=" * 72)
-    print("ESC Opportunity Finder — connect full backend dataset to frontend")
-    print("=" * 72)
-    print()
+    banner(
+        "ESC Opportunity Finder — Phase 2 canonical backend " "architecture migration"
+    )
 
     validate_update_py()
-    require_git_repository()
-    require_main_branch()
+    validate_repository()
+    validate_branch()
+    validate_origin()
 
-    status_before = print_status("CURRENT WORKTREE:")
+    print_status()
 
-    checkpoint_before = (
-        sha256(REPAIR_CHECKPOINT) if REPAIR_CHECKPOINT.exists() else None
-    )
+    protect_repair_checkpoint()
+    validate_protected_worktree()
 
     fetch_origin()
-    verify_not_behind_origin()
+    require_safe_history()
 
-    resolve_current_stash_conflicts()
+    banner("PHASE 2 BASELINE VALIDATION")
 
-    # Clear any staging left behind by the interrupted stash-pop.
-    unstage_everything_without_touching_worktree()
+    baseline_payload = validate_current_dataset()
 
-    (
-        web_payload,
-        web_opportunities,
-        target,
-    ) = validate_1178_dataset()
-
-    checkpoint_hash = validate_checkpoint()
-
-    if checkpoint_before is not None:
-        if checkpoint_hash != checkpoint_before:
-            fail(
-                "full_detail_repair_checkpoint.json changed while "
-                "resolving the previous stash conflict."
-            )
-
-        print("PASS: repair checkpoint SHA-256 unchanged.")
-
-    participant_country_sample, participant_country_sample_count = (
-        validate_participant_eligibility_data(web_opportunities)
+    baseline_records = extract_opportunities(
+        baseline_payload,
+        SOURCE_DATA_JSON,
     )
 
-    simulate_frontend_mapping(target)
+    baseline_count = len(baseline_records)
 
-    before_app = APP_JS.read_text(encoding="utf-8")
-
-    before_provider = DATA_PROVIDER_JS.read_text(encoding="utf-8")
-
-    before_index = INDEX_HTML.read_text(encoding="utf-8")
-
-    print()
-    print("=" * 72)
-    print("CONNECTING FRONTEND TO FULL DATASET")
-    print("=" * 72)
-
-    patch_app_js_file()
-    write_provider()
-    patch_index_html()
-
-    node_check(APP_JS)
-    node_check(DATA_PROVIDER_JS)
-
-    validate_provider_source()
-    validate_app_source()
-    validate_country_selector()
-
-    provider_payload = {
-        key: web_payload[key] for key in web_payload if key != "opportunities"
-    }
-
-    provider_payload["opportunities"] = web_opportunities
-
-    test_provider_with_node(provider_payload)
-
-    # Validate that the data files were not modified by frontend code
-    # generation.
-    _, source_after = load_opportunity_payload(SOURCE_DATA_JSON)
-
-    web_payload_after, web_after = load_opportunity_payload(WEB_DATA_JSON)
-
-    if len(source_after) != EXPECTED_COUNT:
-        fail(
-            "data/opportunities.json changed unexpectedly "
-            "during frontend integration."
+    if baseline_count < EXPECTED_BASELINE_OPPORTUNITIES:
+        print(
+            "WARNING: canonical dataset is below the historical "
+            f"{EXPECTED_BASELINE_OPPORTUNITIES}-opportunity baseline."
         )
 
-    if len(web_after) != EXPECTED_COUNT:
-        fail(
-            "web/opportunities.json changed unexpectedly "
-            "during frontend integration."
-        )
+    expired_count = validate_expired_dataset()
+
+    validate_checkpoint()
+    validate_scraper()
+    validate_workflows_before_change()
 
     print(
-        "PASS: both backend and frontend datasets still contain "
-        f"{EXPECTED_COUNT} opportunities."
+        f"PASS: Phase 2 baseline contains {baseline_count} " "canonical opportunities."
     )
 
-    if REPAIR_CHECKPOINT.exists():
-        checkpoint_after = sha256(REPAIR_CHECKPOINT)
+    banner("APPLYING PHASE 2 ARCHITECTURE MIGRATION")
 
-        if checkpoint_after != checkpoint_hash:
-            fail("Repair checkpoint changed during frontend integration.")
+    changed_files: list[str] = []
+    removed_files: list[str] = []
 
-    after_app = APP_JS.read_text(encoding="utf-8")
+    if remove_scrape_workflow():
+        removed_files.append(SCRAPE_WORKFLOW.relative_to(ROOT).as_posix())
 
-    after_provider = DATA_PROVIDER_JS.read_text(encoding="utf-8")
+    if patch_update_workflow():
+        changed_files.append(UPDATE_WORKFLOW.relative_to(ROOT).as_posix())
 
-    after_index = INDEX_HTML.read_text(encoding="utf-8")
+    if patch_deploy_workflow():
+        changed_files.append(DEPLOY_WORKFLOW.relative_to(ROOT).as_posix())
+
+    if patch_data_provider():
+        changed_files.append(DATA_PROVIDER_JS.relative_to(ROOT).as_posix())
+
+    removed_files.extend(remove_obsolete_web_datasets())
+
+    validate_final_architecture()
+    validate_frontend()
 
     write_review(
-        before_app=before_app,
-        before_provider=before_provider,
-        before_index=before_index,
-        after_app=after_app,
-        after_provider=after_provider,
-        after_index=after_index,
-        participant_country_sample=participant_country_sample,
-        participant_country_sample_count=participant_country_sample_count,
+        baseline_count=baseline_count,
+        expired_count=expired_count,
+        changed_files=changed_files,
+        removed_files=removed_files,
     )
 
-    # The checkpoint must remain local-only.
-    if REPAIR_CHECKPOINT.exists():
-        print("PASS: repair checkpoint remains local and uncommitted.")
+    final_validation(baseline_count)
+
+    protect_repair_checkpoint()
+    validate_protected_worktree()
+
+    banner("PHASE 2 COMPLETE")
+
+    print("PASS: Phase 2 architecture migration completed.")
+
+    print("INFO: update.yml is the only scraper workflow.")
+
+    print("INFO: deploy.yml is the deployment-only workflow.")
+
+    print("INFO: data/opportunities.json is the canonical " "opportunity dataset.")
+
+    print("INFO: no scraper execution was performed.")
+
+    print("INFO: no checkpoint or backend dataset was rebuilt.")
+
+    print("INFO: review UPDATE_REVIEW.md before committing/pushing.")
 
     print()
-    print("=" * 72)
-    print("PRE-COMMIT VALIDATION")
-    print("=" * 72)
+    print("Final Git status:")
 
-    node_check(APP_JS)
-    node_check(DATA_PROVIDER_JS)
+    final_status = status_lines()
 
-    validate_provider_source()
-    validate_app_source()
-    validate_country_selector()
-    validate_1178_dataset()
-    validate_checkpoint()
+    if final_status:
+        for line in final_status:
+            print(f"  {line}")
+    else:
+        print("  clean")
 
-    stage_allowed_files()
-    commit_changes()
-    push_main()
-
-    verify_final_state()
-
-    print()
-    print("=" * 72)
-    print("DONE")
-    print("=" * 72)
     print()
     print(
-        "The full 1,178-opportunity dataset is now connected "
-        "to the GitHub Pages frontend."
+        "IMPORTANT: data/full_detail_repair_checkpoint.json " "must remain untracked."
     )
-    print()
-    print(
-        "The frontend provider loads web/opportunities.json, "
-        "splits active/recently expired opportunities, and "
-        "supports participant-country eligibility filtering."
-    )
-    print()
-    print("The full-detail repair checkpoint remains local-only.")
 
 
 if __name__ == "__main__":

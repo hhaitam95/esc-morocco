@@ -12,7 +12,7 @@ window.ESC_DATA_PROVIDER = {
 
   async load() {
     const response = await fetch(
-      `./opportunities.json?v=${Date.now()}`,
+      `https://raw.githubusercontent.com/hhaitam95/esc-opportunity-finder/main/data/opportunities.json?v=${Date.now()}`,
       {
         cache: 'no-store',
       },
