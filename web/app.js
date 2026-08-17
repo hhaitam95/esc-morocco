@@ -2814,6 +2814,100 @@ function getParticipantFilteredExpiredOpportunities() {
   );
 }
 
+function getExpiredAgeLabel(deadline) {
+  if (!deadline) {
+    return "";
+  }
+
+  const parsed =
+    parseDate(deadline);
+
+  if (!parsed) {
+    return "";
+  }
+
+  const today =
+    new Date();
+
+  const todayStart =
+    new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+
+  const expiredStart =
+    new Date(
+      parsed.getFullYear(),
+      parsed.getMonth(),
+      parsed.getDate(),
+    );
+
+  const millisecondsPerDay =
+    24 * 60 * 60 * 1000;
+
+  const daysAgo =
+    Math.floor(
+      (
+        todayStart.getTime() -
+        expiredStart.getTime()
+      ) / millisecondsPerDay,
+    );
+
+  if (daysAgo <= 0) {
+    return t("expiredToday");
+  }
+
+  return `${daysAgo} day(s) ago`;
+}
+
+function getExpiredAgeLabel(deadline) {
+  if (!deadline) {
+    return "";
+  }
+
+  const parsed =
+    parseDate(deadline);
+
+  if (!parsed) {
+    return "";
+  }
+
+  const today =
+    new Date();
+
+  const todayStart =
+    new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+
+  const expiredStart =
+    new Date(
+      parsed.getFullYear(),
+      parsed.getMonth(),
+      parsed.getDate(),
+    );
+
+  const millisecondsPerDay =
+    24 * 60 * 60 * 1000;
+
+  const daysAgo =
+    Math.floor(
+      (
+        todayStart.getTime() -
+        expiredStart.getTime()
+      ) / millisecondsPerDay,
+    );
+
+  if (daysAgo <= 0) {
+    return t("expiredToday");
+  }
+
+  return `${daysAgo} day(s) ago`;
+}
+
 function renderExpired() {
   if (!participantSearchApplied) {
     expiredSection.classList.add("hidden");
@@ -2857,6 +2951,30 @@ function renderExpired() {
       },
     );
 
+  filteredExpired.sort(
+    (a, b) => {
+      const dateA =
+        parseDate(a.deadline);
+
+      const dateB =
+        parseDate(b.deadline);
+
+      if (!dateA && !dateB) {
+        return 0;
+      }
+
+      if (!dateA) {
+        return 1;
+      }
+
+      if (!dateB) {
+        return -1;
+      }
+
+      return dateB - dateA;
+    },
+  );
+
   if (!filteredExpired.length) {
     expiredSection.classList.add("hidden");
     expiredBody.innerHTML = "";
@@ -2883,11 +3001,9 @@ function renderExpired() {
           );
 
         const expiredLabel =
-          typeof expiredRelative === "function"
-            ? expiredRelative(
-                opportunity.deadline,
-              )
-            : "";
+          getExpiredAgeLabel(
+            opportunity.deadline,
+          );
 
         const imageSrc =
           opportunity.image_url
@@ -2901,14 +3017,18 @@ function renderExpired() {
                     <tr>
 
                         <td class="title-cell">
+
                             <div class="opportunity-title">
+
                                 ${
                                   imageSrc
                                     ? `
                                             <img
                                                 class="opportunity-image"
                                                 src="${escapeHtml(imageSrc)}"
-                                                alt="${escapeHtml(opportunity.title || "")}"
+                                                alt="${escapeHtml(
+                                                  opportunity.title || "",
+                                                )}"
                                                 loading="lazy"
                                                 onerror="this.style.display='none'"
                                             />
@@ -2923,7 +3043,6 @@ function renderExpired() {
                                 </span>
 
                             </div>
-
 
                             ${
                               opportunity.topics?.length
@@ -2957,12 +3076,10 @@ function renderExpired() {
 
                         <td class="activity-cell">
 
-                            ${
-                              formatActivityDates(
-                                opportunity.start_date,
-                                opportunity.end_date,
-                              )
-                            }
+                            ${formatActivityDates(
+                              opportunity.start_date,
+                              opportunity.end_date,
+                            )}
 
                         </td>
 

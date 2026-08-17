@@ -2,31 +2,35 @@
 
 ## Recently Expired
 
-The Recently expired table now copies the active opportunity table style.
+The Recently expired table copies the active opportunity-table presentation.
 
-Final column order:
+Column order:
 
 Opportunity | Location | Activity | Deadline | Type | Expired | View
 
-The only additional column is `Expired`.
+Expired records are filtered by the selected Participant Country.
 
-Recently expired records are restricted to the selected Participant Country using `eligible_countries`.
+Expired records are sorted newest first:
 
-Rows retain logo, location/country rendering, activity, deadline, type, and View markup.
+Expired today
+1 day(s) ago
+2 day(s) ago
+...
+
+The age label uses the requested `day(s) ago` wording.
 
 ## Safety
 
 - Current opportunities: 657
 - Opportunity 53577 integrity validated.
-- Protected backend/cache files remain untouched.
+- Backend/cache files remain protected.
 - Local repair checkpoint remains untouched.
-- Archive data is read-only during this update.
 
 ## Working Tree
 
+- `M  UPDATE_REVIEW.md`
 - ` M update.py`
-- ` M web/app.js`
-- ` M web/index.html`
+- `MM web/app.js`
 - `?? data/full_detail_repair_checkpoint.json`
 
 ## Canonical Remote
