@@ -1,28 +1,16 @@
 # ESC Opportunity Finder — Production Review
 
-## Country Filter Fix
+## Live Country Filter Fix
 
-The main `#country-filter` was changed from labels such as:
+Patched the actual `populateFilters()` function used to populate `#country-filter`.
 
-`🌍 DE`
+The live renderer now:
 
-to human-readable labels such as:
-
-`🇩🇪 Germany`
-
-The underlying option value remains the ISO country code, for example `DE`.
-
-The implementation does not depend on `Intl.DisplayNames` or the existing country metadata implementation.
-
-## Validated Countries
-
-- 🇩🇪 Germany
-- 🇮🇹 Italy
-- 🇱🇹 Lithuania
-- 🇵🇹 Portugal
-- 🇷🇴 Romania
-- 🇸🇰 Slovakia
-- 🇹🇷 Türkiye
+- keeps ISO codes as option values;
+- displays country flags;
+- displays human-readable country names;
+- uses `Intl.DisplayNames` as a fallback;
+- removes the legacy `🌍 + ISO` rendering.
 
 ## Dataset Safety
 

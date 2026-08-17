@@ -188,16 +188,56 @@ const ESC_COUNTRY_DISPLAY = Object.freeze({
 });
 
 function getCountryDisplay(code) {
-  const normalized = String(code || "").trim().toUpperCase();
+  const normalized =
+    String(code || "").trim().toUpperCase();
 
-  if (ESC_COUNTRY_DISPLAY[normalized]) {
-    return ESC_COUNTRY_DISPLAY[normalized];
+  const aliases = {
+    EL: "GR",
+  };
+
+  const resolvedCode =
+    aliases[normalized] || normalized;
+
+  if (ESC_COUNTRY_DISPLAY[resolvedCode]) {
+    return ESC_COUNTRY_DISPLAY[resolvedCode];
   }
 
-  // Safe fallback for an unknown ISO-style country code.
+  let localizedName = "";
+
+  try {
+    if (
+      typeof Intl !== "undefined" &&
+      typeof Intl.DisplayNames === "function"
+    ) {
+      const locale =
+        currentLanguage === "fr"
+          ? "fr-FR"
+          : currentLanguage === "ar"
+            ? "ar-MA"
+            : "en-GB";
+
+      const displayNames =
+        new Intl.DisplayNames(
+          [locale],
+          {
+            type: "region",
+          },
+        );
+
+      localizedName =
+        displayNames.of(resolvedCode) || "";
+    }
+  } catch (error) {
+    localizedName = "";
+  }
+
   return {
-    name: normalized || "Unknown",
-    flag: "🌍"
+    name:
+      localizedName ||
+      resolvedCode ||
+      "Unknown",
+    flag:
+      getCountryFlagByCode(resolvedCode),
   };
 }
 
@@ -2232,48 +2272,109 @@ function uniqueSortedValues(items, property) {
 }
 
 function populateFilters() {
-  const countries = uniqueSortedValues(activeOpportunities, "country");
+  const countries =
+    uniqueSortedValues(
+      activeOpportunities,
+      "country",
+    );
 
-  const types = uniqueSortedValues(activeOpportunities, "activity_type");
+  const types =
+    uniqueSortedValues(
+      activeOpportunities,
+      "activity_type",
+    );
 
-  const selectedCountry = countryFilter.value;
+  const selectedCountry =
+    countryFilter.value;
 
-  const selectedType = typeFilter.value;
+  const selectedType =
+    typeFilter.value;
 
-  countryFilter.innerHTML = `<option value="">
-            ${escapeHtml(t("allCountries"))}
-        </option>`;
+  countryFilter.innerHTML = "";
 
-  countries.forEach((code) => {
-    const option = document.createElement("option");
+  const allCountriesOption =
+    document.createElement("option");
+
+  allCountriesOption.value = "";
+
+  allCountriesOption.textContent =
+    t("allCountries");
+
+  countryFilter.appendChild(
+    allCountriesOption,
+  );
+
+  countries.forEach((rawCode) => {
+    const code =
+      String(rawCode || "")
+        .trim()
+        .toUpperCase();
+
+    if (!code) {
+      return;
+    }
+
+    const display =
+      getCountryDisplay(code);
+
+    const option =
+      document.createElement("option");
 
     option.value = code;
 
-    option.textContent = `${getCountryFlag(code)} ` + `${getCountryName(code)}`;
+    option.textContent =
+      `${display.flag} ${display.name}`;
 
-    countryFilter.appendChild(option);
+    countryFilter.appendChild(
+      option,
+    );
   });
 
-  typeFilter.innerHTML = `<option value="">
-            ${escapeHtml(t("allTypes"))}
-        </option>`;
+  typeFilter.innerHTML = "";
+
+  const allTypesOption =
+    document.createElement("option");
+
+  allTypesOption.value = "";
+
+  allTypesOption.textContent =
+    t("allTypes");
+
+  typeFilter.appendChild(
+    allTypesOption,
+  );
 
   types.forEach((type) => {
-    const option = document.createElement("option");
+    const option =
+      document.createElement("option");
 
     option.value = type;
 
-    option.textContent = `${getCountryFlagByCode(option.value)} ${getTranslatedCountryName(option.value, option.value)}`;
+    option.textContent = type;
 
     typeFilter.appendChild(option);
   });
 
-  if (countries.includes(selectedCountry)) {
-    countryFilter.value = selectedCountry;
+  if (
+    countries.includes(
+      selectedCountry,
+    )
+  ) {
+    countryFilter.value =
+      selectedCountry;
+  } else {
+    countryFilter.value = "";
   }
 
-  if (types.includes(selectedType)) {
-    typeFilter.value = selectedType;
+  if (
+    types.includes(
+      selectedType,
+    )
+  ) {
+    typeFilter.value =
+      selectedType;
+  } else {
+    typeFilter.value = "";
   }
 }
 
