@@ -3336,7 +3336,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Illustration-Georgia_16.png?itok=l2AvmUmO",
         "url": "https://youth.europa.eu/solidarity/opportunity/53749_en"
       },
-      "checked_at": "2026-08-15T19:05:43.252803"
+      "checked_at": "2026-08-17T10:07:11.721831"
     },
     "53748": {
       "status": "scanned",
@@ -3365,7 +3365,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo-Antigona-carta-intestata_247.JPG?itok=Y-QFXSgx",
         "url": "https://youth.europa.eu/solidarity/opportunity/53748_en"
       },
-      "checked_at": "2026-08-15T19:05:49.208175"
+      "checked_at": "2026-08-17T10:07:17.894619"
     },
     "53746": {
       "status": "scanned",
@@ -3438,7 +3438,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Illustration-Georgia_16.png?itok=l2AvmUmO",
         "url": "https://youth.europa.eu/solidarity/opportunity/53746_en"
       },
-      "checked_at": "2026-08-15T19:05:54.374285"
+      "checked_at": "2026-08-17T10:07:28.989636"
     },
     "53745": {
       "status": "scanned",
@@ -3511,7 +3511,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Illustration-Georgia_16.png?itok=l2AvmUmO",
         "url": "https://youth.europa.eu/solidarity/opportunity/53745_en"
       },
-      "checked_at": "2026-08-15T19:05:59.541887"
+      "checked_at": "2026-08-17T10:07:35.819372"
     },
     "53747": {
       "status": "scanned",
@@ -3578,7 +3578,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/acarbio_logo.jpg?itok=TkD6aWVF",
         "url": "https://youth.europa.eu/solidarity/opportunity/53747_en"
       },
-      "checked_at": "2026-08-15T19:06:04.710923"
+      "checked_at": "2026-08-17T10:07:43.316863"
     },
     "53744": {
       "status": "scanned",
@@ -3607,7 +3607,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/ESN-Italy_colour_black.png?itok=kgJik38y",
         "url": "https://youth.europa.eu/solidarity/opportunity/53744_en"
       },
-      "checked_at": "2026-08-15T19:06:09.923050"
+      "checked_at": "2026-08-17T10:07:48.461020"
     },
     "53743": {
       "status": "scanned",
@@ -3693,9 +3693,14 @@
         "project_code": "2025-1-LT02-ESC51-VTJ-000346080",
         "created": "2026-08-10T08:56:25",
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
-        "url": "https://youth.europa.eu/solidarity/opportunity/53743_en"
+        "url": "https://youth.europa.eu/solidarity/opportunity/53743_en",
+        "eligible_countries_unmapped": [
+          "Bonaire Sint Eustatius and Saba",
+          "French Southern and Antarctic Territories",
+          "St Pierre and Miquelon"
+        ]
       },
-      "checked_at": "2026-08-15T19:06:15.093663"
+      "checked_at": "2026-08-17T10:07:53.604152"
     },
     "53742": {
       "status": "scanned",
@@ -3734,7 +3739,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/new-1-%281%29_1.gif?itok=c5l-mcd9",
         "url": "https://youth.europa.eu/solidarity/opportunity/53742_en"
       },
-      "checked_at": "2026-08-15T19:06:20.324566"
+      "checked_at": "2026-08-17T10:08:00.519833"
     },
     "53741": {
       "status": "scanned",
@@ -3849,7 +3854,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53740_en"
       },
-      "checked_at": "2026-08-15T19:06:30.676453"
+      "checked_at": "2026-08-17T10:08:06.466270"
     },
     "53739": {
       "status": "scanned",
@@ -3910,7 +3915,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/abs-photo_esc_15_60.png?itok=s-YDYLUq",
         "url": "https://youth.europa.eu/solidarity/opportunity/53739_en"
       },
-      "checked_at": "2026-08-15T19:06:36.532389"
+      "checked_at": "2026-08-17T10:08:12.519697"
     },
     "53738": {
       "status": "scanned",
@@ -3938,7 +3943,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53738_en"
       },
-      "checked_at": "2026-08-15T19:06:41.717884"
+      "checked_at": "2026-08-17T10:08:18.994536"
     },
     "53737": {
       "status": "scanned",
@@ -3966,7 +3971,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53737_en"
       },
-      "checked_at": "2026-08-15T19:06:46.883002"
+      "checked_at": "2026-08-17T10:08:24.136876"
     },
     "53734": {
       "status": "scanned",
@@ -4001,7 +4006,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo-IAFA-01.png?itok=VMl9sx5G",
         "url": "https://youth.europa.eu/solidarity/opportunity/53734_en"
       },
-      "checked_at": "2026-08-15T19:06:52.051421"
+      "checked_at": "2026-08-17T10:08:29.988877"
     },
     "53733": {
       "status": "scanned",
@@ -4036,7 +4041,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo-IAFA-01.png?itok=VMl9sx5G",
         "url": "https://youth.europa.eu/solidarity/opportunity/53733_en"
       },
-      "checked_at": "2026-08-15T19:06:57.220206"
+      "checked_at": "2026-08-17T10:08:35.133878"
     },
     "53735": {
       "status": "scanned",
@@ -4098,9 +4103,13 @@
         "project_code": "2026-1-IT03-ESC51-VTJ-000402744",
         "created": "2026-08-07T17:02:03",
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo-2026_0.png?itok=0S4SYuso",
-        "url": "https://youth.europa.eu/solidarity/opportunity/53735_en"
+        "url": "https://youth.europa.eu/solidarity/opportunity/53735_en",
+        "eligible_countries_unmapped": [
+          "Bonaire Sint Eustatius and Saba",
+          "St Pierre and Miquelon"
+        ]
       },
-      "checked_at": "2026-08-15T19:07:02.390002"
+      "checked_at": "2026-08-17T10:08:41.665193"
     },
     "53732": {
       "status": "scanned",
@@ -4158,7 +4167,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53732_en"
       },
-      "checked_at": "2026-08-15T19:07:07.581223"
+      "checked_at": "2026-08-17T10:08:46.831984"
     },
     "53731": {
       "status": "scanned",
@@ -4369,7 +4378,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logos-for-Poznan-Logos-NGO.png?itok=8Zpm9D27",
         "url": "https://youth.europa.eu/solidarity/opportunity/53728_en"
       },
-      "checked_at": "2026-08-15T19:07:28.254637"
+      "checked_at": "2026-08-17T10:08:52.882117"
     },
     "53726": {
       "status": "scanned",
@@ -4397,7 +4406,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53726_en"
       },
-      "checked_at": "2026-08-15T19:07:33.421250"
+      "checked_at": "2026-08-17T10:08:59.565065"
     },
     "53725": {
       "status": "scanned",
@@ -4512,7 +4521,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53724_en"
       },
-      "checked_at": "2026-08-15T19:07:43.843724"
+      "checked_at": "2026-08-17T10:09:05.893288"
     },
     "53723": {
       "status": "scanned",
@@ -4574,7 +4583,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53723_en"
       },
-      "checked_at": "2026-08-15T19:07:49.010465"
+      "checked_at": "2026-08-17T10:09:12.175785"
     },
     "53722": {
       "status": "scanned",
@@ -4638,7 +4647,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53722_en"
       },
-      "checked_at": "2026-08-15T19:07:54.183301"
+      "checked_at": "2026-08-17T10:09:18.526769"
     },
     "53721": {
       "status": "scanned",
@@ -4723,7 +4732,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53720_en"
       },
-      "checked_at": "2026-08-15T19:08:04.524936"
+      "checked_at": "2026-08-17T10:09:25.595821"
     },
     "53719": {
       "status": "scanned",
@@ -4788,7 +4797,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Bildschirmfoto-2026-08-07-um-12.38.07.png?itok=Rg3ooyXx",
         "url": "https://youth.europa.eu/solidarity/opportunity/53719_en"
       },
-      "checked_at": "2026-08-15T19:08:09.692816"
+      "checked_at": "2026-08-17T10:09:32.010150"
     },
     "53718": {
       "status": "scanned",
@@ -4817,7 +4826,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/LOGO-BBA_7.png?itok=TIZ-6y46",
         "url": "https://youth.europa.eu/solidarity/opportunity/53718_en"
       },
-      "checked_at": "2026-08-15T19:08:14.863406"
+      "checked_at": "2026-08-17T10:09:38.362649"
     },
     "53717": {
       "status": "scanned",
@@ -4846,7 +4855,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/LOGO-BBA_7.png?itok=TIZ-6y46",
         "url": "https://youth.europa.eu/solidarity/opportunity/53717_en"
       },
-      "checked_at": "2026-08-15T19:08:20.742732"
+      "checked_at": "2026-08-17T10:09:45.186676"
     },
     "53716": {
       "status": "scanned",
@@ -4929,7 +4938,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo-farfalle_11.jpeg?itok=CVQ9PzFN",
         "url": "https://youth.europa.eu/solidarity/opportunity/53715_en"
       },
-      "checked_at": "2026-08-15T19:08:31.082372"
+      "checked_at": "2026-08-17T10:09:51.445342"
     },
     "53714": {
       "status": "scanned",
@@ -4985,7 +4994,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo-farfalle_11.jpeg?itok=CVQ9PzFN",
         "url": "https://youth.europa.eu/solidarity/opportunity/53714_en"
       },
-      "checked_at": "2026-08-15T19:50:55.820241"
+      "checked_at": "2026-08-17T10:09:57.672971"
     },
     "53713": {
       "status": "not_morocco",
@@ -5050,7 +5059,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo_158.png?itok=L76LCLeI",
         "url": "https://youth.europa.eu/solidarity/opportunity/53712_en"
       },
-      "checked_at": "2026-08-15T19:51:01.021760"
+      "checked_at": "2026-08-17T10:10:03.675269"
     },
     "53710": {
       "status": "scanned",
@@ -5118,7 +5127,7 @@
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/53710_en"
       },
-      "checked_at": "2026-08-15T19:51:06.205051"
+      "checked_at": "2026-08-17T10:10:08.819178"
     },
     "53709": {
       "status": "scanned",
@@ -5174,7 +5183,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/WhatsApp-Image-2026-06-15-at-15.05.01_0.jpeg?itok=r71g2jci",
         "url": "https://youth.europa.eu/solidarity/opportunity/53709_en"
       },
-      "checked_at": "2026-08-15T19:51:12.198792"
+      "checked_at": "2026-08-17T10:10:15.727072"
     },
     "53708": {
       "status": "scanned",
@@ -5235,7 +5244,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
         "url": "https://youth.europa.eu/solidarity/opportunity/53708_en"
       },
-      "checked_at": "2026-08-15T19:51:18.250957"
+      "checked_at": "2026-08-17T10:10:21.736124"
     },
     "53707": {
       "status": "scanned",
@@ -5290,7 +5299,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/solj-logo_40.png?itok=ugfdroF7",
         "url": "https://youth.europa.eu/solidarity/opportunity/53707_en"
       },
-      "checked_at": "2026-08-15T19:51:24.180751"
+      "checked_at": "2026-08-17T10:10:28.179093"
     },
     "53706": {
       "status": "scanned",
@@ -5345,7 +5354,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/solj-logo_40.png?itok=ugfdroF7",
         "url": "https://youth.europa.eu/solidarity/opportunity/53706_en"
       },
-      "checked_at": "2026-08-15T19:51:30.047645"
+      "checked_at": "2026-08-17T10:10:34.178958"
     },
     "53705": {
       "status": "scanned",
@@ -5401,7 +5410,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/solj-logo_40.png?itok=ugfdroF7",
         "url": "https://youth.europa.eu/solidarity/opportunity/53705_en"
       },
-      "checked_at": "2026-08-15T19:51:35.216607"
+      "checked_at": "2026-08-17T10:10:40.634293"
     },
     "53704": {
       "status": "scanned",
@@ -5455,7 +5464,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/solj-logo_40.png?itok=ugfdroF7",
         "url": "https://youth.europa.eu/solidarity/opportunity/53704_en"
       },
-      "checked_at": "2026-08-15T19:51:41.355476"
+      "checked_at": "2026-08-17T10:10:46.699611"
     },
     "53703": {
       "status": "scanned",
@@ -5519,7 +5528,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo_EFM1_1.png?itok=7lRRiAmH",
         "url": "https://youth.europa.eu/solidarity/opportunity/53703_en"
       },
-      "checked_at": "2026-08-15T19:51:46.524189"
+      "checked_at": "2026-08-17T10:10:52.640701"
     },
     "53702": {
       "status": "scanned",
@@ -5574,7 +5583,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Blivande-Logo-%281%29_2.png?itok=AMsQx9Zr",
         "url": "https://youth.europa.eu/solidarity/opportunity/53702_en"
       },
-      "checked_at": "2026-08-15T19:51:51.693116"
+      "checked_at": "2026-08-17T10:10:57.783577"
     },
     "53700": {
       "status": "scanned",
@@ -5634,7 +5643,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/ParkeriING_jpg_4.jpg?itok=JJtEW4NP",
         "url": "https://youth.europa.eu/solidarity/opportunity/53700_en"
       },
-      "checked_at": "2026-08-15T19:51:56.868446"
+      "checked_at": "2026-08-17T10:11:03.871340"
     },
     "53701": {
       "status": "scanned",
@@ -5687,7 +5696,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo_227.jpg?itok=srwnPPVP",
         "url": "https://youth.europa.eu/solidarity/opportunity/53701_en"
       },
-      "checked_at": "2026-08-15T19:52:02.038378"
+      "checked_at": "2026-08-17T10:11:09.781354"
     },
     "53698": {
       "status": "scanned",
@@ -5746,7 +5755,7 @@
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/ParkeriING_jpg_4.jpg?itok=JJtEW4NP",
         "url": "https://youth.europa.eu/solidarity/opportunity/53698_en"
       },
-      "checked_at": "2026-08-15T19:52:07.207222"
+      "checked_at": "2026-08-17T10:11:16.368527"
     },
     "53697": {
       "status": "scanned",
@@ -62070,11 +62079,11 @@
       "checked_at": "2026-08-16T19:49:42.851086"
     }
   },
-  "updated_at": "2026-08-17T08:37:44.202967",
+  "updated_at": "2026-08-17T10:11:16.571144",
   "history": {
     "53801": {
       "first_seen": "2026-08-12T19:49:46",
-      "last_seen": "2026-08-17T08:34:07.011934",
+      "last_seen": "2026-08-17T10:07:00.581259",
       "result": {
         "id": 53801,
         "opid": 53801,
@@ -62109,7 +62118,7 @@
     },
     "53800": {
       "first_seen": "2026-08-12T19:46:19",
-      "last_seen": "2026-08-17T08:34:07.011953",
+      "last_seen": "2026-08-17T10:07:00.581276",
       "result": {
         "id": 53800,
         "opid": 53800,
@@ -62144,7 +62153,7 @@
     },
     "53769": {
       "first_seen": "2026-08-11T11:40:46",
-      "last_seen": "2026-08-17T08:34:07.011966",
+      "last_seen": "2026-08-17T10:07:00.581298",
       "result": {
         "id": 53769,
         "opid": 53769,
@@ -62220,7 +62229,7 @@
     },
     "53741": {
       "first_seen": "2026-08-09T09:35:11",
-      "last_seen": "2026-08-17T08:34:07.011975",
+      "last_seen": "2026-08-17T10:07:00.581313",
       "result": {
         "id": 53741,
         "opid": 53741,
@@ -62290,7 +62299,7 @@
     },
     "53731": {
       "first_seen": "2026-08-07T15:58:06",
-      "last_seen": "2026-08-17T08:34:07.011981",
+      "last_seen": "2026-08-17T10:07:00.581319",
       "result": {
         "id": 53731,
         "opid": 53731,
@@ -62343,7 +62352,7 @@
     },
     "53729": {
       "first_seen": "2026-08-07T15:23:50",
-      "last_seen": "2026-08-17T08:34:07.011983",
+      "last_seen": "2026-08-17T10:07:00.581322",
       "result": {
         "id": 53729,
         "opid": 53729,
@@ -62394,7 +62403,7 @@
     },
     "53727": {
       "first_seen": "2026-08-07T15:14:19",
-      "last_seen": "2026-08-17T08:34:07.011985",
+      "last_seen": "2026-08-17T10:07:00.581326",
       "result": {
         "id": 53727,
         "opid": 53727,
@@ -62445,7 +62454,7 @@
     },
     "53670": {
       "first_seen": "2026-08-05T09:06:21",
-      "last_seen": "2026-08-17T08:34:07.012010",
+      "last_seen": "2026-08-17T10:07:00.581362",
       "result": {
         "id": 53670,
         "opid": 53670,
@@ -62502,7 +62511,7 @@
     },
     "53667": {
       "first_seen": "2026-08-04T21:51:58",
-      "last_seen": "2026-08-17T08:34:07.012012",
+      "last_seen": "2026-08-17T10:07:00.581364",
       "result": {
         "id": 53667,
         "opid": 53667,
@@ -62577,7 +62586,7 @@
     },
     "53661": {
       "first_seen": "2026-08-04T17:17:11",
-      "last_seen": "2026-08-17T08:34:07.012020",
+      "last_seen": "2026-08-17T10:07:00.581374",
       "result": {
         "id": 53661,
         "opid": 53661,
@@ -62631,7 +62640,7 @@
     },
     "53660": {
       "first_seen": "2026-08-04T16:57:15",
-      "last_seen": "2026-08-17T08:34:07.012022",
+      "last_seen": "2026-08-17T10:07:00.581377",
       "result": {
         "id": 53660,
         "opid": 53660,
@@ -62685,7 +62694,7 @@
     },
     "53658": {
       "first_seen": "2026-08-04T16:21:10",
-      "last_seen": "2026-08-17T08:34:07.012025",
+      "last_seen": "2026-08-17T10:07:00.581380",
       "result": {
         "id": 53658,
         "opid": 53658,
@@ -62739,7 +62748,7 @@
     },
     "53638": {
       "first_seen": "2026-08-04T10:06:46",
-      "last_seen": "2026-08-17T08:34:07.012032",
+      "last_seen": "2026-08-17T10:07:00.581388",
       "result": {
         "id": 53638,
         "opid": 53638,
@@ -62792,7 +62801,7 @@
     },
     "53485": {
       "first_seen": "2026-07-26T14:16:02",
-      "last_seen": "2026-08-17T08:34:07.012072",
+      "last_seen": "2026-08-17T10:07:00.581441",
       "result": {
         "id": 53485,
         "opid": 53485,
@@ -62845,7 +62854,7 @@
     },
     "53463": {
       "first_seen": "2026-07-23T23:15:50",
-      "last_seen": "2026-08-17T08:34:07.012076",
+      "last_seen": "2026-08-17T10:07:00.581447",
       "result": {
         "id": 53463,
         "opid": 53463,
@@ -62932,7 +62941,7 @@
     },
     "53406": {
       "first_seen": "2026-07-22T10:54:32",
-      "last_seen": "2026-08-17T08:34:07.012089",
+      "last_seen": "2026-08-17T10:07:00.581455",
       "result": {
         "id": 53406,
         "opid": 53406,
@@ -62975,7 +62984,7 @@
     },
     "53387": {
       "first_seen": "2026-07-21T15:35:45",
-      "last_seen": "2026-08-17T08:34:07.012094",
+      "last_seen": "2026-08-17T10:07:00.581460",
       "result": {
         "id": 53387,
         "opid": 53387,
@@ -63819,7 +63828,7 @@
     },
     "53790": {
       "first_seen": "2026-08-12T12:24:20",
-      "last_seen": "2026-08-17T08:34:07.011959",
+      "last_seen": "2026-08-17T10:07:00.581285",
       "result": {
         "id": 53790,
         "opid": 53790,
@@ -63888,7 +63897,7 @@
     },
     "53725": {
       "first_seen": "2026-08-07T14:27:57",
-      "last_seen": "2026-08-17T08:34:07.011988",
+      "last_seen": "2026-08-17T10:07:00.581330",
       "result": {
         "id": 53725,
         "opid": 53725,
@@ -63942,7 +63951,7 @@
     },
     "53721": {
       "first_seen": "2026-08-07T13:12:23",
-      "last_seen": "2026-08-17T08:34:07.011991",
+      "last_seen": "2026-08-17T10:07:00.581334",
       "result": {
         "id": 53721,
         "opid": 53721,
@@ -63993,7 +64002,7 @@
     },
     "53716": {
       "first_seen": "2026-08-07T11:40:45",
-      "last_seen": "2026-08-17T08:34:07.011995",
+      "last_seen": "2026-08-17T10:07:00.581339",
       "result": {
         "id": 53716,
         "opid": 53716,
@@ -64023,7 +64032,7 @@
     },
     "53678": {
       "first_seen": "2026-08-05T12:51:28",
-      "last_seen": "2026-08-17T08:34:07.012004",
+      "last_seen": "2026-08-17T10:07:00.581354",
       "result": {
         "id": 53678,
         "opid": 53678,
@@ -64061,7 +64070,7 @@
     },
     "53674": {
       "first_seen": "2026-08-05T09:32:18",
-      "last_seen": "2026-08-17T08:34:07.012007",
+      "last_seen": "2026-08-17T10:07:00.581359",
       "result": {
         "id": 53674,
         "opid": 53674,
@@ -64112,7 +64121,7 @@
     },
     "53663": {
       "first_seen": "2026-08-04T17:59:40",
-      "last_seen": "2026-08-17T08:34:07.012016",
+      "last_seen": "2026-08-17T10:07:00.581369",
       "result": {
         "id": 53663,
         "opid": 53663,
@@ -64157,7 +64166,7 @@
     },
     "53662": {
       "first_seen": "2026-08-04T17:37:27",
-      "last_seen": "2026-08-17T08:34:07.012018",
+      "last_seen": "2026-08-17T10:07:00.581371",
       "result": {
         "id": 53662,
         "opid": 53662,
@@ -64212,7 +64221,7 @@
     },
     "53650": {
       "first_seen": "2026-08-04T13:53:50",
-      "last_seen": "2026-08-17T08:34:07.012029",
+      "last_seen": "2026-08-17T10:07:00.581384",
       "result": {
         "id": 53650,
         "opid": 53650,
@@ -64269,7 +64278,7 @@
     },
     "53626": {
       "first_seen": "2026-08-03T15:25:32",
-      "last_seen": "2026-08-17T08:34:07.012037",
+      "last_seen": "2026-08-17T10:07:00.581394",
       "result": {
         "id": 53626,
         "opid": 53626,
@@ -64329,7 +64338,7 @@
     },
     "53625": {
       "first_seen": "2026-08-03T14:45:42",
-      "last_seen": "2026-08-17T08:34:07.012039",
+      "last_seen": "2026-08-17T10:07:00.581396",
       "result": {
         "id": 53625,
         "opid": 53625,
@@ -64358,7 +64367,7 @@
     },
     "53539": {
       "first_seen": "2026-07-28T17:17:46",
-      "last_seen": "2026-08-17T08:34:07.012052",
+      "last_seen": "2026-08-17T10:07:00.581416",
       "result": {
         "id": 53539,
         "opid": 53539,
@@ -64432,7 +64441,7 @@
     },
     "53538": {
       "first_seen": "2026-07-28T17:13:29",
-      "last_seen": "2026-08-17T08:34:07.012055",
+      "last_seen": "2026-08-17T10:07:00.581420",
       "result": {
         "id": 53538,
         "opid": 53538,
@@ -64506,7 +64515,7 @@
     },
     "53536": {
       "first_seen": "2026-07-28T17:07:31",
-      "last_seen": "2026-08-17T08:34:07.012057",
+      "last_seen": "2026-08-17T10:07:00.581423",
       "result": {
         "id": 53536,
         "opid": 53536,
@@ -64580,7 +64589,7 @@
     },
     "53534": {
       "first_seen": "2026-07-28T17:01:51",
-      "last_seen": "2026-08-17T08:34:07.012060",
+      "last_seen": "2026-08-17T10:07:00.581426",
       "result": {
         "id": 53534,
         "opid": 53534,
@@ -64654,7 +64663,7 @@
     },
     "53510": {
       "first_seen": "2026-07-27T21:12:55",
-      "last_seen": "2026-08-17T08:34:07.012065",
+      "last_seen": "2026-08-17T10:07:00.581433",
       "result": {
         "id": 53510,
         "opid": 53510,
@@ -64688,7 +64697,7 @@
     },
     "53502": {
       "first_seen": "2026-07-27T13:59:14",
-      "last_seen": "2026-08-17T08:34:07.012068",
+      "last_seen": "2026-08-17T10:07:00.581436",
       "result": {
         "id": 53502,
         "opid": 53502,
@@ -64744,7 +64753,7 @@
     },
     "53345": {
       "first_seen": "2026-07-20T13:41:22",
-      "last_seen": "2026-08-17T08:34:07.012098",
+      "last_seen": "2026-08-17T10:07:00.581465",
       "result": {
         "id": 53345,
         "opid": 53345,
@@ -64792,7 +64801,7 @@
     },
     "53315": {
       "first_seen": "2026-07-17T10:12:37",
-      "last_seen": "2026-08-17T08:34:07.012102",
+      "last_seen": "2026-08-17T10:07:00.581472",
       "result": {
         "id": 53315,
         "opid": 53315,
@@ -64859,7 +64868,7 @@
     },
     "53291": {
       "first_seen": "2026-07-16T11:07:41",
-      "last_seen": "2026-08-17T08:34:07.012106",
+      "last_seen": "2026-08-17T10:07:00.581476",
       "result": {
         "id": 53291,
         "opid": 53291,
@@ -64914,7 +64923,7 @@
     },
     "52898": {
       "first_seen": "2026-06-29T11:31:25",
-      "last_seen": "2026-08-17T08:34:07.012127",
+      "last_seen": "2026-08-17T10:07:00.581509",
       "result": {
         "id": 52898,
         "opid": 52898,
@@ -64964,7 +64973,7 @@
     },
     "52469": {
       "first_seen": "2026-06-10T10:10:14",
-      "last_seen": "2026-08-17T08:34:07.012143",
+      "last_seen": "2026-08-17T10:07:00.581531",
       "result": {
         "id": 52469,
         "opid": 52469,
@@ -65018,7 +65027,7 @@
     },
     "51639": {
       "first_seen": "2026-05-07T16:03:18",
-      "last_seen": "2026-08-17T08:34:07.012166",
+      "last_seen": "2026-08-17T10:07:00.581564",
       "result": {
         "id": 51639,
         "opid": 51639,
@@ -65071,7 +65080,7 @@
     },
     "51560": {
       "first_seen": "2026-05-05T13:51:19",
-      "last_seen": "2026-08-17T08:34:07.012170",
+      "last_seen": "2026-08-17T10:07:00.581569",
       "result": {
         "id": 51560,
         "opid": 51560,
@@ -65127,7 +65136,7 @@
     },
     "51559": {
       "first_seen": "2026-05-05T13:30:54",
-      "last_seen": "2026-08-17T08:34:07.012172",
+      "last_seen": "2026-08-17T10:07:00.581572",
       "result": {
         "id": 51559,
         "opid": 51559,
@@ -65179,7 +65188,7 @@
     },
     "51541": {
       "first_seen": "2026-05-05T01:24:57",
-      "last_seen": "2026-08-17T08:34:07.012174",
+      "last_seen": "2026-08-17T10:07:00.581574",
       "result": {
         "id": 51541,
         "opid": 51541,
@@ -65234,7 +65243,7 @@
     },
     "51540": {
       "first_seen": "2026-05-05T01:04:49",
-      "last_seen": "2026-08-17T08:34:07.012176",
+      "last_seen": "2026-08-17T10:07:00.581577",
       "result": {
         "id": 51540,
         "opid": 51540,
@@ -65291,7 +65300,7 @@
     },
     "51539": {
       "first_seen": "2026-05-05T00:51:30",
-      "last_seen": "2026-08-17T08:34:07.012178",
+      "last_seen": "2026-08-17T10:07:00.581580",
       "result": {
         "id": 51539,
         "opid": 51539,
@@ -65347,7 +65356,7 @@
     },
     "51389": {
       "first_seen": "2026-04-27T14:34:33",
-      "last_seen": "2026-08-17T08:34:07.012184",
+      "last_seen": "2026-08-17T10:07:00.581588",
       "result": {
         "id": 51389,
         "opid": 51389,
@@ -65395,7 +65404,7 @@
     },
     "51135": {
       "first_seen": "2026-04-15T09:02:59",
-      "last_seen": "2026-08-17T08:34:07.012191",
+      "last_seen": "2026-08-17T10:07:00.581598",
       "result": {
         "id": 51135,
         "opid": 51135,
@@ -65455,7 +65464,7 @@
     },
     "50999": {
       "first_seen": "2026-04-08T11:02:44",
-      "last_seen": "2026-08-17T08:34:07.012196",
+      "last_seen": "2026-08-17T10:07:00.581603",
       "result": {
         "id": 50999,
         "opid": 50999,
@@ -65515,7 +65524,7 @@
     },
     "50808": {
       "first_seen": "2026-03-27T15:55:19",
-      "last_seen": "2026-08-17T08:34:07.012199",
+      "last_seen": "2026-08-17T10:07:00.581608",
       "result": {
         "id": 50808,
         "opid": 50808,
@@ -65558,6 +65567,6 @@
       "reason": "No longer present in the active opportunity list."
     }
   },
-  "last_scan_at": "2026-08-17T08:37:44.202965",
+  "last_scan_at": "2026-08-17T10:11:16.571140",
   "schema_version": 4
 }
