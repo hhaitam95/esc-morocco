@@ -1737,28 +1737,40 @@ function getCountryFlag(countryName) {
 }
 
 function renderCountry(code) {
-  const name = getCountryName(code);
+  const normalizedCode =
+    normalizeCountryCode(code);
 
-  if (!name) {
+  if (!normalizedCode) {
     return "";
   }
 
-  const flag = getCountryFlag(code);
+  let name = "";
+
+  try {
+    name =
+      getTranslatedCountryName(
+        normalizedCode,
+        getCountryName(normalizedCode),
+      );
+  } catch (error) {
+    name =
+      getCountryName(normalizedCode);
+  }
+
+  const flag =
+    getCountryFlagByCode(normalizedCode);
 
   return `
         <span class="country-display">
-
             <span
                 class="country-flag"
                 aria-hidden="true"
             >
                 ${flag}
             </span>
-
             <span>
                 ${escapeHtml(name)}
             </span>
-
         </span>
     `;
 }
@@ -2177,6 +2189,7 @@ async function applyParticipantCountry() {
     ];
 
     resetParticipantSearchDisplay();
+    renderExpired();
     errorMessage.classList.add("hidden");
     return;
   }
@@ -2220,6 +2233,7 @@ async function applyParticipantCountry() {
       matchingOpportunities;
 
     renderActive();
+    renderExpired();
   } catch (error) {
     console.error(
       "Could not filter opportunities by participant country:",
@@ -2758,70 +2772,259 @@ ${formatActivityDates(opportunity.start_date, opportunity.end_date)}
 // EXPIRED TABLE
 // ============================================================
 
-function renderExpired() {
-  if (!expiredOpportunities.length) {
-    expiredSection.classList.add("hidden");
+function getParticipantFilteredExpiredOpportunities() {
+  if (
+    !participantSearchApplied ||
+    !selectedParticipantCountry
+  ) {
+    return [];
+  }
 
+  const selectedCode =
+    getParticipantCountryCode(
+      selectedParticipantCountry,
+    );
+
+  if (!selectedCode) {
+    return [];
+  }
+
+  return expiredOpportunities.filter(
+    (opportunity) => {
+      const participantCountries =
+        Array.isArray(
+          opportunity?.participant_countries,
+        )
+          ? opportunity.participant_countries
+          : Array.isArray(
+                opportunity?.eligible_countries,
+              )
+            ? opportunity.eligible_countries
+            : [];
+
+      return participantCountries
+        .map(
+          (value) =>
+            String(value || "")
+              .trim()
+              .toUpperCase(),
+        )
+        .includes(selectedCode);
+    },
+  );
+}
+
+function renderExpired() {
+  if (!participantSearchApplied) {
+    expiredSection.classList.add("hidden");
+    expiredBody.innerHTML = "";
+    expiredCount.textContent = "0";
+    return;
+  }
+
+  const selectedCode =
+    getParticipantCountryCode(
+      selectedParticipantCountry,
+    );
+
+  if (!selectedCode) {
+    expiredSection.classList.add("hidden");
+    expiredBody.innerHTML = "";
+    expiredCount.textContent = "0";
+    return;
+  }
+
+  const filteredExpired =
+    expiredOpportunities.filter(
+      (opportunity) => {
+        const eligibleCountries =
+          Array.isArray(
+            opportunity.eligible_countries,
+          )
+            ? opportunity.eligible_countries
+            : Array.isArray(
+                  opportunity.participant_countries,
+                )
+              ? opportunity.participant_countries
+              : [];
+
+        return eligibleCountries.some(
+          (value) =>
+            String(value || "")
+              .trim()
+              .toUpperCase() === selectedCode,
+        );
+      },
+    );
+
+  if (!filteredExpired.length) {
+    expiredSection.classList.add("hidden");
+    expiredBody.innerHTML = "";
+    expiredCount.textContent = "0";
     return;
   }
 
   expiredSection.classList.remove("hidden");
 
-  expiredCount.textContent = expiredOpportunities.length;
+  expiredCount.textContent =
+    String(filteredExpired.length);
 
-  expiredBody.innerHTML = expiredOpportunities
-    .map((opportunity) => {
-      const location =
-        opportunity.town || opportunity.location || t("noLocation");
+  expiredBody.innerHTML =
+    filteredExpired
+      .map((opportunity) => {
+        const location =
+          opportunity.town ||
+          opportunity.location ||
+          t("noLocation");
 
-      return `
-                        <tr>
+        const deadlineClassName =
+          deadlineClass(
+            opportunity.deadline,
+          );
 
-                            <td>
+        const expiredLabel =
+          typeof expiredRelative === "function"
+            ? expiredRelative(
+                opportunity.deadline,
+              )
+            : "";
 
-                                <strong>
-                                    ${escapeHtml(opportunity.title)}
-                                </strong>
+        const imageSrc =
+          opportunity.image_url
+            ? new URL(
+                opportunity.image_url,
+                "https://youth.europa.eu",
+              ).href
+            : "";
 
-                            </td>
+        return `
+                    <tr>
+
+                        <td class="title-cell">
+                            <div class="opportunity-title">
+                                ${
+                                  imageSrc
+                                    ? `
+                                            <img
+                                                class="opportunity-image"
+                                                src="${escapeHtml(imageSrc)}"
+                                                alt="${escapeHtml(opportunity.title || "")}"
+                                                loading="lazy"
+                                                onerror="this.style.display='none'"
+                                            />
+                                        `
+                                    : ""
+                                }
+
+                                <span>
+                                    ${escapeHtml(
+                                      opportunity.title || "",
+                                    )}
+                                </span>
+
+                            </div>
 
 
-                            <td>
+                            ${
+                              opportunity.topics?.length
+                                ? renderTopics(
+                                    opportunity.topics,
+                                  )
+                                : ""
+                            }
 
-                                <div>
-                                    ${escapeHtml(location)}
-                                </div>
-
-                                <div
-                                    class="location-country"
-                                >
-
-                                    ${renderCountry(opportunity.country)}
-
-                                </div>
-
-                            </td>
+                        </td>
 
 
-                            <td>
+                        <td class="location-cell">
 
-                                ${escapeHtml(formatDate(opportunity.deadline))}
+                            <div class="location-main">
 
-                            </td>
+                                ${escapeHtml(location)}
 
+                            </div>
 
-                            <td>
+                            <div class="location-country">
 
-                                ${escapeHtml(
-                                  expiredRelative(opportunity.deadline),
+                                ${renderCountry(
+                                  opportunity.country,
                                 )}
 
-                            </td>
+                            </div>
 
-                        </tr>
-                    `;
-    })
-    .join("");
+                        </td>
+
+
+                        <td class="activity-cell">
+
+                            ${
+                              formatActivityDates(
+                                opportunity.start_date,
+                                opportunity.end_date,
+                              )
+                            }
+
+                        </td>
+
+
+                        <td class="deadline-cell">
+
+                            <span
+                                class="deadline-date ${deadlineClassName}"
+                            >
+
+                                ${escapeHtml(
+                                  opportunity.deadline
+                                    ? formatDate(
+                                        opportunity.deadline,
+                                      )
+                                    : t("noDeadline"),
+                                )}
+
+                            </span>
+
+                        </td>
+
+
+                        <td class="type-cell">
+
+                            ${renderActivityType(
+                              opportunity.activity_type,
+                            )}
+
+                        </td>
+
+
+                        <td class="deadline-cell">
+
+                            ${escapeHtml(
+                              expiredLabel,
+                            )}
+
+                        </td>
+
+
+                        <td class="apply-cell">
+
+                            <a
+                                class="apply-button"
+                                href="${escapeHtml(
+                                  opportunity.url || "",
+                                )}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                ${escapeHtml(
+                                  t("view"),
+                                )}
+                            </a>
+
+                        </td>
+
+                    </tr>
+                `;
+      })
+      .join("");
 }
 
 // ============================================================
@@ -3233,9 +3436,13 @@ async function loadData() {
     ];
 
     expiredOpportunities =
-      Array.isArray(payload?.expiredData?.opportunities)
-        ? payload.expiredData.opportunities
-        : [];
+      normalizeLoadedOpportunities(
+        Array.isArray(
+          payload?.expiredData?.opportunities,
+        )
+          ? payload.expiredData.opportunities
+          : [],
+      );
 
     moveExpiredOpportunitiesToArchive();
     pruneExpiredArchive();

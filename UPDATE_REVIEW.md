@@ -1,28 +1,32 @@
 # ESC Opportunity Finder — Production Review
 
-## Live Country Filter Fix
+## Recently Expired
 
-Patched the actual `populateFilters()` function used to populate `#country-filter`.
+The Recently expired table now copies the active opportunity table style.
 
-The live renderer now:
+Final column order:
 
-- keeps ISO codes as option values;
-- displays country flags;
-- displays human-readable country names;
-- uses `Intl.DisplayNames` as a fallback;
-- removes the legacy `🌍 + ISO` rendering.
+Opportunity | Location | Activity | Deadline | Type | Expired | View
 
-## Dataset Safety
+The only additional column is `Expired`.
+
+Recently expired records are restricted to the selected Participant Country using `eligible_countries`.
+
+Rows retain logo, location/country rendering, activity, deadline, type, and View markup.
+
+## Safety
 
 - Current opportunities: 657
 - Opportunity 53577 integrity validated.
-- Backend/cache files were not modified.
-- Local repair checkpoint was preserved.
+- Protected backend/cache files remain untouched.
+- Local repair checkpoint remains untouched.
+- Archive data is read-only during this update.
 
 ## Working Tree
 
 - ` M update.py`
 - ` M web/app.js`
+- ` M web/index.html`
 - `?? data/full_detail_repair_checkpoint.json`
 
 ## Canonical Remote
