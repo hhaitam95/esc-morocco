@@ -1527,21 +1527,78 @@ function getCountryName(code) {
   }
 }
 
-function getCountryFlag(code) {
-  const normalizedCode = normalizeCountryCode(code);
+function getCountryFlag(countryName) {
+  const countryFlags = {
+    "Albania": "🇦🇱",
+    "Argentina": "🇦🇷",
+    "Armenia": "🇦🇲",
+    "Aruba": "🇦🇼",
+    "Austria": "🇦🇹",
+    "Belgium": "🇧🇪",
+    "Bolivia": "🇧🇴",
+    "Brazil": "🇧🇷",
+    "Bulgaria": "🇧🇬",
+    "Cameroon": "🇨🇲",
+    "Colombia": "🇨🇴",
+    "Congo": "🇨🇬",
+    "Costa Rica": "🇨🇷",
+    "Croatia": "🇭🇷",
+    "Cyprus": "🇨🇾",
+    "Czechia": "🇨🇿",
+    "Denmark": "🇩🇰",
+    "Ecuador": "🇪🇨",
+    "Egypt": "🇪🇬",
+    "Estonia": "🇪🇪",
+    "Finland": "🇫🇮",
+    "France": "🇫🇷",
+    "Georgia": "🇬🇪",
+    "Germany": "🇩🇪",
+    "Ghana": "🇬🇭",
+    "Greece": "🇬🇷",
+    "Guatemala": "🇬🇹",
+    "Honduras": "🇭🇳",
+    "Hungary": "🇭🇺",
+    "Iceland": "🇮🇸",
+    "Ireland": "🇮🇪",
+    "Italy": "🇮🇹",
+    "Jordan": "🇯🇴",
+    "Kenya": "🇰🇪",
+    "Kosovo * UN resolution": "🇽🇰",
+    "Latvia": "🇱🇻",
+    "Liechtenstein": "🇱🇮",
+    "Lithuania": "🇱🇹",
+    "Luxembourg": "🇱🇺",
+    "Malta": "🇲🇹",
+    "Mauritania": "🇲🇷",
+    "Moldova": "🇲🇩",
+    "Montenegro": "🇲🇪",
+    "Morocco": "🇲🇦",
+    "Nepal": "🇳🇵",
+    "Netherlands": "🇳🇱",
+    "North Macedonia": "🇲🇰",
+    "Norway": "🇳🇴",
+    "Peru": "🇵🇪",
+    "Poland": "🇵🇱",
+    "Portugal": "🇵🇹",
+    "Romania": "🇷🇴",
+    "Senegal": "🇸🇳",
+    "Serbia": "🇷🇸",
+    "Sierra Leone": "🇸🇱",
+    "Slovakia": "🇸🇰",
+    "Slovenia": "🇸🇮",
+    "Spain": "🇪🇸",
+    "Sweden": "🇸🇪",
+    "Tanzania (United Republic of)": "🇹🇿",
+    "Togo": "🇹🇬",
+    "Tunisia": "🇹🇳",
+    "Türkiye": "🇹🇷",
+    "Uganda": "🇺🇬",
+    "Ukraine": "🇺🇦",
+    "Viet Nam": "🇻🇳",
+  };
 
-  if (!normalizedCode || normalizedCode.length !== 2) {
-    return "🌍";
-  }
-
-  const upper = normalizedCode.toUpperCase();
-
-  return String.fromCodePoint(
-    ...[...upper].map(
-      (character) =>
-        127397 + character.charCodeAt(0),
-    ),
-  );
+  const normalized = String(countryName || "").trim();
+  return countryFlags[normalized] || "🌍";
 }
 
 function renderCountry(code) {
@@ -2818,7 +2875,17 @@ refreshButton.addEventListener("click", async () => {
   refreshButton.innerHTML = `↻ <span>${escapeHtml(t("loading"))}</span>`;
 
   try {
+    // Refresh the cached dataset without clearing the current
+    // participant-country/search state.
     await loadData();
+
+    // Re-apply the currently active participant-country search
+    // instead of resetting the table.
+    if (participantSearchApplied) {
+      await applyParticipantCountry();
+    } else {
+      renderActive();
+    }
   } finally {
     refreshButton.disabled = false;
 
