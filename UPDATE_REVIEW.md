@@ -1,42 +1,42 @@
-# ESC Opportunity Finder — Country Dropdown Flag Repair
+# ESC Opportunity Finder — Production Review
 
-## Scope
+## Country Filter Fix
 
-Frontend-only production update.
+The main `#country-filter` was changed from labels such as:
 
-### Changes being pushed
+`🌍 DE`
 
-- Restore correct country flags in the Participant Country dropdown.
-- Restore correct country flags in the destination Country filter.
-- Preserve the existing country names and translations.
-- Continue using stable country-code values.
-- Use the shared country-code flag resolver.
-- Remove the generic globe fallback from the affected country dropdown renderers.
+to human-readable labels such as:
 
-### Validation
+`🇩🇪 Germany`
 
-- `web/app.js` passes Node syntax validation.
-- `web/opportunities.json` remains unchanged.
-- Opportunity `53577` remains intact.
-- Backend/cache files are not included in the commit.
-- `data/full_detail_repair_checkpoint.json` remains local and untouched.
+The underlying option value remains the ISO country code, for example `DE`.
 
-## Files intentionally committed
+The implementation does not depend on `Intl.DisplayNames` or the existing country metadata implementation.
 
-- `web/app.js`
-- `UPDATE_REVIEW.md`
+## Validated Countries
 
-## Files intentionally excluded
+- 🇩🇪 Germany
+- 🇮🇹 Italy
+- 🇱🇹 Lithuania
+- 🇵🇹 Portugal
+- 🇷🇴 Romania
+- 🇸🇰 Slovakia
+- 🇹🇷 Türkiye
 
-- `update.py`
-- `data/full_detail_repair_checkpoint.json`
-- `data/checkpoint.json`
-- `data/expired.json`
-- `data/opportunities.json`
-- `web/opportunities.json`
+## Dataset Safety
 
-## Production push
+- Current opportunities: 657
+- Opportunity 53577 integrity validated.
+- Backend/cache files were not modified.
+- Local repair checkpoint was preserved.
 
-The commit is intended to be pushed to `origin/main`.
+## Working Tree
 
-No network scraping is performed by this update.
+- ` M update.py`
+- ` M web/app.js`
+- `?? data/full_detail_repair_checkpoint.json`
+
+## Canonical Remote
+
+https://github.com/hhaitam95/esc-opportunity-finder.git

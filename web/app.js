@@ -2880,60 +2880,215 @@ function normalizeLoadedOpportunities(opportunities) {
 // ============================================================
 
 
+
+function normalizeFilterCountryCode(value) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "";
+  }
+
+  const text = String(value).trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const upper = text.toUpperCase();
+
+  if (/^[A-Z]{2}$/.test(upper)) {
+    return upper;
+  }
+
+  const match = upper.match(
+    /\\b[A-Z]{2}\\b/,
+  );
+
+  return match ? match[0] : "";
+}
+
+function getFilterCountryFlag(code) {
+  const normalized =
+    normalizeFilterCountryCode(code);
+
+  if (
+    !/^[A-Z]{2}$/.test(normalized)
+  ) {
+    return "🌍";
+  }
+
+  return String.fromCodePoint(
+    ...normalized
+      .split("")
+      .map(
+        (letter) =>
+          127397 +
+          letter.charCodeAt(0),
+      ),
+  );
+}
+
+function getFilterCountryName(code) {
+
+  const countryNames = {
+    AD: "Andorra",
+    AL: "Albania",
+    AT: "Austria",
+    BE: "Belgium",
+    BG: "Bulgaria",
+    CH: "Switzerland",
+    CY: "Cyprus",
+    CZ: "Czechia",
+    DE: "Germany",
+    DK: "Denmark",
+    EE: "Estonia",
+    ES: "Spain",
+    FI: "Finland",
+    FR: "France",
+    GR: "Greece",
+    HR: "Croatia",
+    HU: "Hungary",
+    IE: "Ireland",
+    IS: "Iceland",
+    IT: "Italy",
+    LI: "Liechtenstein",
+    LT: "Lithuania",
+    LU: "Luxembourg",
+    LV: "Latvia",
+    MC: "Monaco",
+    ME: "Montenegro",
+    MK: "North Macedonia",
+    MT: "Malta",
+    NL: "Netherlands",
+    NO: "Norway",
+    PL: "Poland",
+    PT: "Portugal",
+    RO: "Romania",
+    RS: "Serbia",
+    SE: "Sweden",
+    SI: "Slovenia",
+    SK: "Slovakia",
+    SM: "San Marino",
+    TR: "Türkiye",
+    UA: "Ukraine",
+    VA: "Vatican City",
+    XK: "Kosovo",
+    MA: "Morocco",
+    TN: "Tunisia",
+    DZ: "Algeria",
+    EG: "Egypt",
+    JO: "Jordan",
+    LB: "Lebanon",
+    IL: "Israel",
+    PS: "Palestine",
+  };
+
+  const normalized =
+    normalizeFilterCountryCode(code);
+
+  return (
+    countryNames[normalized] ||
+    normalized
+  );
+}
+
 function populateCountryFilter(opportunities) {
-  if (!countryFilter) {
+  if (
+    typeof countryFilter === "undefined" ||
+    !countryFilter
+  ) {
     return;
   }
 
-  const selectedValue = countryFilter.value || "";
+  const currentValue =
+    normalizeFilterCountryCode(
+      countryFilter.value || "",
+    );
 
   const codes = new Set();
 
-  (Array.isArray(opportunities) ? opportunities : []).forEach((opportunity) => {
-    const code = String(
-      opportunity?.country ||
-      opportunity?.country_code ||
-      opportunity?.location_country ||
-      ""
-    ).trim().toUpperCase();
+  const records =
+    Array.isArray(opportunities)
+      ? opportunities
+      : [];
 
-    if (code) {
+  records.forEach((opportunity) => {
+    if (
+      !opportunity ||
+      typeof opportunity !== "object"
+    ) {
+      return;
+    }
+
+    const rawCountry =
+      opportunity.country ??
+      opportunity.country_code ??
+      opportunity.countryCode ??
+      opportunity.location_country ??
+      "";
+
+    const code =
+      normalizeFilterCountryCode(
+        rawCountry,
+      );
+
+    if (
+      /^[A-Z]{2}$/.test(code)
+    ) {
       codes.add(code);
     }
   });
 
-  const sortedCodes = Array.from(codes).sort((a, b) => {
-    const aDisplay = getCountryDisplay(a);
-    const bDisplay = getCountryDisplay(b);
+  const sortedCodes =
+    Array.from(codes).sort(
+      (a, b) => {
+        const nameA =
+          getFilterCountryName(a);
 
-    return aDisplay.name.localeCompare(
-      bDisplay.name,
-      currentLanguage || "en"
+        const nameB =
+          getFilterCountryName(b);
+
+        return nameA.localeCompare(
+          nameB,
+        );
+      },
     );
-  });
 
   countryFilter.innerHTML = "";
 
-  const allOption = document.createElement("option");
+  const allOption =
+    document.createElement("option");
+
   allOption.value = "";
-  allOption.textContent = "All countries";
-  countryFilter.appendChild(allOption);
+
+  allOption.textContent =
+    "All countries";
+
+  countryFilter.appendChild(
+    allOption,
+  );
 
   sortedCodes.forEach((code) => {
-    const display = getCountryDisplay(code);
-    const option = document.createElement("option");
+    const option =
+      document.createElement("option");
 
     option.value = code;
-    option.textContent = `${display.flag} ${display.name}`;
 
-    countryFilter.appendChild(option);
+    option.textContent =
+      `${getFilterCountryFlag(code)} ${getFilterCountryName(code)}`;
+
+    countryFilter.appendChild(
+      option,
+    );
   });
 
   if (
-    selectedValue &&
-    sortedCodes.includes(String(selectedValue).trim().toUpperCase())
+    currentValue &&
+    sortedCodes.includes(currentValue)
   ) {
-    countryFilter.value = String(selectedValue).trim().toUpperCase();
+    countryFilter.value =
+      currentValue;
   } else {
     countryFilter.value = "";
   }
