@@ -1,40 +1,40 @@
-# ESC Opportunity Finder — Workflow Syntax Repair
+# ESC Opportunity Finder — Scraper to Pages Deployment Fix
 
-## Fixed
+## Root cause
 
-Repaired the GitHub Actions workflow syntax/staging-output issue.
+The scraper workflow successfully updated the cache on main.
 
-The workflow now contains exactly:
+GitHub Pages previously depended on a normal push event, which was
+not reliably triggered by the GitHub Actions cache commit.
 
-`printf '%s\n' "$STAGED"`
+## Fix
 
-with no trailing whitespace.
+deploy.yml now listens for:
+
+workflow_run:
+  workflows:
+    - "Update ESC Opportunities"
+  types:
+    - completed
+
+and deploys only after a successful scraper workflow.
+
+## Production flow
+
+Update ESC Opportunities
+    -> incremental scraper
+    -> cache publication
+    -> scraper workflow success
+    -> deploy.yml workflow_run
+    -> GitHub Pages
+    -> live website
 
 ## Schedule
 
-The incremental scraper remains scheduled approximately every 30 minutes:
+The scraper remains approximately every 30 minutes:
 
-`17,47 * * * *`
+17,47 * * * *
 
-## Preserved
+## Safety
 
-No changes were made to:
-
-- scraper.py
-- checkpoint.json
-- expired.json
-- opportunities.json
-- web/opportunities.json
-- scraper batch size
-- scraper retry behavior
-- scraper rate limits
-- checkpoint state
-- backend repair checkpoint
-
-## Validation
-
-- update.py syntax
-- workflow text structure
-- workflow YAML
-- trailing whitespace
-- protected backend/cache state
+No protected cache/checkpoint file is modified.
