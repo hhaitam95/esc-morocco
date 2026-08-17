@@ -41426,12 +41426,7 @@
         "project_code": "2025-1-PT02-ESC51-VTJ-000348343",
         "created": "2025-11-17T12:18:32",
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
-        "url": "https://youth.europa.eu/solidarity/opportunity/49024_en",
-        "eligible_countries_unmapped": [
-          "Bonaire Sint Eustatius and Saba",
-          "French Southern and Antarctic Territories",
-          "St Pierre and Miquelon"
-        ]
+        "url": "https://youth.europa.eu/solidarity/opportunity/49024_en"
       },
       "checked_at": "2026-08-17T03:32:17.160930"
     },
@@ -41560,11 +41555,7 @@
         "project_code": "2025-1-CZ01-ESC51-VTJ-000348674",
         "created": "2025-11-12T23:25:46",
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
-        "url": "https://youth.europa.eu/solidarity/opportunity/48983_en",
-        "eligible_countries_unmapped": [
-          "Bonaire Sint Eustatius and Saba",
-          "French Southern and Antarctic Territories"
-        ]
+        "url": "https://youth.europa.eu/solidarity/opportunity/48983_en"
       },
       "checked_at": "2026-08-17T03:32:29.488322"
     },
@@ -41941,12 +41932,7 @@
         "project_code": "2025-1-RO01-ESC51-VTJ-000346797",
         "created": "2025-10-15T20:01:35",
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/img-20190328-wa000311.jpg?itok=Nymsky_0",
-        "url": "https://youth.europa.eu/solidarity/opportunity/48678_en",
-        "eligible_countries_unmapped": [
-          "Bonaire Sint Eustatius and Saba",
-          "French Southern and Antarctic Territories",
-          "St Pierre and Miquelon"
-        ]
+        "url": "https://youth.europa.eu/solidarity/opportunity/48678_en"
       },
       "checked_at": "2026-08-17T03:33:11.986854"
     },
@@ -42288,22 +42274,56 @@
         "project_code": "2025-1-RO01-ESC51-VTJ-000346939",
         "created": "2025-10-10T15:09:56",
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
-        "url": "https://youth.europa.eu/solidarity/opportunity/48617_en",
-        "eligible_countries_unmapped": [
-          "French Southern and Antarctic Territories"
-        ]
+        "url": "https://youth.europa.eu/solidarity/opportunity/48617_en"
       },
       "checked_at": "2026-08-17T03:33:47.872795"
     },
     "48611": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:10.747359"
+      "status": "scanned",
+      "result": {
+        "id": 48611,
+        "opid": 48611,
+        "title": "Connecting Ukraine-Germany: work with children from Ukraine in residential care (start Sept. or Oct 2026 for 10-12 months)",
+        "location": "Wentzinger Str. 36, Freiburg im Breisgau, Germany",
+        "country": "DE",
+        "town": "Freiburg im Breisgau",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-09-30",
+        "deadline": null,
+        "eligible_countries": [
+          "BG",
+          "BY",
+          "CZ",
+          "EE",
+          "LT",
+          "LV",
+          "MD",
+          "PL",
+          "RO",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Education and training",
+          "Employment and entrepreneurship"
+        ],
+        "project_code": "2025-1-DE04-ESC51-VTJ-000347282",
+        "created": "2025-10-10T13:01:44",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48611_en"
+      },
+      "checked_at": "2026-08-17T04:27:10.450742"
     },
     "48601": {
-      "status": "match",
+      "status": "scanned",
       "result": {
         "id": 48601,
+        "opid": 48601,
         "title": "VOLUNTEERING WITH S&G 2026 ST",
         "location": "KIZILAY MAHALLESI NECATIBEY CADDESI 19/17, ANKARA, Türkiye",
         "country": "TR",
@@ -42351,6 +42371,7 @@
           "TN",
           "UA"
         ],
+        "eligibility_known": true,
         "topics": [
           "Citizenship and democratic participation",
           "Environment and natural protection",
@@ -42359,50 +42380,402 @@
         "project_code": "2025-1-TR01-ESC51-VTJ-000345981",
         "created": "2025-10-09T16:02:56",
         "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/sg_logo.png?itok=7fcL20ha",
-        "url": "https://youth.europa.eu/solidarity/opportunity/48601_en",
-        "eligibility_known": true
+        "url": "https://youth.europa.eu/solidarity/opportunity/48601_en"
       },
-      "checked_at": "2026-08-14T22:03:53.904011"
+      "checked_at": "2026-08-17T04:27:15.676649"
     },
     "48596": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:22.664819"
+      "status": "scanned",
+      "result": {
+        "id": 48596,
+        "opid": 48596,
+        "title": "comeINcola 8",
+        "location": "Calle Olmo 63, Valladolid, Spain",
+        "country": "ES",
+        "town": "Valladolid",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-05-21",
+        "end_date": "2027-03-14",
+        "deadline": null,
+        "eligible_countries": [
+          "BE",
+          "BG",
+          "CY",
+          "DE",
+          "FR",
+          "GR",
+          "HU",
+          "IE",
+          "IT",
+          "MT",
+          "PL",
+          "PT",
+          "RO",
+          "SE"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Reception and integration of refugees and migrants"
+        ],
+        "project_code": "2025-1-ES02-ESC51-VTJ-000345833",
+        "created": "2025-10-09T15:42:14",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48596_en"
+      },
+      "checked_at": "2026-08-17T04:27:21.552956"
     },
     "48593": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:28.554391"
+      "status": "scanned",
+      "result": {
+        "id": 48593,
+        "opid": 48593,
+        "title": "Communication for Social Inclusion",
+        "location": "Avenida de Moisés 1, Sierra Elvira, Atarfe. Granada., Spain",
+        "country": "ES",
+        "town": "Sierra Elvira, Atarfe. Granada.",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-12-01",
+        "end_date": "2026-11-01",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "MK",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Citizenship and democratic participation",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-ES02-ESC51-VTJ-000347713",
+        "created": "2025-10-09T12:29:11",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48593_en"
+      },
+      "checked_at": "2026-08-17T04:27:27.425451"
     },
     "48566": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:34.384432"
+      "status": "scanned",
+      "result": {
+        "id": 48566,
+        "opid": 48566,
+        "title": "In the heart of Sicily",
+        "location": "DISCESA BONACCORSO N5, PRIZZI, Italy",
+        "country": "IT",
+        "town": "PRIZZI",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-08-24",
+        "end_date": "2026-12-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LT",
+          "LV",
+          "MT",
+          "NL",
+          "PL",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Citizenship and democratic participation",
+          "Education and training"
+        ],
+        "project_code": "2024-2-IT03-ESC51-VTJ-000270535",
+        "created": "2025-10-07T11:42:57",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo2022_testodx.png?itok=zkkaH7_e",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48566_en"
+      },
+      "checked_at": "2026-08-17T04:27:33.373605"
     },
     "48557": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:40.275359"
+      "status": "scanned",
+      "result": {
+        "id": 48557,
+        "opid": 48557,
+        "title": "NON-FORMAL EDUCATION IN A HIGHSCHOOL ",
+        "location": "Berrogain-Laruns, France",
+        "country": "FR",
+        "town": "Berrogain-Laruns",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-06-30",
+        "deadline": "2026-09-01",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "GR",
+          "HU",
+          "IE",
+          "IT",
+          "LT",
+          "LU",
+          "LV",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2024-1-FR02-ESC51-VTJ-000230191",
+        "created": "2025-10-06T16:21:44",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48557_en"
+      },
+      "checked_at": "2026-08-17T04:27:39.325121"
     },
     "48494": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:46.076372"
+      "status": "scanned",
+      "result": {
+        "id": 48494,
+        "opid": 48494,
+        "title": "Volunteering in Klaipeda County Ieva Simonaityte Public Library",
+        "location": "Herkaus Manto 25, Klaipeda, Lithuania",
+        "country": "LT",
+        "town": "Klaipeda",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-08-31",
+        "deadline": "2026-08-17",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "DE",
+          "ES",
+          "FR",
+          "IT"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-LT02-ESC51-VTJ-000346357",
+        "created": "2025-09-30T16:19:17",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/RTVM-platus.jpg?itok=a3d548L5",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48494_en"
+      },
+      "checked_at": "2026-08-17T04:27:45.305431"
     },
     "48477": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:52.239191"
+      "status": "scanned",
+      "result": {
+        "id": 48477,
+        "opid": 48477,
+        "title": "Arslan Spor Kulübü gönüllülüğü",
+        "location": "Arslan Spor Kulübü Buğday Pazarı Mah. Öztaş Sokak Hoca Ahmet Yesevi Apt.24/b Merkez Çankırı, Çankırı, Türkiye",
+        "country": "TR",
+        "town": "Çankırı",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-07-31",
+        "end_date": "2026-09-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "AZ",
+          "BA",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "HU",
+          "IT",
+          "LT",
+          "PL",
+          "PT",
+          "RO",
+          "RU",
+          "SE",
+          "SI",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Physical education and sport"
+        ],
+        "project_code": "2024-1-TR01-ESC51-VTJ-000215671",
+        "created": "2025-09-29T15:29:39",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48477_en"
+      },
+      "checked_at": "2026-08-17T04:27:51.162252"
     },
     "48469": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:53:58.621387"
+      "status": "scanned",
+      "result": {
+        "id": 48469,
+        "opid": 48469,
+        "title": "Steinbeis ESC 25.01",
+        "location": "Welckerstrasse 3, Freiburg, Germany",
+        "country": "DE",
+        "town": "Freiburg",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-08-01",
+        "end_date": "2027-09-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Employment and entrepreneurship"
+        ],
+        "project_code": "2025-1-DE04-ESC51-VTJ-000348616",
+        "created": "2025-09-29T12:05:24",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48469_en"
+      },
+      "checked_at": "2026-08-17T04:27:57.070205"
     },
     "48454": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:04.547747"
+      "status": "scanned",
+      "result": {
+        "id": 48454,
+        "opid": 48454,
+        "title": "Volunteering for a better world",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-10",
+        "end_date": "2026-10-10",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RS",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "2025-1-RO01-ESC51-VTJ-000345900",
+        "created": "2025-09-27T16:31:57",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48454_en"
+      },
+      "checked_at": "2026-08-17T04:28:02.976359"
     },
     "48437": {
       "status": "not_morocco",
@@ -42410,29 +42783,222 @@
       "checked_at": "2026-08-14T15:54:10.515419"
     },
     "48426": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:24.127633"
+      "status": "scanned",
+      "result": {
+        "id": 48426,
+        "opid": 48426,
+        "title": "Solidarité locale et internationale – Engagement citoyen et interculturalité",
+        "location": "1 rue des Recollets , Metz, France",
+        "country": "FR",
+        "town": "Metz",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-02-10",
+        "end_date": "2026-08-28",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BA",
+          "BG",
+          "DE",
+          "ES",
+          "FI",
+          "GR",
+          "IT",
+          "LB",
+          "LT",
+          "ME",
+          "MK",
+          "NO",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "XK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Citizenship and democratic participation"
+        ],
+        "project_code": "2024-1-FR02-ESC51-VTJ-000230788",
+        "created": "2025-09-25T10:44:40",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/cpum.quadri.long_.jpg?itok=oFJJqJoC",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48426_en"
+      },
+      "checked_at": "2026-08-17T04:28:08.897164"
     },
     "48425": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:30.324596"
+      "status": "scanned",
+      "result": {
+        "id": 48425,
+        "opid": 48425,
+        "title": "Ateneu Rural Cal Cisteller : voluntariado para un desarrollo rural sostenible",
+        "location": "Barri Montjuic, Font-Rubí, Spain",
+        "country": "ES",
+        "town": "Font-Rubí",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2026-12-19",
+        "deadline": "2026-08-24",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GL",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Nutrition and subsistence agriculture"
+        ],
+        "project_code": "2025-1-ES02-ESC51-VTJ-000349136",
+        "created": "2025-09-25T09:43:49",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48425_en"
+      },
+      "checked_at": "2026-08-17T04:28:15.000975"
     },
     "48416": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:36.165822"
+      "status": "scanned",
+      "result": {
+        "id": 48416,
+        "opid": 48416,
+        "title": "Volunteering for a better world",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-10",
+        "end_date": "2026-10-10",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RS",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "",
+        "created": "2025-09-24T19:34:37",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48416_en"
+      },
+      "checked_at": "2026-08-17T04:28:20.975853"
     },
     "48383": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:42.171515"
+      "status": "scanned",
+      "result": {
+        "id": 48383,
+        "opid": 48383,
+        "title": "Volunteering for a better world",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-05",
+        "end_date": "2026-10-05",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RS",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-09-22T19:56:17",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48383_en"
+      },
+      "checked_at": "2026-08-17T04:28:26.868858"
     },
     "48370": {
-      "status": "match",
+      "status": "scanned",
       "result": {
         "id": 48370,
+        "opid": 48370,
         "title": "Proyecto Griébal",
         "location": "N260, km 429 calle única s/n, Aínsa - Sobrarbe, Spain",
         "country": "ES",
@@ -42505,139 +43071,1412 @@
           "WF",
           "XK"
         ],
+        "eligibility_known": true,
         "topics": [],
         "project_code": "2025-1-ES02-ESC51-VTJ-000346182",
         "created": "2025-09-22T11:53:38",
         "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
         "url": "https://youth.europa.eu/solidarity/opportunity/48370_en",
-        "eligibility_known": true
+        "eligible_countries_unmapped": [
+          "Bonaire Sint Eustatius and Saba",
+          "French Southern and Antarctic Territories",
+          "St Pierre and Miquelon"
+        ]
       },
-      "checked_at": "2026-08-14T22:03:59.784708"
+      "checked_at": "2026-08-17T04:28:32.746300"
     },
     "48339": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:54:54.469575"
+      "status": "scanned",
+      "result": {
+        "id": 48339,
+        "opid": 48339,
+        "title": "ESC Volunteering on the Jurassic Coast of Portugal for Paleontological Heritage Conservation",
+        "location": "Travessa Florêncio Augusto Chagas, nº8 R/C , Torres Vedras, Portugal",
+        "country": "PT",
+        "town": "Torres Vedras",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-01",
+        "end_date": "2026-11-30",
+        "deadline": null,
+        "eligible_countries": [
+          "FR"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Environment and natural protection"
+        ],
+        "project_code": "",
+        "created": "2025-09-18T16:27:55",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/sociedade_de_historia_natural-01.jpg?itok=sEePY7kW",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48339_en"
+      },
+      "checked_at": "2026-08-17T04:28:38.711237"
     },
     "48311": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:00.850296"
+      "status": "scanned",
+      "result": {
+        "id": 48311,
+        "opid": 48311,
+        "title": "Volunteering for a better world",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-25",
+        "end_date": "2026-09-25",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-09-17T11:40:58",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48311_en"
+      },
+      "checked_at": "2026-08-17T04:28:44.767561"
     },
     "48275": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:07.100996"
+      "status": "scanned",
+      "result": {
+        "id": 48275,
+        "opid": 48275,
+        "title": "Connecting people & developing synergies in the Stadthaus HO",
+        "location": "Marktplatz 13, Hessisch Oldendorf, Germany",
+        "country": "DE",
+        "town": "Hessisch Oldendorf",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-11-16",
+        "end_date": "2027-11-15",
+        "deadline": "2026-08-31",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Reception and integration of refugees and migrants",
+          "Citizenship and democratic participation",
+          "Creativity and culture"
+        ],
+        "project_code": "2026-1-DE04-ESC51-VTJ-000404131",
+        "created": "2025-09-15T11:23:43",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48275_en"
+      },
+      "checked_at": "2026-08-17T04:28:50.652189"
     },
     "48236": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:12.908452"
+      "status": "scanned",
+      "result": {
+        "id": 48236,
+        "opid": 48236,
+        "title": "Volunteering for a better world",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-20",
+        "end_date": "2026-09-20",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Environment and natural protection",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-09-11T10:28:44",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48236_en"
+      },
+      "checked_at": "2026-08-17T04:28:56.679481"
     },
     "48226": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:19.575499"
+      "status": "scanned",
+      "result": {
+        "id": 48226,
+        "opid": 48226,
+        "title": "Level up your impact! Volunteer at the Gardeja Kindergarten!",
+        "location": "Kościuszki 35/2, Kwidzyn, Poland",
+        "country": "PL",
+        "town": "Kwidzyn",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-02-01",
+        "end_date": "2026-10-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BY",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LT",
+          "LV",
+          "ME",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PF",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "SX",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-PL01-ESC51-VTJ-000346447",
+        "created": "2025-09-10T17:40:14",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-big.png?itok=Rc-TmZz-",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48226_en",
+        "eligible_countries_unmapped": [
+          "French Southern and Antarctic Territories"
+        ]
+      },
+      "checked_at": "2026-08-17T04:29:02.563964"
     },
     "48225": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:25.678693"
+      "status": "scanned",
+      "result": {
+        "id": 48225,
+        "opid": 48225,
+        "title": "ESC@CASA SERENA: Educare alla Solidarietà",
+        "location": "Via Badazzole, 29 - 25018 Montichiari (BS), Montichiari, Italy",
+        "country": "IT",
+        "town": "Montichiari",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2026-12-21",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "LT",
+          "LU",
+          "LV",
+          "ME",
+          "MK",
+          "MT",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training"
+        ],
+        "project_code": "2024-2-IT03-ESC51-VTJ-000266114",
+        "created": "2025-09-10T16:34:15",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48225_en"
+      },
+      "checked_at": "2026-08-17T04:29:08.595323"
     },
     "48214": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:31.476950"
+      "status": "scanned",
+      "result": {
+        "id": 48214,
+        "opid": 48214,
+        "title": "Level up your impact! Volunteer at the Library!",
+        "location": "Kościuszki 35/2, Kwidzyn, Poland",
+        "country": "PL",
+        "town": "Kwidzyn",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-02-01",
+        "end_date": "2026-10-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AM",
+          "AT",
+          "AW",
+          "BE",
+          "BG",
+          "BY",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GL",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PF",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "UA",
+          "WF"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Education and training",
+          "Employment and entrepreneurship",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-PL01-ESC51-VTJ-000346447",
+        "created": "2025-09-10T10:39:03",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-big.png?itok=Rc-TmZz-",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48214_en",
+        "eligible_countries_unmapped": [
+          "French Southern and Antarctic Territories",
+          "St Pierre and Miquelon"
+        ]
+      },
+      "checked_at": "2026-08-17T04:29:14.540537"
     },
     "48216": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:37.435071"
+      "status": "scanned",
+      "result": {
+        "id": 48216,
+        "opid": 48216,
+        "title": "Building Bridges – European and International Relations, City of Chemnitz – European Capital of Culture 2025",
+        "location": "Altchemnitzerstr. 4, Chemnitz, Germany",
+        "country": "DE",
+        "town": "Chemnitz",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-10-01",
+        "end_date": "2026-09-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GL",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Citizenship and democratic participation",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-09-10T09:46:46",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/f-u-sachsen-ggmbh1.png?itok=MHbOkkVE",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48216_en"
+      },
+      "checked_at": "2026-08-17T04:29:20.498004"
     },
     "48162": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:43.475997"
+      "status": "scanned",
+      "result": {
+        "id": 48162,
+        "opid": 48162,
+        "title": "Volunteering For a Better World ",
+        "location": "Aleea Tusnad bl. 2, sc. 3, ap. 16, Resita, Romania",
+        "country": "RO",
+        "town": "Resita",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-15",
+        "end_date": "2026-09-15",
+        "deadline": null,
+        "eligible_countries": [
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NO",
+          "PL",
+          "PT",
+          "SE"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Environment and natural protection",
+          "Education and training",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-09-05T10:49:55",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/organisation-logos/logo-vpt.jpg?itok=JsuYhI5W",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48162_en"
+      },
+      "checked_at": "2026-08-17T04:29:26.617071"
     },
     "48158": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:49.293800"
+      "status": "scanned",
+      "result": {
+        "id": 48158,
+        "opid": 48158,
+        "title": "Accompaign children in social risk",
+        "location": "Avenida de Moisés 1, Sierra Elvira, Atarfe. Granada., Spain",
+        "country": "ES",
+        "town": "Sierra Elvira, Atarfe. Granada.",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-11-01",
+        "end_date": "2026-10-01",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "MK",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "",
+        "created": "2025-09-05T10:00:25",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48158_en"
+      },
+      "checked_at": "2026-08-17T04:29:32.488055"
     },
     "48155": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:55:55.191777"
+      "status": "scanned",
+      "result": {
+        "id": 48155,
+        "opid": 48155,
+        "title": "VSC 25 - Volunteering for Sustainable Communities",
+        "location": "sat Busag, strada 119, nr. 21, Tautii Magheraus, Romania",
+        "country": "RO",
+        "town": "Tautii Magheraus",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-12-01",
+        "end_date": "2027-08-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AM",
+          "AT",
+          "AZ",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "JO",
+          "LT",
+          "LV",
+          "MD",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "SE",
+          "SK",
+          "TR",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Environment and natural protection",
+          "Health and wellbeing",
+          "Education and training"
+        ],
+        "project_code": "",
+        "created": "2025-09-04T22:35:01",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48155_en"
+      },
+      "checked_at": "2026-08-17T04:29:37.643039"
     },
     "48115": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:01.209946"
+      "status": "scanned",
+      "result": {
+        "id": 48115,
+        "opid": 48115,
+        "title": "Promo Star 2026 in Jelenia Góra, Poland ",
+        "location": "Mikołaja Kopernika 2 / 1U, JELENIA GORA , Poland",
+        "country": "PL",
+        "town": "JELENIA GORA ",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-10-14",
+        "end_date": "2027-10-13",
+        "deadline": "2026-08-20",
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GL",
+          "GR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-2-PL01-ESC51-VTJ-000367981",
+        "created": "2025-09-01T19:07:03",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Logo-herb-kolor%2C-bez-tla.png?itok=KKw7SGPc",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48115_en"
+      },
+      "checked_at": "2026-08-17T04:29:43.582434"
     },
     "48104": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:07.146543"
+      "status": "scanned",
+      "result": {
+        "id": 48104,
+        "opid": 48104,
+        "title": "Administrative support for the sectoral coordination in San Marcos (Guatemala), Education of the Centre-East of Guatemala",
+        "location": "11 AV 18-45 ZONA 2 CIUDAD NUEVA, CIUDAD DE GUATEMALA, Guatemala",
+        "country": "GT",
+        "town": "CIUDAD DE GUATEMALA",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-01-05",
+        "end_date": "2026-12-20",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MK",
+          "MT",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "TR"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Education and training",
+          "Disaster Preparedness",
+          "Nutrition and subsistence agriculture"
+        ],
+        "project_code": "2024-1-EACEA-VOLUN-101191888",
+        "created": "2025-09-01T13:10:16",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo-alboan-transparente_11.png?itok=6qsLBcJA",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48104_en"
+      },
+      "checked_at": "2026-08-17T04:29:49.472248"
     },
     "48092": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:13.101929"
+      "status": "scanned",
+      "result": {
+        "id": 48092,
+        "opid": 48092,
+        "title": "Volunteering in Living Open-air museum",
+        "location": "Jindřichovice pod Smrkem 12, Jindřichovice pod Smrkem, Czechia",
+        "country": "CZ",
+        "town": "Jindřichovice pod Smrkem",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-04-01",
+        "end_date": "2027-03-31",
+        "deadline": null,
+        "eligible_countries": [
+          "CZ"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Environment and natural protection",
+          "Education and training"
+        ],
+        "project_code": "2025-1-CZ01-ESC51-VTJ-000347269",
+        "created": "2025-08-31T19:35:32",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48092_en"
+      },
+      "checked_at": "2026-08-17T04:29:55.595225"
     },
     "48071": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:18.971930"
+      "status": "scanned",
+      "result": {
+        "id": 48071,
+        "opid": 48071,
+        "title": "Volunteer Opportunities at Center for People with Disabilities ,,Korys“!",
+        "location": "Danu g. 15A , Kaunas, Lithuania",
+        "country": "LT",
+        "town": "Kaunas",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-08-01",
+        "end_date": "2027-07-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LU",
+          "LV",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK",
+          "XK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Citizenship and democratic participation",
+          "Health and wellbeing",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "2025-1-LT02-ESC51-VTJ-000347189",
+        "created": "2025-08-28T13:24:17",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Kaunas-L%27Arche-community_1.png?itok=5__SiQZ7",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48071_en"
+      },
+      "checked_at": "2026-08-17T04:30:01.759222"
     },
     "48058": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:25.199190"
+      "status": "scanned",
+      "result": {
+        "id": 48058,
+        "opid": 48058,
+        "title": "Teaching and Care in After School Clubs 5.0",
+        "location": "Str. Eroilor nr. 7, Miercurea Ciuc, Romania",
+        "country": "RO",
+        "town": "Miercurea Ciuc",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-15",
+        "end_date": "2027-06-10",
+        "deadline": "2026-08-30",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RS",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Environment and natural protection",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2026-1-RO01-ESC51-VTJ-000401709",
+        "created": "2025-08-27T13:44:57",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/Care2Travel-Logo_4_0.jpeg?itok=FljTjBa4",
+        "url": "https://youth.europa.eu/solidarity/opportunity/48058_en"
+      },
+      "checked_at": "2026-08-17T04:30:08.097980"
     },
     "47983": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:31.306792"
+      "status": "scanned",
+      "result": {
+        "id": 47983,
+        "opid": 47983,
+        "title": "VOLUNTEERING IN CZECHIA FOR 5-12 MONTHS",
+        "location": "Zámecká 243, Náchod, Czechia",
+        "country": "CZ",
+        "town": "Náchod",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-15",
+        "end_date": "2026-09-15",
+        "deadline": "2026-09-15",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Environment and natural protection",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "",
+        "created": "2025-08-21T13:39:38",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47983_en"
+      },
+      "checked_at": "2026-08-17T04:30:14.057151"
     },
     "47949": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:37.106928"
+      "status": "scanned",
+      "result": {
+        "id": 47949,
+        "opid": 47949,
+        "title": "Being green and open citizens in Epron ! (2026-2027)",
+        "location": "Place Francis Bernard, Epron, France",
+        "country": "FR",
+        "town": "Epron",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-10-05",
+        "end_date": "2027-07-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "SE",
+          "SI",
+          "SK"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Citizenship and democratic participation",
+          "Environment and natural protection",
+          "Education and training"
+        ],
+        "project_code": "2026-1-FR02-ESC51-VTJ-000402423",
+        "created": "2025-08-19T16:01:42",
+        "image_url": "https://youth.europa.eu/sites/default/files/styles/medium/public/opportunity-images/logo-calvados-departement-rvb-2.png?itok=Ji3Tf_Pn",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47949_en"
+      },
+      "checked_at": "2026-08-17T04:30:19.979185"
     },
     "47921": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:43.269852"
+      "status": "scanned",
+      "result": {
+        "id": 47921,
+        "opid": 47921,
+        "title": "Colors of Solidarity",
+        "location": "Tudor Vladimirescu, no 88, room 01 and room 02, Jimbolia, Romania",
+        "country": "RO",
+        "town": "Jimbolia",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-03-01",
+        "deadline": null,
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "MT",
+          "NL",
+          "PL",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-RO01-ESC51-VTJ-000346288",
+        "created": "2025-08-18T11:05:31",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47921_en"
+      },
+      "checked_at": "2026-08-17T04:30:26.094567"
     },
     "47894": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:49.086454"
+      "status": "scanned",
+      "result": {
+        "id": 47894,
+        "opid": 47894,
+        "title": "LOCAL ACTIVITY CENTER IN GDAŃSK",
+        "location": "Jaskowa Dolina 7, Gdansk, Poland",
+        "country": "PL",
+        "town": "Gdansk",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-08-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "AW",
+          "BA",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GL",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "ME",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "TR"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Health and wellbeing",
+          "Creativity and culture",
+          "Physical education and sport"
+        ],
+        "project_code": "2025-2-PL01-ESC51-VTJ-000375397",
+        "created": "2025-08-14T15:31:07",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47894_en"
+      },
+      "checked_at": "2026-08-17T04:30:32.039608"
     },
     "47893": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:56:55.058072"
+      "status": "scanned",
+      "result": {
+        "id": 47893,
+        "opid": 47893,
+        "title": "SPORTS AND RECREATIONAL ACTIVITIES IN GDAŃSK",
+        "location": "Jaskowa Dolina 7, Gdansk, Poland",
+        "country": "PL",
+        "town": "Gdansk",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-08-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AM",
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GL",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IS",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "ME",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "TR"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Health and wellbeing",
+          "Creativity and culture",
+          "Physical education and sport"
+        ],
+        "project_code": "2025-2-PL01-ESC51-VTJ-000375397",
+        "created": "2025-08-14T15:14:41",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47893_en"
+      },
+      "checked_at": "2026-08-17T04:30:38.545684"
     },
     "47889": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:57:01.952576"
+      "status": "scanned",
+      "result": {
+        "id": 47889,
+        "opid": 47889,
+        "title": "Inclusive Volunteering – Empowering People XI",
+        "location": "RUA FRANCISCO FERREIRA NEVES , AVEIRO, Portugal",
+        "country": "PT",
+        "town": "AVEIRO",
+        "activity_type": "Individual volunteering",
+        "start_date": "2025-09-08",
+        "end_date": "2026-10-31",
+        "deadline": null,
+        "eligible_countries": [
+          "ES",
+          "IT"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Environment and natural protection",
+          "Education and training"
+        ],
+        "project_code": "",
+        "created": "2025-08-14T11:44:43",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47889_en"
+      },
+      "checked_at": "2026-08-17T04:30:44.490507"
     },
     "47879": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:57:08.011407"
+      "status": "scanned",
+      "result": {
+        "id": 47879,
+        "opid": 47879,
+        "title": "BECOME A VOLUNTEER IN CZECHIA for 12 MONTHS from 1st September 2026!",
+        "location": "Zámecká 243, Náchod, Czechia",
+        "country": "CZ",
+        "town": "Náchod",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-08-31",
+        "deadline": "2026-08-21",
+        "eligible_countries": [
+          "AT",
+          "BE",
+          "BG",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Environment and natural protection",
+          "Education and training",
+          "Creativity and culture"
+        ],
+        "project_code": "2025-1-CZ01-ESC51-VTJ-000346833",
+        "created": "2025-08-13T15:18:35",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47879_en"
+      },
+      "checked_at": "2026-08-17T04:30:49.671530"
     },
     "47813": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:57:13.773460"
+      "status": "scanned",
+      "result": {
+        "id": 47813,
+        "opid": 47813,
+        "title": "Classes and activities at the Osówek People's University",
+        "location": "Osówek 47, Osówek, Poland",
+        "country": "PL",
+        "town": "Osówek",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-09-01",
+        "end_date": "2027-08-30",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AT",
+          "BA",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IE",
+          "IT",
+          "LI",
+          "LT",
+          "LU",
+          "LV",
+          "MD",
+          "ME",
+          "MK",
+          "MT",
+          "NL",
+          "NO",
+          "PT",
+          "RO",
+          "RS",
+          "SE",
+          "SI",
+          "SK",
+          "TR"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Creativity and culture",
+          "Physical education and sport"
+        ],
+        "project_code": "2025-2-PL01-ESC51-VTJ-000375397",
+        "created": "2025-08-11T11:06:00",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47813_en"
+      },
+      "checked_at": "2026-08-17T04:30:55.645265"
     },
     "47795": {
-      "status": "not_morocco",
-      "result": null,
-      "checked_at": "2026-08-14T15:57:19.783615"
+      "status": "scanned",
+      "result": {
+        "id": 47795,
+        "opid": 47795,
+        "title": "Inclusivity Unlocked 3",
+        "location": "Eugeniu Carada Nr.10, Craiova , Romania",
+        "country": "RO",
+        "town": "Craiova ",
+        "activity_type": "Individual volunteering",
+        "start_date": "2026-01-01",
+        "end_date": "2026-12-31",
+        "deadline": null,
+        "eligible_countries": [
+          "AL",
+          "AM",
+          "AT",
+          "AZ",
+          "BA",
+          "BE",
+          "BG",
+          "CY",
+          "CZ",
+          "DE",
+          "DK",
+          "EE",
+          "ES",
+          "FI",
+          "FR",
+          "GE",
+          "GR",
+          "HR",
+          "HU",
+          "IT",
+          "JO",
+          "LT",
+          "LV",
+          "MD",
+          "ME",
+          "MK",
+          "MT",
+          "NO",
+          "PF",
+          "PL",
+          "PT",
+          "RS",
+          "SI",
+          "SK",
+          "TR",
+          "UA"
+        ],
+        "eligibility_known": true,
+        "topics": [
+          "Social challenges",
+          "Creativity and culture",
+          "Working against discrimination (including gender discrimination)"
+        ],
+        "project_code": "",
+        "created": "2025-08-08T13:52:18",
+        "image_url": "https://youth.europa.eu/modules/custom/eyp_esc/images/esc-logo-en.png",
+        "url": "https://youth.europa.eu/solidarity/opportunity/47795_en",
+        "eligible_countries_unmapped": [
+          "French Southern and Antarctic Territories"
+        ]
+      },
+      "checked_at": "2026-08-17T04:31:01.529153"
     },
     "47789": {
       "status": "not_morocco",
@@ -46503,11 +48342,11 @@
       "checked_at": "2026-08-16T19:49:42.851086"
     }
   },
-  "updated_at": "2026-08-17T03:33:48.034058",
+  "updated_at": "2026-08-17T04:31:01.682188",
   "history": {
     "53801": {
       "first_seen": "2026-08-12T19:49:46",
-      "last_seen": "2026-08-17T03:29:36.599865",
+      "last_seen": "2026-08-17T04:26:59.478249",
       "result": {
         "id": 53801,
         "opid": 53801,
@@ -46542,7 +48381,7 @@
     },
     "53800": {
       "first_seen": "2026-08-12T19:46:19",
-      "last_seen": "2026-08-17T03:29:36.599882",
+      "last_seen": "2026-08-17T04:26:59.478266",
       "result": {
         "id": 53800,
         "opid": 53800,
@@ -46577,7 +48416,7 @@
     },
     "53769": {
       "first_seen": "2026-08-11T11:40:46",
-      "last_seen": "2026-08-17T03:29:36.599900",
+      "last_seen": "2026-08-17T04:26:59.478402",
       "result": {
         "id": 53769,
         "opid": 53769,
@@ -46653,7 +48492,7 @@
     },
     "53741": {
       "first_seen": "2026-08-09T09:35:11",
-      "last_seen": "2026-08-17T03:29:36.599912",
+      "last_seen": "2026-08-17T04:26:59.478421",
       "result": {
         "id": 53741,
         "opid": 53741,
@@ -46723,7 +48562,7 @@
     },
     "53731": {
       "first_seen": "2026-08-07T15:58:06",
-      "last_seen": "2026-08-17T03:29:36.599918",
+      "last_seen": "2026-08-17T04:26:59.478427",
       "result": {
         "id": 53731,
         "opid": 53731,
@@ -46776,7 +48615,7 @@
     },
     "53729": {
       "first_seen": "2026-08-07T15:23:50",
-      "last_seen": "2026-08-17T03:29:36.599920",
+      "last_seen": "2026-08-17T04:26:59.478431",
       "result": {
         "id": 53729,
         "opid": 53729,
@@ -46827,7 +48666,7 @@
     },
     "53727": {
       "first_seen": "2026-08-07T15:14:19",
-      "last_seen": "2026-08-17T03:29:36.599924",
+      "last_seen": "2026-08-17T04:26:59.478434",
       "result": {
         "id": 53727,
         "opid": 53727,
@@ -46878,7 +48717,7 @@
     },
     "53670": {
       "first_seen": "2026-08-05T09:06:21",
-      "last_seen": "2026-08-17T03:29:36.599955",
+      "last_seen": "2026-08-17T04:26:59.478468",
       "result": {
         "id": 53670,
         "opid": 53670,
@@ -46935,7 +48774,7 @@
     },
     "53667": {
       "first_seen": "2026-08-04T21:51:58",
-      "last_seen": "2026-08-17T03:29:36.599958",
+      "last_seen": "2026-08-17T04:26:59.478471",
       "result": {
         "id": 53667,
         "opid": 53667,
@@ -47010,7 +48849,7 @@
     },
     "53661": {
       "first_seen": "2026-08-04T17:17:11",
-      "last_seen": "2026-08-17T03:29:36.599966",
+      "last_seen": "2026-08-17T04:26:59.478479",
       "result": {
         "id": 53661,
         "opid": 53661,
@@ -47064,7 +48903,7 @@
     },
     "53660": {
       "first_seen": "2026-08-04T16:57:15",
-      "last_seen": "2026-08-17T03:29:36.599969",
+      "last_seen": "2026-08-17T04:26:59.478482",
       "result": {
         "id": 53660,
         "opid": 53660,
@@ -47118,7 +48957,7 @@
     },
     "53658": {
       "first_seen": "2026-08-04T16:21:10",
-      "last_seen": "2026-08-17T03:29:36.599972",
+      "last_seen": "2026-08-17T04:26:59.478485",
       "result": {
         "id": 53658,
         "opid": 53658,
@@ -47172,7 +49011,7 @@
     },
     "53638": {
       "first_seen": "2026-08-04T10:06:46",
-      "last_seen": "2026-08-17T03:29:36.599979",
+      "last_seen": "2026-08-17T04:26:59.478493",
       "result": {
         "id": 53638,
         "opid": 53638,
@@ -47225,7 +49064,7 @@
     },
     "53485": {
       "first_seen": "2026-07-26T14:16:02",
-      "last_seen": "2026-08-17T03:29:36.600026",
+      "last_seen": "2026-08-17T04:26:59.478537",
       "result": {
         "id": 53485,
         "opid": 53485,
@@ -47278,7 +49117,7 @@
     },
     "53463": {
       "first_seen": "2026-07-23T23:15:50",
-      "last_seen": "2026-08-17T03:29:36.600031",
+      "last_seen": "2026-08-17T04:26:59.478541",
       "result": {
         "id": 53463,
         "opid": 53463,
@@ -47365,7 +49204,7 @@
     },
     "53406": {
       "first_seen": "2026-07-22T10:54:32",
-      "last_seen": "2026-08-17T03:29:36.600038",
+      "last_seen": "2026-08-17T04:26:59.478549",
       "result": {
         "id": 53406,
         "opid": 53406,
@@ -47408,7 +49247,7 @@
     },
     "53387": {
       "first_seen": "2026-07-21T15:35:45",
-      "last_seen": "2026-08-17T03:29:36.600042",
+      "last_seen": "2026-08-17T04:26:59.478553",
       "result": {
         "id": 53387,
         "opid": 53387,
@@ -48252,7 +50091,7 @@
     },
     "53790": {
       "first_seen": "2026-08-12T12:24:20",
-      "last_seen": "2026-08-17T03:29:36.599889",
+      "last_seen": "2026-08-17T04:26:59.478273",
       "result": {
         "id": 53790,
         "opid": 53790,
@@ -48321,7 +50160,7 @@
     },
     "53725": {
       "first_seen": "2026-08-07T14:27:57",
-      "last_seen": "2026-08-17T03:29:36.599928",
+      "last_seen": "2026-08-17T04:26:59.478437",
       "result": {
         "id": 53725,
         "opid": 53725,
@@ -48375,7 +50214,7 @@
     },
     "53721": {
       "first_seen": "2026-08-07T13:12:23",
-      "last_seen": "2026-08-17T03:29:36.599933",
+      "last_seen": "2026-08-17T04:26:59.478442",
       "result": {
         "id": 53721,
         "opid": 53721,
@@ -48426,7 +50265,7 @@
     },
     "53716": {
       "first_seen": "2026-08-07T11:40:45",
-      "last_seen": "2026-08-17T03:29:36.599937",
+      "last_seen": "2026-08-17T04:26:59.478447",
       "result": {
         "id": 53716,
         "opid": 53716,
@@ -48456,7 +50295,7 @@
     },
     "53678": {
       "first_seen": "2026-08-05T12:51:28",
-      "last_seen": "2026-08-17T03:29:36.599948",
+      "last_seen": "2026-08-17T04:26:59.478461",
       "result": {
         "id": 53678,
         "opid": 53678,
@@ -48494,7 +50333,7 @@
     },
     "53674": {
       "first_seen": "2026-08-05T09:32:18",
-      "last_seen": "2026-08-17T03:29:36.599952",
+      "last_seen": "2026-08-17T04:26:59.478465",
       "result": {
         "id": 53674,
         "opid": 53674,
@@ -48545,7 +50384,7 @@
     },
     "53663": {
       "first_seen": "2026-08-04T17:59:40",
-      "last_seen": "2026-08-17T03:29:36.599961",
+      "last_seen": "2026-08-17T04:26:59.478474",
       "result": {
         "id": 53663,
         "opid": 53663,
@@ -48590,7 +50429,7 @@
     },
     "53662": {
       "first_seen": "2026-08-04T17:37:27",
-      "last_seen": "2026-08-17T03:29:36.599964",
+      "last_seen": "2026-08-17T04:26:59.478477",
       "result": {
         "id": 53662,
         "opid": 53662,
@@ -48645,7 +50484,7 @@
     },
     "53650": {
       "first_seen": "2026-08-04T13:53:50",
-      "last_seen": "2026-08-17T03:29:36.599975",
+      "last_seen": "2026-08-17T04:26:59.478488",
       "result": {
         "id": 53650,
         "opid": 53650,
@@ -48702,7 +50541,7 @@
     },
     "53626": {
       "first_seen": "2026-08-03T15:25:32",
-      "last_seen": "2026-08-17T03:29:36.599984",
+      "last_seen": "2026-08-17T04:26:59.478498",
       "result": {
         "id": 53626,
         "opid": 53626,
@@ -48762,7 +50601,7 @@
     },
     "53625": {
       "first_seen": "2026-08-03T14:45:42",
-      "last_seen": "2026-08-17T03:29:36.599986",
+      "last_seen": "2026-08-17T04:26:59.478500",
       "result": {
         "id": 53625,
         "opid": 53625,
@@ -48791,7 +50630,7 @@
     },
     "53539": {
       "first_seen": "2026-07-28T17:17:46",
-      "last_seen": "2026-08-17T03:29:36.600004",
+      "last_seen": "2026-08-17T04:26:59.478516",
       "result": {
         "id": 53539,
         "opid": 53539,
@@ -48865,7 +50704,7 @@
     },
     "53538": {
       "first_seen": "2026-07-28T17:13:29",
-      "last_seen": "2026-08-17T03:29:36.600007",
+      "last_seen": "2026-08-17T04:26:59.478519",
       "result": {
         "id": 53538,
         "opid": 53538,
@@ -48939,7 +50778,7 @@
     },
     "53536": {
       "first_seen": "2026-07-28T17:07:31",
-      "last_seen": "2026-08-17T03:29:36.600010",
+      "last_seen": "2026-08-17T04:26:59.478522",
       "result": {
         "id": 53536,
         "opid": 53536,
@@ -49013,7 +50852,7 @@
     },
     "53534": {
       "first_seen": "2026-07-28T17:01:51",
-      "last_seen": "2026-08-17T03:29:36.600013",
+      "last_seen": "2026-08-17T04:26:59.478524",
       "result": {
         "id": 53534,
         "opid": 53534,
@@ -49087,7 +50926,7 @@
     },
     "53510": {
       "first_seen": "2026-07-27T21:12:55",
-      "last_seen": "2026-08-17T03:29:36.600019",
+      "last_seen": "2026-08-17T04:26:59.478529",
       "result": {
         "id": 53510,
         "opid": 53510,
@@ -49121,7 +50960,7 @@
     },
     "53502": {
       "first_seen": "2026-07-27T13:59:14",
-      "last_seen": "2026-08-17T03:29:36.600022",
+      "last_seen": "2026-08-17T04:26:59.478532",
       "result": {
         "id": 53502,
         "opid": 53502,
@@ -49177,7 +51016,7 @@
     },
     "53345": {
       "first_seen": "2026-07-20T13:41:22",
-      "last_seen": "2026-08-17T03:29:36.600046",
+      "last_seen": "2026-08-17T04:26:59.478558",
       "result": {
         "id": 53345,
         "opid": 53345,
@@ -49225,7 +51064,7 @@
     },
     "53315": {
       "first_seen": "2026-07-17T10:12:37",
-      "last_seen": "2026-08-17T03:29:36.600052",
+      "last_seen": "2026-08-17T04:26:59.478564",
       "result": {
         "id": 53315,
         "opid": 53315,
@@ -49292,7 +51131,7 @@
     },
     "53291": {
       "first_seen": "2026-07-16T11:07:41",
-      "last_seen": "2026-08-17T03:29:36.600056",
+      "last_seen": "2026-08-17T04:26:59.478568",
       "result": {
         "id": 53291,
         "opid": 53291,
@@ -49347,7 +51186,7 @@
     },
     "52898": {
       "first_seen": "2026-06-29T11:31:25",
-      "last_seen": "2026-08-17T03:29:36.600082",
+      "last_seen": "2026-08-17T04:26:59.478595",
       "result": {
         "id": 52898,
         "opid": 52898,
@@ -49397,7 +51236,7 @@
     },
     "52469": {
       "first_seen": "2026-06-10T10:10:14",
-      "last_seen": "2026-08-17T03:29:36.600103",
+      "last_seen": "2026-08-17T04:26:59.478615",
       "result": {
         "id": 52469,
         "opid": 52469,
@@ -49451,7 +51290,7 @@
     },
     "51639": {
       "first_seen": "2026-05-07T16:03:18",
-      "last_seen": "2026-08-17T03:29:36.600128",
+      "last_seen": "2026-08-17T04:26:59.478642",
       "result": {
         "id": 51639,
         "opid": 51639,
@@ -49504,7 +51343,7 @@
     },
     "51560": {
       "first_seen": "2026-05-05T13:51:19",
-      "last_seen": "2026-08-17T03:29:36.600133",
+      "last_seen": "2026-08-17T04:26:59.478646",
       "result": {
         "id": 51560,
         "opid": 51560,
@@ -49560,7 +51399,7 @@
     },
     "51559": {
       "first_seen": "2026-05-05T13:30:54",
-      "last_seen": "2026-08-17T03:29:36.600135",
+      "last_seen": "2026-08-17T04:26:59.478649",
       "result": {
         "id": 51559,
         "opid": 51559,
@@ -49612,7 +51451,7 @@
     },
     "51541": {
       "first_seen": "2026-05-05T01:24:57",
-      "last_seen": "2026-08-17T03:29:36.600138",
+      "last_seen": "2026-08-17T04:26:59.478652",
       "result": {
         "id": 51541,
         "opid": 51541,
@@ -49667,7 +51506,7 @@
     },
     "51540": {
       "first_seen": "2026-05-05T01:04:49",
-      "last_seen": "2026-08-17T03:29:36.600140",
+      "last_seen": "2026-08-17T04:26:59.478654",
       "result": {
         "id": 51540,
         "opid": 51540,
@@ -49724,7 +51563,7 @@
     },
     "51539": {
       "first_seen": "2026-05-05T00:51:30",
-      "last_seen": "2026-08-17T03:29:36.600142",
+      "last_seen": "2026-08-17T04:26:59.478657",
       "result": {
         "id": 51539,
         "opid": 51539,
@@ -49780,7 +51619,7 @@
     },
     "51389": {
       "first_seen": "2026-04-27T14:34:33",
-      "last_seen": "2026-08-17T03:29:36.600150",
+      "last_seen": "2026-08-17T04:26:59.478663",
       "result": {
         "id": 51389,
         "opid": 51389,
@@ -49828,7 +51667,7 @@
     },
     "51135": {
       "first_seen": "2026-04-15T09:02:59",
-      "last_seen": "2026-08-17T03:29:36.600160",
+      "last_seen": "2026-08-17T04:26:59.478672",
       "result": {
         "id": 51135,
         "opid": 51135,
@@ -49888,7 +51727,7 @@
     },
     "50999": {
       "first_seen": "2026-04-08T11:02:44",
-      "last_seen": "2026-08-17T03:29:36.600164",
+      "last_seen": "2026-08-17T04:26:59.478677",
       "result": {
         "id": 50999,
         "opid": 50999,
@@ -49948,7 +51787,7 @@
     },
     "50808": {
       "first_seen": "2026-03-27T15:55:19",
-      "last_seen": "2026-08-17T03:29:36.600169",
+      "last_seen": "2026-08-17T04:26:59.478681",
       "result": {
         "id": 50808,
         "opid": 50808,
@@ -49991,6 +51830,6 @@
       "reason": "No longer present in the active opportunity list."
     }
   },
-  "last_scan_at": "2026-08-17T03:33:48.034054",
+  "last_scan_at": "2026-08-17T04:31:01.682183",
   "schema_version": 4
 }
