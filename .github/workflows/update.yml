@@ -1,7 +1,7 @@
 name: Update ESC Opportunities
 
 on:
-  # Run automatically every hour.
+  # Run automatically every 30 minutes.
   # Offset from the top of the hour to reduce GitHub Actions scheduling
   # contention during high-load periods.
   schedule:
@@ -99,8 +99,8 @@ jobs:
       #
       # One invocation therefore remains deliberately small.
       #
-      # Three invocations provide up to 120 detail-page scans per hourly
-      # workflow while keeping the overall request volume bounded.
+      # Three invocations provide up to 120 detail-page scans per 30-minute
+      # workflow while keeping each invocation bounded and resumable.
       #
       # Exit codes:
       #   0 = successful / normal incremental progress
@@ -173,8 +173,6 @@ jobs:
               fi
             fi
 
-            if [ -f data/expired.json ]; then
-            fi
 
             # --------------------------------------------------------
             # Commit only the files produced by the scraper.
