@@ -1622,6 +1622,8 @@ def save_public_output(
     opportunities,
     checkpoint,
     current_ids,
+    generated_at=None,
+    new_opportunity_ids=None,
 ):
     registry = build_participant_country_registry(
         opportunities
@@ -1656,7 +1658,14 @@ def save_public_output(
 
     output = {
         "schema_version": OUTPUT_SCHEMA_VERSION,
-        "generated_at": now_iso(),
+        # PHASE3_UPDATE_CYCLE_METADATA
+        "generated_at": generated_at or now_iso(),
+        "new_opportunity_ids": sorted(
+            {
+                str(opid)
+                for opid in (new_opportunity_ids or [])
+            }
+        ),
         "source_date": TODAY.strftime(
             "%Y-%m-%d"
         ),
@@ -1674,13 +1683,6 @@ def save_public_output(
         output,
     )
 
-    # The static frontend consumes this copy.
-    atomic_write_json(
-        PROJECT_ROOT
-        / "web"
-        / "opportunities.json",
-        output,
-    )
 
     return output
 
@@ -1749,6 +1751,9 @@ def save_expired_output(history):
 
 
 def main():
+    # PHASE3_UPDATE_CYCLE_METADATA
+    cycle_generated_at = now_iso()
+    newly_scanned_ids = set()
     print("=" * 70)
     print(
         "EUROPEAN SOLIDARITY CORPS — "
@@ -1902,6 +1907,8 @@ def main():
             opportunities,
             checkpoint,
             current_ids,
+            generated_at=cycle_generated_at,
+            new_opportunity_ids=newly_scanned_ids,
         )
 
         save_expired_output(
@@ -2097,6 +2104,11 @@ def main():
                         archived_this_batch += 1
 
                 if new_status == "scanned":
+                    # PHASE3_UPDATE_CYCLE_METADATA
+                    if previous_entry is None:
+                        newly_scanned_ids.add(
+                            str(opid)
+                        )
                     history.pop(
                         opid,
                         None,
@@ -2178,6 +2190,8 @@ def main():
         opportunities,
         checkpoint,
         current_ids,
+        generated_at=cycle_generated_at,
+        new_opportunity_ids=newly_scanned_ids,
     )
 
     save_expired_output(

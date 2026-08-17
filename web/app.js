@@ -1333,82 +1333,33 @@ function escapeHtml(value) {
 
 // ============================================================
 // NEW OPPORTUNITIES
-// ============================================================
 
-const SEEN_OPPORTUNITIES_KEY = "esc_seen_opportunities";
+const PHASE3_UPDATE_CYCLE_METADATA_KEY = true;
 
 let newOpportunityIds = new Set();
 
-function loadSeenOpportunities() {
-  try {
-    const stored = localStorage.getItem(SEEN_OPPORTUNITIES_KEY);
+function calculateNewOpportunities(
+  opportunities,
+  dataset,
+) {
+  const ids = Array.isArray(
+    dataset?.new_opportunity_ids,
+  )
+    ? dataset.new_opportunity_ids
+    : [];
 
-    if (!stored) {
-      return null;
-    }
-
-    const parsed = JSON.parse(stored);
-
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-
-    return new Set(parsed.map((id) => String(id)));
-  } catch {
-    return null;
-  }
-}
-
-function saveSeenOpportunities(opportunities) {
-  try {
-    const ids = opportunities.map((opportunity) => String(opportunity.id));
-
-    localStorage.setItem(SEEN_OPPORTUNITIES_KEY, JSON.stringify(ids));
-  } catch {
-    // Ignore localStorage failures.
-  }
-}
-
-function calculateNewOpportunities(opportunities) {
-  const previousIds = loadSeenOpportunities();
-
-  /*
-   * First visit:
-   *
-   * There is no previous dataset, so we cannot know
-   * which opportunities are genuinely new.
-   *
-   * Remember the current dataset but show NO NEW badges.
-   */
-
-  if (!previousIds) {
-    saveSeenOpportunities(opportunities);
-
-    newOpportunityIds = new Set();
-
-    return;
-  }
-
-  /*
-   * Every opportunity currently visible that wasn't present
-   * in the previous dataset is genuinely new.
-   */
-
-  newOpportunityIds = new Set(
-    opportunities
-      .map((opportunity) => String(opportunity.id))
-      .filter((id) => !previousIds.has(id)),
+  const allowed = new Set(
+    ids.map((id) => String(id)),
   );
 
-  /*
-   * Save the current dataset so the next refresh compares
-   * against this one.
-   */
-
-  saveSeenOpportunities(opportunities);
+  newOpportunityIds = new Set(
+    (Array.isArray(opportunities) ? opportunities : [])
+      .map((opportunity) => String(
+        opportunity?.id ?? opportunity?.opid ?? "",
+      ))
+      .filter((id) => allowed.has(id)),
+  );
 }
-
-// ============================================================
 // COUNTRY NAMES
 // ============================================================
 
@@ -3602,7 +3553,7 @@ async function loadData() {
     moveExpiredOpportunitiesToArchive();
     pruneExpiredArchive();
 
-    calculateNewOpportunities(activeOpportunities);
+    calculateNewOpportunities(activeOpportunities, currentActiveData);
 
     populateFilters();
     populateParticipantCountries();
