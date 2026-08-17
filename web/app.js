@@ -114,6 +114,80 @@ const emptyMessage = document.getElementById("empty-message");
 const searchInput = document.getElementById("search-input");
 
 const countryFilter = document.getElementById("country-filter");
+// ============================================================
+// COUNTRY DISPLAY HELPERS
+// ============================================================
+
+const ESC_COUNTRY_DISPLAY = Object.freeze({
+  AL: { name: "Albania", flag: "🇦🇱" },
+  AM: { name: "Armenia", flag: "🇦🇲" },
+  AT: { name: "Austria", flag: "🇦🇹" },
+  AZ: { name: "Azerbaijan", flag: "🇦🇿" },
+  BA: { name: "Bosnia and Herzegovina", flag: "🇧🇦" },
+  BE: { name: "Belgium", flag: "🇧🇪" },
+  BG: { name: "Bulgaria", flag: "🇧🇬" },
+  BY: { name: "Belarus", flag: "🇧🇾" },
+  CH: { name: "Switzerland", flag: "🇨🇭" },
+  CY: { name: "Cyprus", flag: "🇨🇾" },
+  CZ: { name: "Czechia", flag: "🇨🇿" },
+  DE: { name: "Germany", flag: "🇩🇪" },
+  DK: { name: "Denmark", flag: "🇩🇰" },
+  EE: { name: "Estonia", flag: "🇪🇪" },
+  ES: { name: "Spain", flag: "🇪🇸" },
+  FI: { name: "Finland", flag: "🇫🇮" },
+  FR: { name: "France", flag: "🇫🇷" },
+  GE: { name: "Georgia", flag: "🇬🇪" },
+  GR: { name: "Greece", flag: "🇬🇷" },
+  HR: { name: "Croatia", flag: "🇭🇷" },
+  HU: { name: "Hungary", flag: "🇭🇺" },
+  IE: { name: "Ireland", flag: "🇮🇪" },
+  IS: { name: "Iceland", flag: "🇮🇸" },
+  IT: { name: "Italy", flag: "🇮🇹" },
+  LI: { name: "Liechtenstein", flag: "🇱🇮" },
+  LT: { name: "Lithuania", flag: "🇱🇹" },
+  LU: { name: "Luxembourg", flag: "🇱🇺" },
+  LV: { name: "Latvia", flag: "🇱🇻" },
+  MC: { name: "Monaco", flag: "🇲🇨" },
+  MD: { name: "Moldova", flag: "🇲🇩" },
+  ME: { name: "Montenegro", flag: "🇲🇪" },
+  MK: { name: "North Macedonia", flag: "🇲🇰" },
+  MT: { name: "Malta", flag: "🇲🇹" },
+  NL: { name: "Netherlands", flag: "🇳🇱" },
+  NO: { name: "Norway", flag: "🇳🇴" },
+  PL: { name: "Poland", flag: "🇵🇱" },
+  PT: { name: "Portugal", flag: "🇵🇹" },
+  RO: { name: "Romania", flag: "🇷🇴" },
+  RS: { name: "Serbia", flag: "🇷🇸" },
+  SE: { name: "Sweden", flag: "🇸🇪" },
+  SI: { name: "Slovenia", flag: "🇸🇮" },
+  SK: { name: "Slovakia", flag: "🇸🇰" },
+  TR: { name: "Türkiye", flag: "🇹🇷" },
+  UA: { name: "Ukraine", flag: "🇺🇦" },
+  XK: { name: "Kosovo * UN resolution", flag: "🇽🇰" }
+});
+
+function getCountryDisplay(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+
+  if (ESC_COUNTRY_DISPLAY[normalized]) {
+    return ESC_COUNTRY_DISPLAY[normalized];
+  }
+
+  // Safe fallback for an unknown ISO-style country code.
+  return {
+    name: normalized || "Unknown",
+    flag: "🌍"
+  };
+}
+
+function getCountryDisplayName(code) {
+  return getCountryDisplay(code).name;
+}
+
+function getCountryFlag(code) {
+  return getCountryDisplay(code).flag;
+}
+
 
 const typeFilter = document.getElementById("type-filter");
 
@@ -2002,11 +2076,7 @@ function populateParticipantCountries() {
       option.value =
         country.name;
 
-      option.textContent =
-        `${country.flag} ${getTranslatedCountryName(
-          getParticipantCountryCode(country.name),
-          country.name
-        )}`;
+      option.textContent = `${getCountryFlag(option.value)} ${getCountryDisplayName(option.value)}`;;
 
 
       participantCountryFilter.appendChild(
@@ -2787,6 +2857,66 @@ function normalizeLoadedOpportunities(opportunities) {
 // ============================================================
 // LOAD DATA
 // ============================================================
+
+
+function populateCountryFilter(opportunities) {
+  if (!countryFilter) {
+    return;
+  }
+
+  const selectedValue = countryFilter.value || "";
+
+  const codes = new Set();
+
+  (Array.isArray(opportunities) ? opportunities : []).forEach((opportunity) => {
+    const code = String(
+      opportunity?.country ||
+      opportunity?.country_code ||
+      opportunity?.location_country ||
+      ""
+    ).trim().toUpperCase();
+
+    if (code) {
+      codes.add(code);
+    }
+  });
+
+  const sortedCodes = Array.from(codes).sort((a, b) => {
+    const aDisplay = getCountryDisplay(a);
+    const bDisplay = getCountryDisplay(b);
+
+    return aDisplay.name.localeCompare(
+      bDisplay.name,
+      currentLanguage || "en"
+    );
+  });
+
+  countryFilter.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = "All countries";
+  countryFilter.appendChild(allOption);
+
+  sortedCodes.forEach((code) => {
+    const display = getCountryDisplay(code);
+    const option = document.createElement("option");
+
+    option.value = code;
+    option.textContent = `${display.flag} ${display.name}`;
+
+    countryFilter.appendChild(option);
+  });
+
+  if (
+    selectedValue &&
+    sortedCodes.includes(String(selectedValue).trim().toUpperCase())
+  ) {
+    countryFilter.value = String(selectedValue).trim().toUpperCase();
+  } else {
+    countryFilter.value = "";
+  }
+}
 
 async function loadData() {
   loadingMessage.classList.remove("hidden");
