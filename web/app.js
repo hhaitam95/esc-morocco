@@ -612,21 +612,12 @@ function applyTranslations() {
     populateParticipantCountries(currentActiveData);
   }
 
+  
   if (participantSearchApplied) {
-    // Preserve the participant-country zero-result/error state
-    // when switching languages.
-    opportunityCount.textContent =
-      `0 ${t("results")}`;
-
-    activeResultCount.textContent =
-      `0 ${t("results")}`;
-
-    lastUpdated.textContent = "—";
-
-    opportunitiesBody.innerHTML = "";
-
-    emptyMessage.classList.add("hidden");
-    errorMessage.classList.remove("hidden");
+    // Preserve the already-filtered Participant Country results
+    // when switching language. The selected country and
+    // activeOpportunities remain unchanged.
+    renderActive();
   } else {
     renderActive();
 
@@ -634,6 +625,7 @@ function applyTranslations() {
       updateHeader(currentActiveData);
     }
   }
+
 
   renderExpired();
 

@@ -1,38 +1,59 @@
-# ESC Opportunity Finder — Production Review
+# ESC Opportunity Finder — Language Switch Participant Country Fix
 
-## Recently Expired
+## Change
 
-The Recently expired table copies the active opportunity-table presentation.
+Fixed the frontend language-switch state handling.
 
-Column order:
+When a Participant Country is selected and applied, switching between
+English, French, and Arabic now preserves the selected country and the
+already-filtered active opportunity results.
 
-Opportunity | Location | Activity | Deadline | Type | Expired | View
+## Behavior
 
-Expired records are filtered by the selected Participant Country.
+Before:
 
-Expired records are sorted newest first:
+1. Select Participant Country.
+2. Apply search.
+3. Active table shows filtered opportunities.
+4. Switch language.
+5. Active table was cleared and showed an incorrect loading/error state.
 
-Expired today
-1 day(s) ago
-2 day(s) ago
-...
+After:
 
-The age label uses the requested `day(s) ago` wording.
+1. Select Participant Country.
+2. Apply search.
+3. Active table shows filtered opportunities.
+4. Switch language.
+5. The same filtered opportunities remain visible.
+6. Labels, dates, country names, buttons, and other translated UI
+   update to the selected language.
+7. Recently Expired continues to refresh independently.
 
-## Safety
+## Preserved
 
-- Current opportunities: 657
-- Opportunity 53577 integrity validated.
-- Backend/cache files remain protected.
-- Local repair checkpoint remains untouched.
+No changes to:
 
-## Working Tree
+- Backend data
+- Scraper
+- Checkpoint
+- GitHub Actions
+- Participant Country list
+- Participant Country filtering logic
+- Recently Expired filtering
+- Recently Expired ordering
+- Recently Expired table markup
+- Active table markup
+- Logos
+- Country flags
+- View buttons
 
-- `M  UPDATE_REVIEW.md`
-- ` M update.py`
-- `MM web/app.js`
-- `?? data/full_detail_repair_checkpoint.json`
+## Validation
 
-## Canonical Remote
-
-https://github.com/hhaitam95/esc-opportunity-finder.git
+- update.py syntax validated
+- dataset validated
+- opportunity 53577 validated
+- web/app.js syntax validated
+- Recently Expired renderer validated
+- language-switch handler validated
+- Participant Country state preservation validated
+- protected backend/cache files preserved
