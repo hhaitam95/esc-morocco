@@ -1,59 +1,44 @@
-# ESC Opportunity Finder — Language Switch Participant Country Fix
+# ESC Opportunity Finder — Backend Finalization Review
 
-## Change
+## Incremental scraper
 
-Fixed the frontend language-switch state handling.
+The existing scraper architecture is preserved.
 
-When a Participant Country is selected and applied, switching between
-English, French, and Arabic now preserves the selected country and the
-already-filtered active opportunity results.
+It continues to:
 
-## Behavior
+- fetch the current ESC opportunity listing;
+- compare current IDs against persistent checkpoint state;
+- process new opportunity IDs;
+- retry failed opportunities;
+- recheck stale opportunities;
+- persist checkpoint progress;
+- publish the current opportunity cache;
+- publish the expired archive.
 
-Before:
+No cache reset or scraper rewrite is performed.
 
-1. Select Participant Country.
-2. Apply search.
-3. Active table shows filtered opportunities.
-4. Switch language.
-5. Active table was cleared and showed an incorrect loading/error state.
+## Schedule
 
-After:
+The GitHub Actions update workflow runs approximately every 30 minutes:
 
-1. Select Participant Country.
-2. Apply search.
-3. Active table shows filtered opportunities.
-4. Switch language.
-5. The same filtered opportunities remain visible.
-6. Labels, dates, country names, buttons, and other translated UI
-   update to the selected language.
-7. Recently Expired continues to refresh independently.
+`17,47 * * * *`
 
-## Preserved
+The existing concurrency protection and bounded scraper behavior
+remain unchanged.
 
-No changes to:
+## Last updated
 
-- Backend data
-- Scraper
-- Checkpoint
-- GitHub Actions
-- Participant Country list
-- Participant Country filtering logic
-- Recently Expired filtering
-- Recently Expired ordering
-- Recently Expired table markup
-- Active table markup
-- Logos
-- Country flags
-- View buttons
+The UI reads the existing scraper-generated `generated_at` timestamp
+from `web/opportunities.json`.
 
-## Validation
+Search actions do not change this timestamp.
 
-- update.py syntax validated
-- dataset validated
-- opportunity 53577 validated
-- web/app.js syntax validated
-- Recently Expired renderer validated
-- language-switch handler validated
-- Participant Country state preservation validated
-- protected backend/cache files preserved
+## Protected state
+
+The update does not modify:
+
+- data/checkpoint.json
+- data/expired.json
+- data/opportunities.json
+- web/opportunities.json
+- data/full_detail_repair_checkpoint.json

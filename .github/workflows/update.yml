@@ -5,7 +5,7 @@ on:
   # Offset from the top of the hour to reduce GitHub Actions scheduling
   # contention during high-load periods.
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17,47 * * * *"
 
   # Allow manual runs from GitHub Actions.
   workflow_dispatch:

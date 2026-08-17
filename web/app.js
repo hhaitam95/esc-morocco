@@ -3507,6 +3507,45 @@ function populateCountryFilter(opportunities) {
   }
 }
 
+
+function renderLastUpdated(value) {
+  if (!value) {
+    lastUpdated.textContent = "—";
+    return;
+  }
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime(),
+    )
+  ) {
+    lastUpdated.textContent =
+      String(value);
+    return;
+  }
+
+  try {
+    lastUpdated.textContent =
+      new Intl.DateTimeFormat(
+        currentLanguage === "fr"
+          ? "fr-FR"
+          : currentLanguage === "ar"
+            ? "ar-MA"
+            : "en-GB",
+        {
+          dateStyle: "medium",
+          timeStyle: "short",
+        },
+      ).format(parsed);
+  } catch (error) {
+    lastUpdated.textContent =
+      parsed.toLocaleString();
+  }
+}
+
 async function loadData() {
   loadingMessage.classList.remove("hidden");
   errorMessage.classList.add("hidden");
@@ -3532,6 +3571,13 @@ async function loadData() {
 
     currentActiveData =
       payload?.activeData || null;
+
+    renderLastUpdated(
+      currentActiveData?.generated_at
+      || currentActiveData?.last_updated
+      || null,
+    );
+
 
     availableActiveOpportunities =
       normalizeLoadedOpportunities(
