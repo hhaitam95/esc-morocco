@@ -196,8 +196,7 @@ jobs:
 
             if [ -n "$STAGED" ]; then
               echo "Changes detected:"
-              printf '%s
-' "$STAGED"
+              printf '%s\n' "$STAGED"
 
               git diff --cached --check
               if [ $? -ne 0 ]; then

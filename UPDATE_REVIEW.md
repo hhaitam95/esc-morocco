@@ -1,44 +1,40 @@
-# ESC Opportunity Finder — Backend Finalization Review
+# ESC Opportunity Finder — Workflow Syntax Repair
 
-## Incremental scraper
+## Fixed
 
-The existing scraper architecture is preserved.
+Repaired the GitHub Actions workflow syntax/staging-output issue.
 
-It continues to:
+The workflow now contains exactly:
 
-- fetch the current ESC opportunity listing;
-- compare current IDs against persistent checkpoint state;
-- process new opportunity IDs;
-- retry failed opportunities;
-- recheck stale opportunities;
-- persist checkpoint progress;
-- publish the current opportunity cache;
-- publish the expired archive.
+`printf '%s\n' "$STAGED"`
 
-No cache reset or scraper rewrite is performed.
+with no trailing whitespace.
 
 ## Schedule
 
-The GitHub Actions update workflow runs approximately every 30 minutes:
+The incremental scraper remains scheduled approximately every 30 minutes:
 
 `17,47 * * * *`
 
-The existing concurrency protection and bounded scraper behavior
-remain unchanged.
+## Preserved
 
-## Last updated
+No changes were made to:
 
-The UI reads the existing scraper-generated `generated_at` timestamp
-from `web/opportunities.json`.
-
-Search actions do not change this timestamp.
-
-## Protected state
-
-The update does not modify:
-
-- data/checkpoint.json
-- data/expired.json
-- data/opportunities.json
+- scraper.py
+- checkpoint.json
+- expired.json
+- opportunities.json
 - web/opportunities.json
-- data/full_detail_repair_checkpoint.json
+- scraper batch size
+- scraper retry behavior
+- scraper rate limits
+- checkpoint state
+- backend repair checkpoint
+
+## Validation
+
+- update.py syntax
+- workflow text structure
+- workflow YAML
+- trailing whitespace
+- protected backend/cache state
