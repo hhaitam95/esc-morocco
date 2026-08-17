@@ -113,6 +113,27 @@ const emptyMessage = document.getElementById("empty-message");
 
 const searchInput = document.getElementById("search-input");
 
+
+// ============================================================
+// COUNTRY FLAG COMPATIBILITY
+// ============================================================
+
+function getCountryFlagByCode(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+  const aliases = { EL: "GR" };
+  const iso = aliases[normalized] || normalized;
+
+  if (!/^[A-Z]{2}$/.test(iso)) {
+    return "🌍";
+  }
+
+  return String.fromCodePoint(
+    ...iso.split("").map(
+      (letter) => 127397 + letter.charCodeAt(0)
+    )
+  );
+}
+
 const countryFilter = document.getElementById("country-filter");
 // ============================================================
 // COUNTRY DISPLAY HELPERS
@@ -2076,7 +2097,7 @@ function populateParticipantCountries() {
       option.value =
         country.name;
 
-      option.textContent = `${getCountryFlag(option.value)} ${getCountryDisplayName(option.value)}`;;
+      option.textContent = `${getCountryFlagByCode(getParticipantCountryCode(country.name))} ${getTranslatedCountryName(getParticipantCountryCode(country.name), country.name)}`;;
 
 
       participantCountryFilter.appendChild(
@@ -2242,7 +2263,7 @@ function populateFilters() {
 
     option.value = type;
 
-    option.textContent = `${activityTypeIcons[type] || "🤝"} ` + `${type}`;
+    option.textContent = `${getCountryFlagByCode(option.value)} ${getTranslatedCountryName(option.value, option.value)}`;
 
     typeFilter.appendChild(option);
   });

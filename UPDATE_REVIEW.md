@@ -1,37 +1,42 @@
-# ESC Opportunity Finder — Safe Frontend Production Push
+# ESC Opportunity Finder — Country Dropdown Flag Repair
 
-Generated: `2026-08-17T01:39:18+01:00`
+## Scope
 
-## Current cache
+Frontend-only production update.
 
-- `657` current opportunities.
-- Opportunity `53577` validated.
+### Changes being pushed
 
-## Destination country mappings
+- Restore correct country flags in the Participant Country dropdown.
+- Restore correct country flags in the destination Country filter.
+- Preserve the existing country names and translations.
+- Continue using stable country-code values.
+- Use the shared country-code flag resolver.
+- Remove the generic globe fallback from the affected country dropdown renderers.
 
-- `DE` -> 🇩🇪 Germany
-- `IT` -> 🇮🇹 Italy
-- `LT` -> 🇱🇹 Lithuania
-- `PT` -> 🇵🇹 Portugal
-- `RO` -> 🇷🇴 Romania
-- `SK` -> 🇸🇰 Slovakia
-- `TR` -> 🇹🇷 Türkiye
+### Validation
 
-## Production files
+- `web/app.js` passes Node syntax validation.
+- `web/opportunities.json` remains unchanged.
+- Opportunity `53577` remains intact.
+- Backend/cache files are not included in the commit.
+- `data/full_detail_repair_checkpoint.json` remains local and untouched.
+
+## Files intentionally committed
 
 - `web/app.js`
 - `UPDATE_REVIEW.md`
 
-## Preserved local files
+## Files intentionally excluded
 
 - `update.py`
 - `data/full_detail_repair_checkpoint.json`
-
-## Protected backend/cache files
-
 - `data/checkpoint.json`
 - `data/expired.json`
 - `data/opportunities.json`
 - `web/opportunities.json`
 
-No network scraping was performed.
+## Production push
+
+The commit is intended to be pushed to `origin/main`.
+
+No network scraping is performed by this update.
