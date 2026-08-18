@@ -1,15 +1,19 @@
-// ESC Opportunity Finder — UI feature registry
-
-window.ESC_FEATURES = {
+const FEATURES = Object.freeze({
   language: true,
   theme: true,
   participantCountry: true,
   search: true,
   filters: true,
   sorting: true,
-  refresh: true,
-  expired: true,
+  clearFilters: true,
+  archives: true,
   newBadges: true,
+    clear: true,
+    expired: true,
+});
 
-  backend: false,
-};
+export function enabled(name) {
+  return FEATURES[name] === true;
+}
+
+export { FEATURES };

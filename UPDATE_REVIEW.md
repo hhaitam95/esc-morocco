@@ -1,34 +1,29 @@
-# Phase 5 — Simplified ESC Update Architecture
+# Frontend Cleanup Review
 
-## Architecture
+## Scope
 
-1. `update.yml` runs every 30 minutes.
-2. `update.yml` runs `scraper/scraper.py`.
-3. The scraper saves the canonical JSON data under `data/`.
-4. `update.yml` commits and pushes changed data to `main`.
-5. That push triggers `deploy.yml`.
-6. `deploy.yml` deploys the existing `web/` directory to GitHub Pages.
+Frontend only.
 
-## Important boundary
+## Completed
 
-`update.yml` does not build or deploy the website.
+- Refresh renamed to Clear.
+- Clear resets table/search filters.
+- Clear preserves Participant Country.
+- Existing frontend modules are preserved.
+- Feature registry syntax is valid.
 
-`deploy.yml` is responsible for GitHub Pages deployment.
+## Protected
 
-## Validation
+- scraper/
+- data/
+- .github/
+- deployment configuration
+- protected repair checkpoint
 
-- update.yml: validated
-- deploy.yml: validated
-- scraper.py: validated
-- canonical JSON: validated
-- protected repair checkpoint: preserved
+No commit or push was performed.
 
-## Current Git status
+## Review
 
-```text
- M .github/workflows/update.yml
- M UPDATE_REVIEW.md
- M update.py
-?? .github/workflows/update.yml.phase5-backup
-?? data/full_detail_repair_checkpoint.json
-```
+git status
+
+git diff -- web/

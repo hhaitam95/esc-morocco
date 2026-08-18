@@ -1,191 +1,185 @@
-// ESC Opportunity Finder — static backend data provider
-//
-// GitHub Pages is a static frontend, so the published backend
-// dataset is consumed from web/opportunities.json.
-//
-// The backend scraper remains the source of truth.
-// This provider is the browser-side boundary between that
-// generated dataset and web/app.js.
+const DATA_BASE =
+  "https://raw.githubusercontent.com/"
+  + "hhaitam95/esc-opportunity-finder/main/data/";
 
-window.ESC_DATA_PROVIDER = {
-  enabled: true,
+async function fetchJson(filename) {
+  const response = await fetch(
+    `${DATA_BASE}${filename}?v=${Date.now()}`,
+    {
+      cache: "no-store",
+    },
+  );
 
-  async load() {
-    const response = await fetch(
-      `https://raw.githubusercontent.com/hhaitam95/esc-opportunity-finder/main/data/opportunities.json?v=${Date.now()}`,
-      {
-        cache: 'no-store',
-      },
+  if (!response.ok) {
+    throw new Error(
+      `Could not load ${filename} (${response.status})`,
+    );
+  }
+
+  const payload =
+    await response.json();
+
+  if (
+    !payload ||
+    typeof payload !== "object"
+  ) {
+    throw new Error(
+      `${filename} returned invalid data.`,
+    );
+  }
+
+  return payload;
+}
+
+function normalizeCodes(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      values
+        .map(
+          (value) =>
+            String(value)
+              .trim()
+              .toUpperCase(),
+        )
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function normalizeOpportunity(
+  opportunity,
+) {
+  const item = {
+    ...opportunity,
+  };
+
+  item.id = String(
+    item.id ??
+    item.opid ??
+    item.opportunity_id ??
+    item.opportunityId ??
+    "",
+  ).trim();
+
+  const dates =
+    item.activity_dates &&
+    typeof item.activity_dates === "object"
+      ? item.activity_dates
+      : {};
+
+  item.start_date =
+    item.start_date ||
+    dates.start ||
+    "";
+
+  item.end_date =
+    item.end_date ||
+    dates.end ||
+    "";
+
+  item.deadline =
+    item.application_deadline ||
+    item.deadline ||
+    "";
+
+  item.town =
+    item.town ||
+    item.city ||
+    "";
+
+  item.image_url =
+    item.logo_url ||
+    item.image_url ||
+    "";
+
+  item.participant_countries =
+    normalizeCodes(
+      Array.isArray(
+        item.participant_countries,
+      )
+        ? item.participant_countries
+        : item.eligible_countries,
     );
 
-    if (!response.ok) {
-      throw new Error(
-        `Could not load opportunities.json (${response.status})`,
-      );
-    }
+  item.eligible_countries =
+    normalizeCodes(
+      item.eligible_countries ||
+      item.participant_countries,
+    );
 
-    const payload = await response.json();
+  return item;
+}
 
-    if (!payload || typeof payload !== 'object') {
-      throw new Error('Opportunity dataset has an invalid root object.');
-    }
-
-    const sourceOpportunities = Array.isArray(payload.opportunities)
+function normalizeList(payload) {
+  const list =
+    Array.isArray(
+      payload?.opportunities,
+    )
       ? payload.opportunities
       : [];
 
-    if (!sourceOpportunities.length) {
-      throw new Error('Opportunity dataset contains no opportunities.');
-    }
+  return list
+    .filter(
+      (item) =>
+        item &&
+        typeof item === "object",
+    )
+    .map(
+      normalizeOpportunity,
+    );
+}
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+export async function loadData() {
+  const [
+    activePayload,
+    expiredPayload,
+  ] = await Promise.all([
+    fetchJson(
+      "opportunities.json",
+    ),
+    fetchJson(
+      "expired.json",
+    ),
+  ]);
 
-    const recentExpiredCutoff = new Date(today);
-    recentExpiredCutoff.setDate(
-      recentExpiredCutoff.getDate() - 30,
+  const active =
+    normalizeList(
+      activePayload,
     );
 
-    const normalizeCode = (value) =>
-      String(value || '')
-        .trim()
-        .toUpperCase();
+  const archived =
+    normalizeList(
+      expiredPayload,
+    );
 
-    const normalizeOpportunity = (opportunity) => {
-      const item = { ...opportunity };
+  if (!active.length) {
+    throw new Error(
+      "Active opportunity dataset is empty.",
+    );
+  }
 
-      const dates =
-        item.activity_dates &&
-        typeof item.activity_dates === 'object'
-          ? item.activity_dates
-          : {};
-
-      item.start_date =
-        dates.start ||
-        item.start_date ||
-        '';
-
-      item.end_date =
-        dates.end ||
-        item.end_date ||
-        '';
-
-      item.deadline =
-        item.application_deadline ||
-        item.deadline ||
-        '';
-
-      item.image_url =
-        item.logo_url ||
-        item.image_url ||
-        '';
-
-      item.town =
-        item.town ||
-        item.city ||
-        '';
-
-      const participantCountries =
-        Array.isArray(item.participant_countries)
-          ? item.participant_countries
-          : Array.isArray(item.eligible_countries)
-            ? item.eligible_countries
-            : [];
-
-      item.participant_countries = [
-        ...new Set(
-          participantCountries
-            .map(normalizeCode)
-            .filter(Boolean),
-        ),
-      ];
-
-      item.eligible_countries = [
-        ...new Set(
-          (Array.isArray(item.eligible_countries)
-            ? item.eligible_countries
-            : item.participant_countries
-          )
-            .map(normalizeCode)
-            .filter(Boolean),
-        ),
-      ];
-
-      return item;
-    };
-
-    const normalized = sourceOpportunities
-      .filter(
-        (item) => item && typeof item === 'object',
+  const newIds =
+    new Set(
+      Array.isArray(
+        activePayload.new_opportunity_ids,
       )
-      .map(normalizeOpportunity);
+        ? activePayload.new_opportunity_ids.map(
+            (value) =>
+              String(value),
+          )
+        : [],
+    );
 
-    const activeOpportunities = [];
-    const recentlyExpired = [];
-
-    normalized.forEach((opportunity) => {
-      const deadline = String(opportunity.deadline || '').trim();
-
-      if (!deadline) {
-        activeOpportunities.push(opportunity);
-        return;
-      }
-
-      const deadlineDate = new Date(`${deadline}T23:59:59`);
-
-      if (Number.isNaN(deadlineDate.getTime())) {
-        activeOpportunities.push(opportunity);
-        return;
-      }
-
-      if (deadlineDate >= today) {
-        activeOpportunities.push(opportunity);
-        return;
-      }
-
-      if (deadlineDate >= recentExpiredCutoff) {
-        recentlyExpired.push(opportunity);
-      }
-    });
-
-    const participantCountryIndex = {};
-
-    activeOpportunities.forEach((opportunity) => {
-      const opportunityId = String(
-        opportunity.id ?? opportunity.opid ?? '',
-      );
-
-      opportunity.participant_countries.forEach((code) => {
-        if (!participantCountryIndex[code]) {
-          participantCountryIndex[code] = [];
-        }
-
-        participantCountryIndex[code].push(opportunityId);
-      });
-    });
-
-    Object.keys(participantCountryIndex).forEach((code) => {
-      participantCountryIndex[code] = [
-        ...new Set(participantCountryIndex[code]),
-      ];
-    });
-
-    const activeData = {
-      ...payload,
-      opportunities: activeOpportunities,
-      count: activeOpportunities.length,
-    };
-
-    const expiredData = {
-      ...payload,
-      opportunities: recentlyExpired,
-      count: recentlyExpired.length,
-    };
-
-    return {
-      activeData,
-      expiredData,
-      participantCountryIndex,
-    };
-  },
-};
+  return {
+    active,
+    archived,
+    newIds,
+    generatedAt:
+      activePayload.generated_at ||
+      null,
+  };
+}

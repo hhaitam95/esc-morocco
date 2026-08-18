@@ -181,7 +181,7 @@
             <select id="participant-country" autocomplete="country-name"><option value="">Select Participant Country</option></select>
           </div>
 
-          <button id="apply-participant-country" class="refresh-button" data-i18n="apply">Apply</button>
+          <button id="apply-participant-country" class="clear-button" data-i18n="apply">Apply</button>
         </div>
 </section>
 
@@ -257,9 +257,9 @@
           </select>
         </div>
 
-        <button id="refresh-button" class="refresh-button" type="button">
+        <button id="clear-filters" class="clear-button" type="button">
           ↻
-          <span data-i18n="refresh"> Refresh </span>
+          <span data-i18n="clear"> Clear </span>
         </button>
       </section>
 
@@ -336,7 +336,7 @@
       <section id="expired-section" class="expired-section hidden">
         <button id="expired-toggle" class="expired-toggle" type="button">
           <span>
-            <span data-i18n="recentlyExpired"> Recently expired </span>
+            <span data-i18n="archivedOpportunities"> Recently expired </span>
 
             <span id="expired-count" class="expired-count"> 0 </span>
           </span>
@@ -395,6 +395,14 @@
     <script src="features.js?v=1"></script>
     <script src="data-provider.js?v=2"></script>
     <script src="app.js?v=23"></script>
-  </body>
+    <script src="state.js"></script>
+    <script src="country.js"></script>
+    <script src="table.js"></script>
+    <script src="features/i18n.js"></script>
+    <script src="features/theme.js"></script>
+    <script src="features.js"></script>
+    <script src="data-provider.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
 </html>
 <!-- ESC-MOROCCO-PAGES-REDEPLOY -->

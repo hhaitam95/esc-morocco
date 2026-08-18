@@ -1,3847 +1,869 @@
-// Complete participant-country list exposed // by the ESC API.
-// The backend currently has cached opportunity // data only for Morocco.
-const ESC_PARTICIPANT_COUNTRIES = [
-  { name: "Albania", flag: "🇦🇱" },
-  { name: "Algeria", flag: "🇩🇿" },
-  { name: "Armenia", flag: "🇦🇲" },
-  { name: "Aruba", flag: "🇦🇼" },
-  { name: "Austria", flag: "🇦🇹" },
-  { name: "Azerbaijan", flag: "🇦🇿" },
-  { name: "Belarus", flag: "🇧🇾" },
-  { name: "Belgium", flag: "🇧🇪" },
-  { name: "Bonaire Sint Eustatius and Saba", flag: "🇧🇶" },
-  { name: "Bosnia and Herzegovina", flag: "🇧🇦" },
-  { name: "Bulgaria", flag: "🇧🇬" },
-  { name: "Croatia", flag: "🇭🇷" },
-  { name: "Curaçao", flag: "🇨🇼" },
-  { name: "Cyprus", flag: "🇨🇾" },
-  { name: "Czechia", flag: "🇨🇿" },
-  { name: "Denmark", flag: "🇩🇰" },
-  { name: "Egypt", flag: "🇪🇬" },
-  { name: "Estonia", flag: "🇪🇪" },
-  { name: "Finland", flag: "🇫🇮" },
-  { name: "France", flag: "🇫🇷" },
-  { name: "French Polynesia", flag: "🇵🇫" },
-  { name: "French Southern and Antarctic Territories", flag: "🇹🇫" },
-  { name: "Georgia", flag: "🇬🇪" },
-  { name: "Germany", flag: "🇩🇪" },
-  { name: "Greece", flag: "🇬🇷" },
-  { name: "Greenland", flag: "🇬🇱" },
-  { name: "Hungary", flag: "🇭🇺" },
-  { name: "Iceland", flag: "🇮🇸" },
-  { name: "Ireland", flag: "🇮🇪" },
-  { name: "Israel", flag: "🇮🇱" },
-  { name: "Italy", flag: "🇮🇹" },
-  { name: "Jordan", flag: "🇯🇴" },
-  { name: "Kosovo * UN resolution", flag: "🇽🇰" },
-  { name: "Latvia", flag: "🇱🇻" },
-  { name: "Lebanon", flag: "🇱🇧" },
-  { name: "Libya", flag: "🇱🇾" },
-  { name: "Liechtenstein", flag: "🇱🇮" },
-  { name: "Lithuania", flag: "🇱🇹" },
-  { name: "Luxembourg", flag: "🇱🇺" },
-  { name: "Malta", flag: "🇲🇹" },
-  { name: "Moldova", flag: "🇲🇩" },
-  { name: "Montenegro", flag: "🇲🇪" },
-  { name: "Morocco", flag: "🇲🇦" },
-  { name: "Netherlands", flag: "🇳🇱" },
-  { name: "New Caledonia", flag: "🇳🇨" },
-  { name: "North Macedonia", flag: "🇲🇰" },
-  { name: "Norway", flag: "🇳🇴" },
-  { name: "Palestine", flag: "🇵🇸" },
-  { name: "Poland", flag: "🇵🇱" },
-  { name: "Portugal", flag: "🇵🇹" },
-  { name: "Romania", flag: "🇷🇴" },
-  { name: "Russia", flag: "🇷🇺" },
-  { name: "Saint Barthélemy", flag: "🇧🇱" },
-  { name: "Serbia", flag: "🇷🇸" },
-  { name: "Sint Maarten (dutch part)", flag: "🇸🇽" },
-  { name: "Slovakia", flag: "🇸🇰" },
-  { name: "Slovenia", flag: "🇸🇮" },
-  { name: "Spain", flag: "🇪🇸" },
-  { name: "St Pierre and Miquelon", flag: "🇵🇲" },
-  { name: "Sweden", flag: "🇸🇪" },
-  { name: "Syria", flag: "🇸🇾" },
-  { name: "Tunisia", flag: "🇹🇳" },
-  { name: "Türkiye", flag: "🇹🇷" },
-  { name: "Ukraine", flag: "🇺🇦" },
-  { name: "Wallis and Futuna", flag: "🇼🇫" },
-];
-
-// ============================================================
-// ESC MOROCCO OPPORTUNITIES
-// Frontend logic
-// ============================================================
-
-// ============================================================
-// STATE
-// ============================================================
-
-let activeOpportunities = [];
-let availableActiveOpportunities = [];
-let expiredOpportunities = [];
-let currentLanguage = 'en';
-let currentActiveData = null;
-
-// ============================================================
-// DOM ELEMENTS
-// ============================================================
-
-const opportunityCount = document.getElementById("opportunity-count");
-
-const lastUpdated = document.getElementById("last-updated");
-
-const activeResultCount = document.getElementById("active-result-count");
-
-const opportunitiesBody = document.getElementById("opportunities-body");
-
-const expiredBody = document.getElementById("expired-body");
-
-const expiredSection = document.getElementById("expired-section");
-
-const expiredContent = document.getElementById("expired-content");
-
-const expiredCount = document.getElementById("expired-count");
-
-const expiredArrow = document.getElementById("expired-arrow");
-
-const loadingMessage = document.getElementById("loading-message");
-
-const errorMessage = document.getElementById("error-message");
-
-const emptyMessage = document.getElementById("empty-message");
-
-const searchInput = document.getElementById("search-input");
-
-
-// ============================================================
-// COUNTRY FLAG COMPATIBILITY
-// ============================================================
-
-function getCountryFlagByCode(code) {
-  const normalized = String(code || "").trim().toUpperCase();
-  const aliases = { EL: "GR" };
-  const iso = aliases[normalized] || normalized;
-
-  if (!/^[A-Z]{2}$/.test(iso)) {
-    return "🌍";
-  }
-
-  return String.fromCodePoint(
-    ...iso.split("").map(
-      (letter) => 127397 + letter.charCodeAt(0)
-    )
-  );
-}
-
-const countryFilter = document.getElementById("country-filter");
-// ============================================================
-// COUNTRY DISPLAY HELPERS
-// ============================================================
-
-const ESC_COUNTRY_DISPLAY = Object.freeze({
-  AL: { name: "Albania", flag: "🇦🇱" },
-  AM: { name: "Armenia", flag: "🇦🇲" },
-  AT: { name: "Austria", flag: "🇦🇹" },
-  AZ: { name: "Azerbaijan", flag: "🇦🇿" },
-  BA: { name: "Bosnia and Herzegovina", flag: "🇧🇦" },
-  BE: { name: "Belgium", flag: "🇧🇪" },
-  BG: { name: "Bulgaria", flag: "🇧🇬" },
-  BY: { name: "Belarus", flag: "🇧🇾" },
-  CH: { name: "Switzerland", flag: "🇨🇭" },
-  CY: { name: "Cyprus", flag: "🇨🇾" },
-  CZ: { name: "Czechia", flag: "🇨🇿" },
-  DE: { name: "Germany", flag: "🇩🇪" },
-  DK: { name: "Denmark", flag: "🇩🇰" },
-  EE: { name: "Estonia", flag: "🇪🇪" },
-  ES: { name: "Spain", flag: "🇪🇸" },
-  FI: { name: "Finland", flag: "🇫🇮" },
-  FR: { name: "France", flag: "🇫🇷" },
-  GE: { name: "Georgia", flag: "🇬🇪" },
-  GR: { name: "Greece", flag: "🇬🇷" },
-  HR: { name: "Croatia", flag: "🇭🇷" },
-  HU: { name: "Hungary", flag: "🇭🇺" },
-  IE: { name: "Ireland", flag: "🇮🇪" },
-  IS: { name: "Iceland", flag: "🇮🇸" },
-  IT: { name: "Italy", flag: "🇮🇹" },
-  LI: { name: "Liechtenstein", flag: "🇱🇮" },
-  LT: { name: "Lithuania", flag: "🇱🇹" },
-  LU: { name: "Luxembourg", flag: "🇱🇺" },
-  LV: { name: "Latvia", flag: "🇱🇻" },
-  MC: { name: "Monaco", flag: "🇲🇨" },
-  MD: { name: "Moldova", flag: "🇲🇩" },
-  ME: { name: "Montenegro", flag: "🇲🇪" },
-  MK: { name: "North Macedonia", flag: "🇲🇰" },
-  MT: { name: "Malta", flag: "🇲🇹" },
-  NL: { name: "Netherlands", flag: "🇳🇱" },
-  NO: { name: "Norway", flag: "🇳🇴" },
-  PL: { name: "Poland", flag: "🇵🇱" },
-  PT: { name: "Portugal", flag: "🇵🇹" },
-  RO: { name: "Romania", flag: "🇷🇴" },
-  RS: { name: "Serbia", flag: "🇷🇸" },
-  SE: { name: "Sweden", flag: "🇸🇪" },
-  SI: { name: "Slovenia", flag: "🇸🇮" },
-  SK: { name: "Slovakia", flag: "🇸🇰" },
-  TR: { name: "Türkiye", flag: "🇹🇷" },
-  UA: { name: "Ukraine", flag: "🇺🇦" },
-  XK: { name: "Kosovo * UN resolution", flag: "🇽🇰" }
-});
-
-function getCountryDisplay(code) {
-  const normalized =
-    String(code || "").trim().toUpperCase();
-
-  const aliases = {
-    EL: "GR",
-  };
-
-  const resolvedCode =
-    aliases[normalized] || normalized;
-
-  if (ESC_COUNTRY_DISPLAY[resolvedCode]) {
-    return ESC_COUNTRY_DISPLAY[resolvedCode];
-  }
-
-  let localizedName = "";
-
-  try {
-    if (
-      typeof Intl !== "undefined" &&
-      typeof Intl.DisplayNames === "function"
-    ) {
-      const locale =
-        currentLanguage === "fr"
-          ? "fr-FR"
-          : currentLanguage === "ar"
-            ? "ar-MA"
-            : "en-GB";
-
-      const displayNames =
-        new Intl.DisplayNames(
-          [locale],
-          {
-            type: "region",
-          },
-        );
-
-      localizedName =
-        displayNames.of(resolvedCode) || "";
-    }
-  } catch (error) {
-    localizedName = "";
-  }
-
-  return {
-    name:
-      localizedName ||
-      resolvedCode ||
-      "Unknown",
-    flag:
-      getCountryFlagByCode(resolvedCode),
-  };
-}
-
-function getCountryDisplayName(code) {
-  return getCountryDisplay(code).name;
-}
-
-function getCountryFlag(code) {
-  return getCountryDisplay(code).flag;
-}
-
-
-const typeFilter = document.getElementById("type-filter");
-
-const sortSelect = document.getElementById("sort-select");
-
-const refreshButton = document.getElementById("refresh-button");
-
-// ============================================================
-// TRANSLATIONS
-// ============================================================
-
-const translations = {
-  en: {
-    participantCountry: "Participant Country",
-    selectParticipantCountry: "Select Participant Country",
-    apply: "Search",
-    allParticipantCountries: "All participant countries",
-    title: "ESC Opportunity Finder",
-    subtitle: "Find European Solidarity Corps volunteering opportunities open to participants from your country",
-    activeOpportunities: "Active opportunities",
-
-    lastUpdated: "Last updated",
-
-    intro:
-      "Find active European Solidarity Corps volunteering opportunities open to participants from your country.",
-    introNote:
-      "The list is automatically refreshed from the European Youth Portal.",
-
-    search: "Search",
-
-    searchPlaceholder: "Search opportunities...",
-
-    country: "Country",
-
-    allCountries: "All countries",
-
-    type: "Type",
-
-    allTypes: "All types",
-
-    sortBy: "Sort by",
-
-    sortDeadline: "Application deadline",
-
-    sortStart: "Activity start date",
-
-    sortCreated: "Recently added",
-
-    refresh: "Refresh",
-
-    loading: "Loading opportunities...",
-
-    errorTitle: "We couldn't load the opportunities.",
-
-    errorText: "Please try again later.",
-
-    availableNow: "Available now",
-
-    opportunity: "Opportunity",
-
-    location: "Location",
-
-    activity: "Activity",
-
-    deadline: "Deadline",
-
-    expired: "Expired",
-
-    noResultsTitle: "No opportunities found.",
-
-    noResultsText: "Try changing your search or filters.",
-
-    recentlyExpired: "Recently expired",
-
-    source: "Data sourced from",
-
-    footerNote: "Always check the official opportunity page before applying.",
-
-    view: "View",
-
-    new: "NEW",
-
-    noDeadline: "No deadline",
-
-    deadlineToday: "Deadline today",
-
-    dayLeft: "day left",
-
-    daysLeft: "days left",
-
-    hour: "hour",
-
-    hourLeft: "hour left",
-
-    hoursLeft: "hours left",
-
-    expiredToday: "Expired today",
-
-    expiredAgo: "days ago",
-
-    noLocation: "Location unavailable",
-
-    noDates: "Dates unavailable",
-
-    noType: "Not specified",
-
-    results: "results",
-
-    result: "result",
-
-     lightMode: "Light mode",
-
-     darkMode: "Dark mode",
-
-},
-  fr: {
-    participantCountry: "Pays du participant",
-    selectParticipantCountry: "Sélectionnez le pays du participant",
-    apply: "Rechercher",
-    allParticipantCountries: "Tous les pays participants",
-    title: "Outil de recherche d’opportunités du CES",
-    subtitle: "Trouvez des opportunités de volontariat du Corps européen de solidarité ouvertes aux participants de votre pays",
-    activeOpportunities: "Opportunités actives",
-
-    lastUpdated: "Dernière mise à jour",
-
-    intro:
-      "Voici les opportunités de volontariat actives du Corps européen de solidarité ouvertes aux participants de votre pays.",
-    introNote:
-      "La liste est automatiquement actualisée depuis le Portail européen de la jeunesse.",
-
-    search: "Rechercher",
-
-    searchPlaceholder: "Rechercher une opportunité...",
-
-    country: "Pays",
-
-    allCountries: "Tous les pays",
-
-    type: "Type",
-
-    allTypes: "Tous les types",
-
-    sortBy: "Trier par",
-
-    sortDeadline: "Date limite de candidature",
-
-    sortStart: "Date de début",
-
-    sortCreated: "Ajoutées récemment",
-
-    refresh: "Actualiser",
-
-    loading: "Chargement des opportunités...",
-
-    errorTitle: "Impossible de charger les opportunités.",
-
-    errorText: "Veuillez réessayer plus tard.",
-
-    availableNow: "Disponibles actuellement",
-
-    opportunity: "Opportunité",
-
-    location: "Lieu",
-
-    activity: "Activité",
-
-    deadline: "Date limite",
-
-    expired: "Expirée",
-
-    noResultsTitle: "Aucune opportunité trouvée.",
-
-    noResultsText: "Essayez de modifier votre recherche ou vos filtres.",
-
-    recentlyExpired: "Récemment expirées",
-
-    source: "Données provenant du",
-
-    footerNote:
-      "Consultez toujours la page officielle de l'opportunité avant de postuler.",
-
-    view: "Voir",
-
-    new: "NOUVEAU",
-
-    noDeadline: "Aucune date limite",
-
-    deadlineToday: "Date limite aujourd'hui",
-
-    dayLeft: "jour restant",
-
-    daysLeft: "jours restants",
-
-    hour: "heure",
-
-    hourLeft: "heure restante",
-
-    hoursLeft: "heures restantes",
-
-    expiredToday: "Expirée aujourd'hui",
-
-    expiredAgo: "jours",
-
-    noLocation: "Lieu indisponible",
-
-    noDates: "Dates indisponibles",
-
-    noType: "Non précisé",
-
-    results: "résultats",
-
-    result: "résultat",
-
-     lightMode: "Mode clair",
-
-     darkMode: "Mode sombre",
-
-},
-  ar: {
-    participantCountry: "بلد المشارك",
-    selectParticipantCountry: "اختر بلد المشارك",
-    apply: "بحث",
-    allParticipantCountries: "جميع بلدان المشاركين",
-    title: "البحث عن فرص الفيلق الأوروبي للتضامن",
-    subtitle: "ابحث عن فرص التطوع ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك",
-    activeOpportunities: "الفرص المتاحة",
-
-    lastUpdated: "آخر تحديث",
-
-    intro:
-      "هذه هي فرص التطوع النشطة ضمن الفيلق الأوروبي للتضامن المفتوحة للمشاركين من بلدك.",
-    introNote: "يتم تحديث القائمة تلقائياً من بوابة الشباب الأوروبية.",
-
-    search: "بحث",
-
-    searchPlaceholder: "ابحث عن فرصة...",
-
-    country: "الدولة",
-
-    allCountries: "جميع الدول",
-
-    type: "النوع",
-
-    allTypes: "جميع الأنواع",
-
-    sortBy: "ترتيب حسب",
-
-    sortDeadline: "آخر موعد للتقديم",
-
-    sortStart: "تاريخ بداية النشاط",
-
-    sortCreated: "الأحدث",
-
-    refresh: "تحديث",
-
-    loading: "جارٍ تحميل الفرص...",
-
-    errorTitle: "تعذر تحميل الفرص.",
-
-    errorText: "يرجى المحاولة مرة أخرى لاحقاً.",
-
-    availableNow: "الفرص المتاحة الآن",
-
-    opportunity: "الفرصة",
-
-    location: "الموقع",
-
-    activity: "النشاط",
-
-    deadline: "الموعد النهائي",
-
-    expired: "منتهية",
-
-    noResultsTitle: "لم يتم العثور على فرص.",
-
-    noResultsText: "حاول تغيير البحث أو عوامل التصفية.",
-
-    recentlyExpired: "الفرص المنتهية مؤخراً",
-
-    source: "البيانات من",
-
-    footerNote: "تحقق دائماً من صفحة الفرصة الرسمية قبل التقديم.",
-
-    view: "عرض",
-
-    new: "جديد",
-
-    noDeadline: "لا يوجد موعد نهائي",
-
-    deadlineToday: "الموعد النهائي اليوم",
-
-    dayLeft: "يوم متبقٍ",
-
-    daysLeft: "أيام متبقية",
-
-    hour: "ساعة",
-
-    hourLeft: "ساعة متبقية",
-
-    hoursLeft: "ساعات متبقية",
-
-    expiredToday: "انتهت اليوم",
-
-    expiredAgo: "يوماً مضت",
-
-    noLocation: "الموقع غير متوفر",
-
-    noDates: "التواريخ غير متوفرة",
-
-    noType: "غير محدد",
-
-    results: "نتائج",
-
-    result: "نتيجة",
-
-     lightMode: "الوضع الفاتح",
-
-     darkMode: "الوضع الداكن",
-
-},
-
-};
-
-// ============================================================
-// TRANSLATION HELPERS
-// ============================================================
-
-function t(key) {
-  return translations[currentLanguage]?.[key] ?? translations.en[key] ?? key;
-}
-
-function applyTranslations() {
-  document.documentElement.lang = currentLanguage;
-
-  document.documentElement.dir =
-    currentLanguage === "ar"
-      ? "rtl"
-      : "ltr";
-
-  document
-    .querySelectorAll("[data-i18n]")
-    .forEach((element) => {
-      const key = element.dataset.i18n;
-
-      element.textContent = t(key);
-    });
-
-  document
-    .querySelectorAll("[data-i18n-placeholder]")
-    .forEach((element) => {
-      const key =
-        element.dataset.i18nPlaceholder;
-
-      element.placeholder = t(key);
-    });
-
-  populateFilters();
-
-  if (currentActiveData) {
-    populateParticipantCountries(currentActiveData);
-  }
-
-  
-  if (participantSearchApplied) {
-    // Preserve the already-filtered Participant Country results
-    // when switching language. The selected country and
-    // activeOpportunities remain unchanged.
-    renderActive();
-  } else {
-    renderActive();
-
-    if (currentActiveData) {
-      updateHeader(currentActiveData);
-    }
-  }
-
-
-  renderExpired();
-
-  updateLanguageDropdown();
-
-  updateThemeToggleLabel();
-}
-
-
-// ============================================================
-// LANGUAGE SWITCHING
-// ============================================================
-
-const languageDropdownToggle =
-  document.getElementById(
-    "language-dropdown-toggle",
-  );
-
-const languageDropdownMenu =
-  document.getElementById(
-    "language-dropdown-menu",
-  );
-
-const languageDropdownFlag =
-  document.getElementById(
-    "language-dropdown-flag",
-  );
-
-const languageDropdownLabel =
-  document.getElementById(
-    "language-dropdown-label",
-  );
-
-const languageFlags = {
-  en: "🇬🇧",
-  fr: "🇫🇷",
-  ar: "🇸🇦",
-};
-
-const languageNames = {
-  en: "English",
-  fr: "Français",
-  ar: "العربية",
-};
-
-const languageShortNames = {
-  en: "EN",
-  fr: "FR",
-  ar: "AR",
-};
-
-function updateLanguageDropdown() {
-  if (
-    !languageDropdownToggle ||
-    !languageDropdownFlag ||
-    !languageDropdownLabel
-  ) {
-    return;
-  }
-
-  const language =
-    languageNames[currentLanguage]
-      ? currentLanguage
-      : "en";
-
-  languageDropdownFlag.textContent =
-    languageFlags[language];
-
-  languageDropdownLabel.textContent =
-    languageShortNames[language];
-
-  languageDropdownToggle.setAttribute(
-    "title",
-    languageNames[language],
-  );
-
-  languageDropdownToggle.setAttribute(
-    "aria-label",
-    languageNames[language],
-  );
-
-  document
-    .querySelectorAll(".language-option")
-    .forEach((button) => {
-      const active =
-        button.dataset.language === language;
-
-      button.classList.toggle(
-        "active",
-        active,
-      );
-
-      if (active) {
-        button.setAttribute(
-          "aria-current",
-          "true",
-        );
-      } else {
-        button.removeAttribute(
-          "aria-current",
-        );
-      }
-    });
-}
-
-function closeLanguageDropdown() {
-  if (
-    !languageDropdownToggle ||
-    !languageDropdownMenu
-  ) {
-    return;
-  }
-
-  languageDropdownMenu.hidden = true;
-
-  languageDropdownToggle.setAttribute(
-    "aria-expanded",
-    "false",
-  );
-}
-
-function openLanguageDropdown() {
-  if (
-    !languageDropdownToggle ||
-    !languageDropdownMenu
-  ) {
-    return;
-  }
-
-  languageDropdownMenu.hidden = false;
-
-  languageDropdownToggle.setAttribute(
-    "aria-expanded",
-    "true",
-  );
-}
-
-if (
-  languageDropdownToggle &&
-  languageDropdownMenu
-) {
-  languageDropdownToggle.addEventListener(
-    "click",
-    (event) => {
-      event.stopPropagation();
-
-      if (languageDropdownMenu.hidden) {
-        openLanguageDropdown();
-      } else {
-        closeLanguageDropdown();
-      }
-    },
-  );
-
-  document
-    .querySelectorAll(".language-option")
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        (event) => {
-          event.stopPropagation();
-
-          const language =
-            button.dataset.language;
-
-          if (
-            !language ||
-            !translations[language]
-          ) {
-            return;
-          }
-
-          currentLanguage =
-            language;
-
-          localStorage.setItem(
-            "esc_language",
-            currentLanguage,
-          );
-
-          applyTranslations();
-          populateParticipantCountries();
-
-          closeLanguageDropdown();
-        },
-      );
-    });
-
-  document.addEventListener(
-    "click",
-    (event) => {
-      if (
-        !event.target.closest(
-          ".language-dropdown",
-        )
-      ) {
-        closeLanguageDropdown();
-      }
-    },
-  );
-
-  document.addEventListener(
-    "keydown",
-    (event) => {
-      if (event.key === "Escape") {
-        closeLanguageDropdown();
-      }
-    },
-  );
-}
-
-const savedLanguage =
-  localStorage.getItem(
-    "esc_language",
-  );
-
-if (
-  savedLanguage &&
-  translations[savedLanguage]
-) {
-  currentLanguage =
-    savedLanguage;
-}
-
-updateLanguageDropdown();
-
-// ============================================================
-// DARK MODE
-// ============================================================
-
-const themeToggle =
-  document.getElementById("theme-toggle");
-
-const themeIcon =
-  document.getElementById("theme-icon");
-
-function updateThemeToggleLabel() {
-  if (!themeToggle || !themeIcon) {
-    return;
-  }
-
-  const isDark =
-    document.documentElement.dataset.theme === "dark";
-
-  themeIcon.textContent =
-    isDark
-      ? "☀️"
-      : "🌙";
-
-  const label =
-    isDark
-      ? t("lightMode")
-      : t("darkMode");
-
-  themeToggle.setAttribute(
-    "aria-label",
-    label,
-  );
-
-  themeToggle.setAttribute(
-    "title",
-    label,
-  );
-}
-
-function applyTheme(theme) {
-  const normalizedTheme =
-    theme === "dark"
-      ? "dark"
-      : "light";
-
-  document.documentElement.dataset.theme =
-    normalizedTheme;
-
-  localStorage.setItem(
-    "esc_theme",
-    normalizedTheme,
-  );
-
-  updateThemeToggleLabel();
-}
-
-if (themeToggle) {
-  themeToggle.addEventListener(
-    "click",
-    () => {
-      const current =
-        document.documentElement.dataset.theme === "dark"
-          ? "dark"
-          : "light";
-
-      applyTheme(
-        current === "dark"
-          ? "light"
-          : "dark",
-      );
-    },
-  );
-
-  updateThemeToggleLabel();
-}
-
-// ============================================================
-// DATE HELPERS
-// ============================================================
-
-function parseDate(value) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
-}
-
-function parseDateTime(value) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
-}
-
-function formatDate(value) {
-  const date = parseDate(value);
-
-  if (!date) {
-    return t("noDeadline");
-  }
-
-  return new Intl.DateTimeFormat(
-    currentLanguage === "ar"
-      ? "ar-MA"
-      : currentLanguage === "fr"
-        ? "fr-FR"
-        : "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    },
-  ).format(date);
-}
-
-function calculateActivityDuration(start, end) {
-  const startDate = parseDate(start);
-
-  const endDate = parseDate(end);
-
-  if (!startDate || !endDate || endDate < startDate) {
-    return null;
-  }
-
-  let months =
-    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-    (endDate.getMonth() - startDate.getMonth());
-
-  let anchor = new Date(startDate);
-
-  anchor.setMonth(anchor.getMonth() + months);
-
-  if (anchor > endDate) {
-    months--;
-
-    anchor = new Date(startDate);
-
-    anchor.setMonth(anchor.getMonth() + months);
-  }
-
-  const remainingDays = Math.floor(
-    (endDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  return {
-    months,
-    days: remainingDays,
-  };
-}
-
-function formatActivityDuration(start, end) {
-  const duration = calculateActivityDuration(start, end);
-
-  if (!duration) {
-    return "";
-  }
-
-  const months = duration.months;
-
-  const days = duration.days;
-
-  if (months === 0 && days === 0) {
-    return currentLanguage === "fr"
-      ? "1 jour"
-      : currentLanguage === "ar"
-        ? "يوم واحد"
-        : "1 day";
-  }
-
-  if (currentLanguage === "fr") {
-    const parts = [];
-
-    if (months > 0) {
-      parts.push(`${months} ` + (months === 1 ? "mois" : "mois"));
-    }
-
-    if (days > 0) {
-      parts.push(`${days} ` + (days === 1 ? "jour" : "jours"));
-    }
-
-    return parts.join(" ");
-  }
-
-  if (currentLanguage === "ar") {
-    const parts = [];
-
-    if (months > 0) {
-      parts.push(months === 1 ? "شهر واحد" : `${months} أشهر`);
-    }
-
-    if (days > 0) {
-      parts.push(days === 1 ? "يوم واحد" : `${days} أيام`);
-    }
-
-    return parts.join(" و ");
-  }
-
-  const parts = [];
-
-  if (months > 0) {
-    parts.push(`${months} ` + (months === 1 ? "month" : "months"));
-  }
-
-  if (days > 0) {
-    parts.push(`${days} ` + (days === 1 ? "day" : "days"));
-  }
-
-  return parts.join(" ");
-}
-
-function formatActivityDates(start, end) {
-  if (!start && !end) {
-    return `
-            <span class="activity-dates">
-                ${escapeHtml(t("noDates"))}
-            </span>
-        `;
-  }
-
-  let datesHtml = "";
-
-  if (!start) {
-    datesHtml = `
-            <span class="activity-dates">
-                → ${escapeHtml(formatDate(end))}
-            </span>
-        `;
-  } else if (!end) {
-    datesHtml = `
-            <span class="activity-dates">
-                ${escapeHtml(formatDate(start))} →
-            </span>
-        `;
-  } else {
-    datesHtml = `
-            <span class="activity-dates">
-                ${escapeHtml(formatDate(start))}
-                →
-                ${escapeHtml(formatDate(end))}
-            </span>
-        `;
-  }
-
-  const duration = formatActivityDuration(start, end);
-
-  if (!duration) {
-    return datesHtml;
-  }
-
-  return `
-        ${datesHtml}
-
-        <span class="activity-duration">
-            📅
-            ${escapeHtml(duration)}
-        </span>
-    `;
-}
-
-function startOfToday() {
-  const date = new Date();
-
-  date.setHours(0, 0, 0, 0);
-
-  return date;
-}
-
-function daysFromToday(value) {
-  const date = parseDate(value);
-
-  if (!date) {
-    return null;
-  }
-
-  const difference =
-    date.getTime() -
-    startOfToday().getTime();
-
-  return Math.ceil(
-    difference / (1000 * 60 * 60 * 24),
-  );
-}
-
-// ============================================================
-// DEADLINE COUNTDOWN
-// ============================================================
-//
-// Date-only deadlines are interpreted as the end of the
-// calendar day (23:59:59.999 local time).
-//
-// ============================================================
-
-function parseDeadlineDate(value) {
-  if (!value) {
-    return null;
-  }
-
-  const raw = String(value).trim();
-
-  if (!raw) {
-    return null;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    const date = new Date(
-      `${raw}T23:59:59.999`,
-    );
-
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-
-    return date;
-  }
-
-  const date = new Date(raw);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
-}
-
-function hoursFromNow(value) {
-  const date = parseDeadlineDate(value);
-
-  if (!date) {
-    return null;
-  }
-
-  const now = new Date();
-
-  const difference =
-    date.getTime() - now.getTime();
-
-  return Math.ceil(
-    difference / (1000 * 60 * 60),
-  );
-}
-
-function deadlineClass(deadline) {
-  const date = parseDeadlineDate(deadline);
-
-  if (!date) {
-    return "deadline-none";
-  }
-
-  const difference =
-    date.getTime() - new Date().getTime();
-
-  const days = Math.ceil(
-    difference / (1000 * 60 * 60 * 24),
-  );
-
-  if (days <= 3) {
-    return "deadline-urgent";
-  }
-
-  if (days <= 7) {
-    return "deadline-soon";
-  }
-
-  return "deadline-normal";
-}
-
-function deadlineRelative(deadline) {
-  const date = parseDeadlineDate(deadline);
-
-  if (!date) {
-    return "";
-  }
-
-  const difference =
-    date.getTime() - new Date().getTime();
-
-  if (difference <= 0) {
-    return "";
-  }
-
-  // Any deadline with fewer than 24 hours remaining gets
-  // an hourly countdown instead of "1 day".
-  if (
-    difference <
-    24 * 60 * 60 * 1000
-  ) {
-    const hours = Math.max(
-      1,
-      Math.ceil(
-        difference / (1000 * 60 * 60),
-      ),
-    );
-
-    if (hours === 1) {
-      return `⏰ 1 ${t("hourLeft")}`;
-    }
-
-    return `⏰ ${hours} ${t("hoursLeft")}`;
-  }
-
-  const days = Math.ceil(
-    difference / (1000 * 60 * 60 * 24),
-  );
-
-  if (days === 1) {
-    return `⏰ 1 ${t("dayLeft")}`;
-  }
-
-  if (days > 1 && days <= 30) {
-    return `⏰ ${days} ${t("daysLeft")}`;
-  }
-
-  return "";
-}
-
-function daysSince(value) {
-  const date = parseDate(value);
-
-  if (!date) {
-    return null;
-  }
-
-  const difference =
-    startOfToday().getTime() -
-    date.getTime();
-
-  return Math.max(
-    0,
-    Math.floor(
-      difference /
-        (1000 * 60 * 60 * 24),
+import { enabled } from "./features.js";
+
+import {
+  createState,
+  setParticipantCountry,
+  clearTableFilters,
+} from "./state.js";
+
+import {
+  initLanguage,
+  locale,
+  t,
+} from "./features/i18n.js";
+
+import {
+  initTheme,
+  updateThemeControl,
+} from "./features/theme.js";
+
+import {
+  loadData,
+} from "./data-provider.js";
+
+import {
+  collectParticipantCountries,
+  displayCountry,
+  matchesParticipantCountry,
+  normalizeCountryCode,
+} from "./country.js";
+
+import {
+  filterRows,
+  sortRows,
+  renderRows,
+} from "./table.js";
+
+const state =
+  createState();
+
+const dom = {
+  participantCountry:
+    document.getElementById(
+      "participant-country",
     ),
-  );
-}
 
-function expiredRelative(deadline) {
-  const days = daysSince(deadline);
+  applyParticipantCountry:
+    document.getElementById(
+      "apply-participant-country",
+    ),
 
-  if (days === null) {
-    return "";
-  }
+  clearFilters:
+    document.getElementById(
+      "clear-filters",
+    ),
 
-  if (days === 0) {
-    return t("expiredToday");
-  }
+  searchInput:
+    document.getElementById(
+      "search-input",
+    ),
 
-  return `${days} ${t("expiredAgo")}`;
-}
-// ============================================================
-// HTML ESCAPING
-// ============================================================
+  countryFilter:
+    document.getElementById(
+      "country-filter",
+    ),
 
-function escapeHtml(value) {
-  if (value === null || value === undefined) {
-    return "";
-  }
+  typeFilter:
+    document.getElementById(
+      "type-filter",
+    ),
 
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+  sortSelect:
+    document.getElementById(
+      "sort-select",
+    ),
 
-// ============================================================
-// NEW OPPORTUNITIES
+  opportunitiesBody:
+    document.getElementById(
+      "opportunities-body",
+    ),
 
-const PHASE3_UPDATE_CYCLE_METADATA_KEY = true;
+  opportunityCount:
+    document.getElementById(
+      "opportunity-count",
+    ),
 
-let newOpportunityIds = new Set();
+  activeResultCount:
+    document.getElementById(
+      "active-result-count",
+    ),
 
-function calculateNewOpportunities(
-  opportunities,
-  dataset,
+  lastUpdated:
+    document.getElementById(
+      "last-updated",
+    ),
+
+  emptyMessage:
+    document.getElementById(
+      "empty-message",
+    ),
+
+  loadingMessage:
+    document.getElementById(
+      "loading-message",
+    ),
+
+  errorMessage:
+    document.getElementById(
+      "error-message",
+    ),
+
+  expiredSection:
+    document.getElementById(
+      "expired-section",
+    ),
+
+  expiredBody:
+    document.getElementById(
+      "expired-body",
+    ),
+
+  expiredCount:
+    document.getElementById(
+      "expired-count",
+    ),
+
+  expiredToggle:
+    document.getElementById(
+      "expired-toggle",
+    ),
+
+  expiredContent:
+    document.getElementById(
+      "expired-content",
+    ),
+
+  expiredArrow:
+    document.getElementById(
+      "expired-arrow",
+    ),
+};
+
+function show(
+  element,
+  value,
 ) {
-  const ids = Array.isArray(
-    dataset?.new_opportunity_ids,
-  )
-    ? dataset.new_opportunity_ids
-    : [];
-
-  const allowed = new Set(
-    ids.map((id) => String(id)),
-  );
-
-  newOpportunityIds = new Set(
-    (Array.isArray(opportunities) ? opportunities : [])
-      .map((opportunity) => String(
-        opportunity?.id ?? opportunity?.opid ?? "",
-      ))
-      .filter((id) => allowed.has(id)),
+  element?.classList.toggle(
+    "hidden",
+    !value,
   );
 }
-// COUNTRY NAMES
-// ============================================================
 
-// ============================================================
-// COUNTRY DISPLAY NORMALIZATION
-// ============================================================
-//
-// Opportunity data may contain either:
-//   - ISO-3166 alpha-2 country codes, e.g. "GR"
-//   - full country names, e.g. "Greece"
-//   - ESC-specific names, e.g. "Türkiye"
-//
-// The frontend must normalize all of these forms before creating
-// country flags. Unknown values intentionally fall back to 🌍.
-//
-// ============================================================
+function activeForParticipantCountry() {
+  if (
+    !state.data ||
+    !state.participantSearchApplied
+  ) {
+    return [];
+  }
 
-const countryNameToCode = (() => {
-  const mapping = {};
+  return state.data.active.filter(
+    (opportunity) =>
+      matchesParticipantCountry(
+        opportunity,
+        state.selectedParticipantCountry,
+      ),
+  );
+}
+
+function archivedForParticipantCountry() {
+  if (
+    !state.data ||
+    !state.participantSearchApplied
+  ) {
+    return [];
+  }
+
+  return state.data.archived.filter(
+    (opportunity) =>
+      matchesParticipantCountry(
+        opportunity,
+        state.selectedParticipantCountry,
+      ),
+  );
+}
+
+function updateLastUpdated() {
+  if (!dom.lastUpdated) {
+    return;
+  }
+
+  const value =
+    state.data?.generatedAt;
+
+  if (!value) {
+    dom.lastUpdated.textContent =
+      "—";
+    return;
+  }
+
+  const date =
+    new Date(value);
 
   if (
-    typeof ESC_PARTICIPANT_COUNTRIES !== "undefined" &&
-    Array.isArray(ESC_PARTICIPANT_COUNTRIES)
-  ) {
-    ESC_PARTICIPANT_COUNTRIES.forEach((country) => {
-      if (!country || !country.name || !country.flag) {
-        return;
-      }
-
-      const regionalIndicators = [...country.flag]
-        .map((character) => character.codePointAt(0))
-        .filter(
-          (codePoint) =>
-            codePoint >= 0x1f1e6 &&
-            codePoint <= 0x1f1ff,
-        );
-
-      if (regionalIndicators.length !== 2) {
-        return;
-      }
-
-      const code = regionalIndicators
-        .map(
-          (codePoint) =>
-            String.fromCharCode(
-              codePoint - 0x1f1e6 + 65,
-            ),
-        )
-        .join("");
-
-      const normalizedName = String(country.name)
-        .trim()
-        .replace(/\s+/g, " ")
-        .toLocaleLowerCase();
-
-      mapping[normalizedName] = code;
-    });
-  }
-
-  // Names that may occur in ESC opportunity location data but
-  // are not necessarily identical to the participant-country
-  // spelling.
-  const aliases = {
-    "greece": "GR",
-    "grecia": "GR",
-    "grèce": "GR",
-    "germany": "DE",
-    "deutschland": "DE",
-    "allemagne": "DE",
-    "france": "FR",
-    "italy": "IT",
-    "italia": "IT",
-    "italie": "IT",
-    "spain": "ES",
-    "españa": "ES",
-    "espagne": "ES",
-    "portugal": "PT",
-    "netherlands": "NL",
-    "the netherlands": "NL",
-    "nederland": "NL",
-    "pays-bas": "NL",
-    "belgium": "BE",
-    "belgië": "BE",
-    "belgique": "BE",
-    "austria": "AT",
-    "österreich": "AT",
-    "autriche": "AT",
-    "hungary": "HU",
-    "magyarország": "HU",
-    "hongrie": "HU",
-    "poland": "PL",
-    "polska": "PL",
-    "pologne": "PL",
-    "romania": "RO",
-    "românia": "RO",
-    "roumanie": "RO",
-    "bulgaria": "BG",
-    "българия": "BG",
-    "croatia": "HR",
-    "hrvatska": "HR",
-    "croatie": "HR",
-    "czechia": "CZ",
-    "czech republic": "CZ",
-    "česko": "CZ",
-    "république tchèque": "CZ",
-    "slovakia": "SK",
-    "slovensko": "SK",
-    "slovaquie": "SK",
-    "slovenia": "SI",
-    "slovenija": "SI",
-    "slovénie": "SI",
-    "serbia": "RS",
-    "srbija": "RS",
-    "serbie": "RS",
-    "montenegro": "ME",
-    "north macedonia": "MK",
-    "северна македонија": "MK",
-    "macédoine du nord": "MK",
-    "albania": "AL",
-    "shqipëria": "AL",
-    "albanie": "AL",
-    "bosnia and herzegovina": "BA",
-    "bosnia-herzegovina": "BA",
-    "bosnie-herzégovine": "BA",
-    "kosovo": "XK",
-    "kosovo * un resolution": "XK",
-    "kosovo * résolution de l’onu": "XK",
-    "sweden": "SE",
-    "sverige": "SE",
-    "suède": "SE",
-    "denmark": "DK",
-    "danmark": "DK",
-    "danemark": "DK",
-    "finland": "FI",
-    "suomi": "FI",
-    "finlande": "FI",
-    "norway": "NO",
-    "norge": "NO",
-    "norvège": "NO",
-    "iceland": "IS",
-    "ísland": "IS",
-    "islande": "IS",
-    "ireland": "IE",
-    "éire": "IE",
-    "irlande": "IE",
-    "switzerland": "CH",
-    "schweiz": "CH",
-    "suisse": "CH",
-    "ukraine": "UA",
-    "ukraine": "UA",
-    "tunisia": "TN",
-    "tunisie": "TN",
-    "morocco": "MA",
-    "maroc": "MA",
-    "المغرب": "MA",
-    "türkiye": "TR",
-    "turkiye": "TR",
-    "turkey": "TR",
-    "türkiye": "TR",
-    "turquie": "TR",
-    "georgia": "GE",
-    "géorgie": "GE",
-    "armenia": "AM",
-    "arménie": "AM",
-    "azerbaijan": "AZ",
-    "azerbaïdjan": "AZ",
-    "cyprus": "CY",
-    "chypre": "CY",
-    "malta": "MT",
-    "malte": "MT",
-    "luxembourg": "LU",
-    "liechtenstein": "LI",
-    "estonia": "EE",
-    "estonie": "EE",
-    "latvia": "LV",
-    "lettonie": "LV",
-    "lithuania": "LT",
-    "lituanie": "LT",
-    "moldova": "MD",
-    "moldavie": "MD",
-    "netherlands": "NL",
-    "palestine": "PS",
-    "palestine": "PS",
-  };
-
-  Object.assign(mapping, aliases);
-
-  return mapping;
-})();
-
-function normalizeCountryCode(code) {
-  if (!code) {
-    return "";
-  }
-
-  const raw = String(code)
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (!raw) {
-    return "";
-  }
-
-  const upper = raw.toUpperCase();
-
-  const existingOverrides = {
-    EL: "GR",
-    UK: "GB",
-  };
-
-  if (existingOverrides[upper]) {
-    return existingOverrides[upper];
-  }
-
-  if (/^[A-Z]{2}$/.test(upper)) {
-    return upper;
-  }
-
-  const normalizedName = raw.toLocaleLowerCase();
-
-  if (countryNameToCode[normalizedName]) {
-    return countryNameToCode[normalizedName];
-  }
-
-  return "";
-}
-
-function getCountryName(code) {
-  if (!code) {
-    return "";
-  }
-
-  const normalizedCode = normalizeCountryCode(code);
-
-  if (!normalizedCode) {
-    return String(code).trim();
-  }
-
-  try {
-    return countryNames.of(normalizedCode) || String(code).trim();
-  } catch {
-    return String(code).trim();
-  }
-}
-
-function getCountryFlag(countryName) {
-  const countryFlags = {
-    "Albania": "🇦🇱",
-    "Argentina": "🇦🇷",
-    "Armenia": "🇦🇲",
-    "Aruba": "🇦🇼",
-    "Austria": "🇦🇹",
-    "Belgium": "🇧🇪",
-    "Bolivia": "🇧🇴",
-    "Brazil": "🇧🇷",
-    "Bulgaria": "🇧🇬",
-    "Cameroon": "🇨🇲",
-    "Colombia": "🇨🇴",
-    "Congo": "🇨🇬",
-    "Costa Rica": "🇨🇷",
-    "Croatia": "🇭🇷",
-    "Cyprus": "🇨🇾",
-    "Czechia": "🇨🇿",
-    "Denmark": "🇩🇰",
-    "Ecuador": "🇪🇨",
-    "Egypt": "🇪🇬",
-    "Estonia": "🇪🇪",
-    "Finland": "🇫🇮",
-    "France": "🇫🇷",
-    "Georgia": "🇬🇪",
-    "Germany": "🇩🇪",
-    "Ghana": "🇬🇭",
-    "Greece": "🇬🇷",
-    "Guatemala": "🇬🇹",
-    "Honduras": "🇭🇳",
-    "Hungary": "🇭🇺",
-    "Iceland": "🇮🇸",
-    "Ireland": "🇮🇪",
-    "Italy": "🇮🇹",
-    "Jordan": "🇯🇴",
-    "Kenya": "🇰🇪",
-    "Kosovo * UN resolution": "🇽🇰",
-    "Latvia": "🇱🇻",
-    "Liechtenstein": "🇱🇮",
-    "Lithuania": "🇱🇹",
-    "Luxembourg": "🇱🇺",
-    "Malta": "🇲🇹",
-    "Mauritania": "🇲🇷",
-    "Moldova": "🇲🇩",
-    "Montenegro": "🇲🇪",
-    "Morocco": "🇲🇦",
-    "Nepal": "🇳🇵",
-    "Netherlands": "🇳🇱",
-    "North Macedonia": "🇲🇰",
-    "Norway": "🇳🇴",
-    "Peru": "🇵🇪",
-    "Poland": "🇵🇱",
-    "Portugal": "🇵🇹",
-    "Romania": "🇷🇴",
-    "Senegal": "🇸🇳",
-    "Serbia": "🇷🇸",
-    "Sierra Leone": "🇸🇱",
-    "Slovakia": "🇸🇰",
-    "Slovenia": "🇸🇮",
-    "Spain": "🇪🇸",
-    "Sweden": "🇸🇪",
-    "Tanzania (United Republic of)": "🇹🇿",
-    "Togo": "🇹🇬",
-    "Tunisia": "🇹🇳",
-    "Türkiye": "🇹🇷",
-    "Uganda": "🇺🇬",
-    "Ukraine": "🇺🇦",
-    "Viet Nam": "🇻🇳",
-  };
-
-  const normalized = String(countryName || "").trim();
-  return countryFlags[normalized] || "🌍";
-}
-
-function renderCountry(code) {
-  const normalizedCode =
-    normalizeCountryCode(code);
-
-  if (!normalizedCode) {
-    return "";
-  }
-
-  let name = "";
-
-  try {
-    name =
-      getTranslatedCountryName(
-        normalizedCode,
-        getCountryName(normalizedCode),
-      );
-  } catch (error) {
-    name =
-      getCountryName(normalizedCode);
-  }
-
-  const flag =
-    getCountryFlagByCode(normalizedCode);
-
-  return `
-        <span class="country-display">
-            <span
-                class="country-flag"
-                aria-hidden="true"
-            >
-                ${flag}
-            </span>
-            <span>
-                ${escapeHtml(name)}
-            </span>
-        </span>
-    `;
-}
-// ============================================================
-// ACTIVITY TYPE ICONS
-// ============================================================
-
-const activityTypeIcons = {
-  "Individual volunteering": "👤",
-
-  "Volunteering teams": "👥",
-};
-
-function renderActivityType(type) {
-  if (!type) {
-    return `
-            <span class="type-label">
-
-                <span
-                    class="type-icon"
-                    aria-hidden="true"
-                >
-                    🤝
-                </span>
-
-                <span>
-                    ${escapeHtml(t("noType"))}
-                </span>
-
-            </span>
-        `;
-  }
-
-  const icon = activityTypeIcons[type] || "🤝";
-
-  return `
-        <span
-            class="type-label"
-            title="${escapeHtml(type)}"
-        >
-
-            <span
-                class="type-icon"
-                aria-hidden="true"
-            >
-                ${icon}
-            </span>
-
-            <span>
-                ${escapeHtml(type)}
-            </span>
-
-        </span>
-    `;
-}
-
-// ============================================================
-// TOPIC ICONS
-// ============================================================
-
-const topicIcons = {
-  "Education and training": "📚",
-
-  "Creativity and culture": "🎨",
-
-  "Social challenges": "🤝",
-
-  "Citizenship and democratic participation": "🗳️",
-
-  "Environment and natural protection": "🌱",
-
-  "Health and wellbeing": "❤️",
-
-  "Employment and entrepreneurship": "💼",
-
-  "Physical education and sport": "⚽",
-
-  "Working against discrimination (including gender discrimination)": "🫱🏻‍🫲🏽",
-
-  "Reception and integration of refugees and migrants": "🏠",
-
-  "Support to local Small and Medium Enterprises": "🏢",
-
-  "Nutrition and subsistence agriculture": "🌾",
-
-  Shelter: "🏠",
-
-  "Disaster prevention and recovery": "🛟",
-
-  "Disaster Preparedness": "🚨",
-
-  "Post Disaster relief": "🆘",
-
-  "WASH (Water, sanitation and hygiene)": "🚿",
-
-};
-
-function renderTopics(topics) {
-  if (!Array.isArray(topics) || topics.length === 0) {
-    return "";
-  }
-
-  return `
-        <div class="topic-tags">
-
-            ${topics
-              .map((topic) => {
-                const icon = topicIcons[topic] || "•";
-
-                return `
-                            <span
-                                class="topic-tag"
-                                title="${escapeHtml(topic)}"
-                            >
-
-                                <span
-                                    class="topic-icon"
-                                    aria-hidden="true"
-                                >
-                                    ${icon}
-                                </span>
-
-                                <span>
-                                    ${escapeHtml(topic)}
-                                </span>
-
-                            </span>
-                        `;
-              })
-              .join("")}
-
-        </div>
-    `;
-}
-
-
-// ============================================================
-// PARTICIPANT COUNTRY FILTER
-// ============================================================
-
-const PARTICIPANT_COUNTRY_STORAGE_KEY =
-  "esc_participant_country";
-
-const participantCountryFilter =
-  document.getElementById(
-    "participant-country",
-  );
-
-const applyParticipantCountryButton =
-  document.getElementById(
-    "apply-participant-country",
-  );
-
-let selectedParticipantCountry = "";
-let participantCountryDraft = "";
-let participantSearchApplied = false;
-
-function normalizeParticipantCountry(value) {
-  return String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase();
-}
-
-function getParticipantCountryCode(name) {
-  const normalizedName =
-    normalizeParticipantCountry(name);
-
-  const country =
-    ESC_PARTICIPANT_COUNTRIES.find(
-      (item) =>
-        normalizeParticipantCountry(
-          item.name,
-        ) === normalizedName,
-    );
-
-  if (!country) {
-    return "";
-  }
-
-  const regionalIndicators =
-    [...country.flag]
-      .map((character) =>
-        character.codePointAt(0),
-      )
-      .filter(
-        (codePoint) =>
-          codePoint >= 0x1f1e6 &&
-          codePoint <= 0x1f1ff,
-      );
-
-  if (
-    regionalIndicators.length !== 2
-  ) {
-    return "";
-  }
-
-  return regionalIndicators
-    .map(
-      (codePoint) =>
-        String.fromCharCode(
-          codePoint - 0x1f1e6 + 65,
-        ),
+    Number.isNaN(
+      date.getTime(),
     )
-    .join("");
+  ) {
+    dom.lastUpdated.textContent =
+      String(value);
+    return;
+  }
+
+  dom.lastUpdated.textContent =
+    new Intl.DateTimeFormat(
+      locale(),
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      },
+    ).format(date);
 }
 
-function getTranslatedCountryName(code, fallback) {
-  const translations = {
-    fr: {
-      AL: "Albanie",
-      DZ: "Algérie",
-      AM: "Arménie",
-      AW: "Aruba",
-      AT: "Autriche",
-      AZ: "Azerbaïdjan",
-      BY: "Biélorussie",
-      BE: "Belgique",
-      BA: "Bosnie-Herzégovine",
-      BG: "Bulgarie",
-      HR: "Croatie",
-      CY: "Chypre",
-      CZ: "Tchéquie",
-      DK: "Danemark",
-      EG: "Égypte",
-      EE: "Estonie",
-      FI: "Finlande",
-      FR: "France",
-      GE: "Géorgie",
-      DE: "Allemagne",
-      GR: "Grèce",
-      HU: "Hongrie",
-      IS: "Islande",
-      IE: "Irlande",
-      IL: "Israël",
-      IT: "Italie",
-      JO: "Jordanie",
-      LV: "Lettonie",
-      LB: "Liban",
-      LY: "Libye",
-      LI: "Liechtenstein",
-      LT: "Lituanie",
-      LU: "Luxembourg",
-      MT: "Malte",
-      MD: "Moldavie",
-      ME: "Monténégro",
-      MA: "Maroc",
-      NL: "Pays-Bas",
-      MK: "Macédoine du Nord",
-      NO: "Norvège",
-      PS: "Palestine",
-      PL: "Pologne",
-      PT: "Portugal",
-      RO: "Roumanie",
-      RU: "Russie",
-      RS: "Serbie",
-      SK: "Slovaquie",
-      SI: "Slovénie",
-      ES: "Espagne",
-      SE: "Suède",
-      SY: "Syrie",
-      TN: "Tunisie",
-      TR: "Türkiye",
-      BQ: "Bonaire, Saint-Eustache et Saba",
-      CW: "Curaçao",
-      PF: "Polynésie française",
-      TF: "Terres australes et antarctiques françaises",
-      GL: "Groenland",
-      XK: "Kosovo * résolution de l’ONU",
-      NC: "Nouvelle-Calédonie",
-      BL: "Saint-Barthélemy",
-      SX: "Saint-Martin (partie néerlandaise)",
-      PM: "Saint-Pierre-et-Miquelon",
-      WF: "Wallis-et-Futuna",
-      UA: "Ukraine"
-    },
-    ar: {
-      AL: "ألبانيا",
-      DZ: "الجزائر",
-      AM: "أرمينيا",
-      AW: "أروبا",
-      AT: "النمسا",
-      AZ: "أذربيجان",
-      BY: "بيلاروسيا",
-      BE: "بلجيكا",
-      BA: "البوسنة والهرسك",
-      BG: "بلغاريا",
-      HR: "كرواتيا",
-      CY: "قبرص",
-      CZ: "التشيك",
-      DK: "الدنمارك",
-      EG: "مصر",
-      EE: "إستونيا",
-      FI: "فنلندا",
-      FR: "فرنسا",
-      GE: "جورجيا",
-      DE: "ألمانيا",
-      GR: "اليونان",
-      HU: "المجر",
-      IS: "آيسلندا",
-      IE: "أيرلندا",
-      IL: "إسرائيل",
-      IT: "إيطاليا",
-      JO: "الأردن",
-      LV: "لاتفيا",
-      LB: "لبنان",
-      LY: "ليبيا",
-      LI: "ليختنشتاين",
-      LT: "ليتوانيا",
-      LU: "لوكسمبورغ",
-      MT: "مالطا",
-      MD: "مولدوفا",
-      ME: "الجبل الأسود",
-      MA: "المغرب",
-      NL: "هولندا",
-      MK: "مقدونيا الشمالية",
-      NO: "النرويج",
-      PS: "فلسطين",
-      PL: "بولندا",
-      PT: "البرتغال",
-      RO: "رومانيا",
-      RU: "روسيا",
-      RS: "صربيا",
-      SK: "سلوفاكيا",
-      SI: "سلوفينيا",
-      ES: "إسبانيا",
-      SE: "السويد",
-      SY: "سوريا",
-      TN: "تونس",
-      TR: "تركيا",
-      BQ: "بونير وسينت أوستاتيوس وسابا",
-      CW: "كوراساو",
-      PF: "بولينيزيا الفرنسية",
-      TF: "الأراضي الفرنسية الجنوبية والأنتارتيكية",
-      GL: "غرينلاند",
-      XK: "كوسوفو * قرار الأمم المتحدة",
-      NC: "كاليدونيا الجديدة",
-      BL: "سان بارتيلمي",
-      SX: "سينت مارتن (الجزء الهولندي)",
-      PM: "سان بيير وميكلون",
-      WF: "واليس وفوتونا",
-      UA: "أوكرانيا"
-    }
-  };
+function renderCounts(count) {
+  const text =
+    count === 1
+      ? `1 ${t("result")}`
+      : `${count} ${t("results")}`;
 
-  const language = currentLanguage || "en";
-  return translations[language]?.[code] || fallback;
+  if (dom.opportunityCount) {
+    dom.opportunityCount.textContent =
+      text;
+  }
+
+  if (dom.activeResultCount) {
+    dom.activeResultCount.textContent =
+      text;
+  }
 }
 
 function populateParticipantCountries() {
-  if (!participantCountryFilter) {
+  if (
+    !enabled(
+      "participantCountry",
+    ) ||
+    !dom.participantCountry ||
+    !state.data
+  ) {
     return;
   }
 
-  const currentValue =
-    participantCountryFilter.value;
+  const countries =
+    collectParticipantCountries(
+      [
+        ...state.data.active,
+        ...state.data.archived,
+      ],
+    );
 
-  participantCountryFilter.innerHTML = "";
+  const selected =
+    normalizeCountryCode(
+      state.selectedParticipantCountry,
+    );
+
+  dom.participantCountry.innerHTML =
+    "";
 
   const placeholder =
-    document.createElement("option");
+    document.createElement(
+      "option",
+    );
 
   placeholder.value = "";
   placeholder.textContent =
     t("selectParticipantCountry");
 
-  participantCountryFilter.appendChild(
+  dom.participantCountry.appendChild(
     placeholder,
   );
 
-  ESC_PARTICIPANT_COUNTRIES.forEach(
-    (country) => {
-      const option =
-        document.createElement("option");
+  countries
+    .map(
+      (code) =>
+        displayCountry(
+          code,
+          locale(),
+        ),
+    )
+    .sort(
+      (a, b) =>
+        a.name.localeCompare(
+          b.name,
+        ),
+    )
+    .forEach(
+      (country) => {
+        const option =
+          document.createElement(
+            "option",
+          );
 
-      option.value =
-        country.name;
+        option.value =
+          country.code;
 
-      option.textContent = `${getCountryFlagByCode(getParticipantCountryCode(country.name))} ${getTranslatedCountryName(getParticipantCountryCode(country.name), country.name)}`;;
+        option.textContent =
+          `${country.flag} ${country.name}`;
 
-
-      participantCountryFilter.appendChild(
-        option,
-      );
-    },
-  );
-
-  const exists =
-    [...participantCountryFilter.options]
-      .some(
-        (option) =>
-          option.value === currentValue,
-      );
-
-  participantCountryFilter.value =
-    exists ? currentValue : "";
-}
-
-async function applyParticipantCountry() {
-  if (!participantCountryFilter) {
-    return;
-  }
-
-  selectedParticipantCountry =
-    participantCountryFilter.value.trim();
-
-  participantCountryDraft =
-    selectedParticipantCountry;
-
-  participantSearchApplied =
-    Boolean(selectedParticipantCountry);
-
-  if (!participantSearchApplied) {
-    activeOpportunities = [
-      ...availableActiveOpportunities,
-    ];
-
-    resetParticipantSearchDisplay();
-    renderExpired();
-    errorMessage.classList.add("hidden");
-    return;
-  }
-
-  loadingMessage.classList.remove("hidden");
-  errorMessage.classList.add("hidden");
-
-  try {
-    const selectedCode =
-      getParticipantCountryCode(
-        selectedParticipantCountry,
-      );
-
-    const matchingOpportunities =
-      Array.isArray(availableActiveOpportunities)
-        ? availableActiveOpportunities.filter(
-            (opportunity) => {
-              const participantCountries =
-                Array.isArray(
-                  opportunity.participant_countries,
-                )
-                  ? opportunity.participant_countries
-                  : Array.isArray(
-                        opportunity.eligible_countries,
-                      )
-                    ? opportunity.eligible_countries
-                    : [];
-
-              return participantCountries
-                .map((value) =>
-                  String(value || "")
-                    .trim()
-                    .toUpperCase()
-                )
-                .includes(selectedCode);
-            },
-          )
-        : [];
-
-    activeOpportunities =
-      matchingOpportunities;
-
-    renderActive();
-    renderExpired();
-  } catch (error) {
-    console.error(
-      "Could not filter opportunities by participant country:",
-      error,
+        dom.participantCountry.appendChild(
+          option,
+        );
+      },
     );
 
-    activeOpportunities = [];
-
-    opportunitiesBody.innerHTML = "";
-
-    opportunityCount.textContent =
-      `0 ${t("results")}`;
-
-    activeResultCount.textContent =
-      `0 ${t("results")}`;
-
-    lastUpdated.textContent = "—";
-
-    emptyMessage.classList.add("hidden");
-    errorMessage.classList.remove("hidden");
-  } finally {
-    loadingMessage.classList.add("hidden");
+  if (
+    selected &&
+    countries.includes(
+      selected,
+    )
+  ) {
+    dom.
   }
 }
 
-if (participantCountryFilter) {
-  participantCountryFilter.addEventListener(
-    "change",
-    () => {
-      participantCountryDraft =
-        participantCountryFilter.value;
-    },
-  );
+function populateTableFilters() {
+  const active =
+    activeForParticipantCountry();
+
+  if (
+    dom.countryFilter &&
+    enabled("filters")
+  ) {
+    const countries =
+      [
+        ...new Set(
+          active
+            .map(
+              (item) =>
+                normalizeCountryCode(
+                  item.country,
+                ),
+            )
+            .filter(Boolean),
+        ),
+      ].sort();
+
+    dom.countryFilter.innerHTML =
+      "";
+
+    const all =
+      document.createElement(
+        "option",
+      );
+
+    all.value = "";
+    all.textContent =
+      t("allCountries");
+
+    dom.countryFilter.appendChild(
+      all,
+    );
+
+    countries.forEach(
+      (code) => {
+        const display =
+          displayCountry(
+            code,
+            locale(),
+          );
+
+        const option =
+          document.createElement(
+            "option",
+          );
+
+        option.value =
+          code;
+
+        option.textContent =
+          `${display.flag} ${display.name}`;
+
+        dom.countryFilter.appendChild(
+          option,
+        );
+      },
+    );
+
+    dom.countryFilter.value =
+      state.filters.country;
+  }
+
+  if (
+    dom.typeFilter &&
+    enabled("filters")
+  ) {
+    const types =
+      [
+        ...new Set(
+          active
+            .map(
+              (item) =>
+                String(
+                  item.activity_type ||
+                  "",
+                ).trim(),
+            )
+            .filter(Boolean),
+        ),
+      ].sort();
+
+    dom.typeFilter.innerHTML =
+      "";
+
+    const all =
+      document.createElement(
+        "option",
+      );
+
+    all.value = "";
+    all.textContent =
+      t("allTypes");
+
+    dom.typeFilter.appendChild(
+      all,
+    );
+
+    types.forEach(
+      (type) => {
+        const option =
+          document.createElement(
+            "option",
+          );
+
+        option.value =
+          type;
+
+        option.textContent =
+          type;
+
+        dom.typeFilter.appendChild(
+          option,
+        );
+      },
+    );
+
+    dom.typeFilter.value =
+      state.filters.type;
+  }
 }
 
-if (applyParticipantCountryButton) {
-  applyParticipantCountryButton.addEventListener(
+function filteredActive() {
+  let results =
+    activeForParticipantCountry();
+
+  if (
+    enabled("filters")
+  ) {
+    results =
+      filterRows(
+        results,
+        state.filters,
+      );
+  }
+
+  if (
+    enabled("sorting")
+  ) {
+    results =
+      sortRows(
+        results,
+        state.filters.sort,
+      );
+  }
+
+  return results;
+}
+
+function renderActive() {
+  if (
+    !state.participantSearchApplied
+  ) {
+    dom.opportunitiesBody.innerHTML =
+      "";
+
+    renderCounts(0);
+
+    show(
+      dom.emptyMessage,
+      false,
+    );
+
+    return;
+  }
+
+  const results =
+    filteredActive();
+
+  renderCounts(
+    results.length,
+  );
+
+  if (!results.length) {
+    dom.opportunitiesBody.innerHTML =
+      "";
+
+    show(
+      dom.emptyMessage,
+      true,
+    );
+
+    return;
+  }
+
+  show(
+    dom.emptyMessage,
+    false,
+  );
+
+  dom.opportunitiesBody.innerHTML =
+    renderRows(
+      results,
+      {
+        archived: false,
+        newIds:
+          enabled(
+            "newBadges",
+          )
+            ? (
+                state.data?.newIds ||
+                new Set()
+              )
+            : new Set(),
+        locale: locale(),
+        t,
+      },
+    );
+}
+
+function renderArchived() {
+  if (
+    !enabled("archives") ||
+    !state.participantSearchApplied
+  ) {
+    show(
+      dom.expiredSection,
+      false,
+    );
+
+    return;
+  }
+
+  const results =
+    archivedForParticipantCountry();
+
+  if (!results.length) {
+    show(
+      dom.expiredSection,
+      false,
+    );
+
+    return;
+  }
+
+  show(
+    dom.expiredSection,
+    true,
+  );
+
+  if (dom.expiredCount) {
+    dom.expiredCount.textContent =
+      String(
+        results.length,
+      );
+  }
+
+  dom.expiredBody.innerHTML =
+    renderRows(
+      results,
+      {
+        archived: true,
+        newIds: new Set(),
+        locale: locale(),
+        t,
+      },
+    );
+}
+
+function renderAll() {
+  updateLastUpdated();
+  renderActive();
+  renderArchived();
+}
+
+function applyParticipantCountry() {
+  const value =
+    normalizeCountryCode(
+      dom.participantCountry?.value,
+    );
+
+  setParticipantCountry(
+    state,
+    value,
+  );
+
+  populateTableFilters();
+  renderAll();
+}
+
+function clearFilters() {
+  clearTableFilters(
+    state,
+  );
+
+  if (dom.searchInput) {
+    dom.searchInput.value =
+      "";
+  }
+
+  if (dom.countryFilter) {
+    dom.countryFilter.value =
+      "";
+  }
+
+  if (dom.typeFilter) {
+    dom.typeFilter.value =
+      "";
+  }
+
+  if (dom.sortSelect) {
+    dom.sortSelect.value =
+      "deadline";
+  }
+
+  populateTableFilters();
+  renderAll();
+}
+
+function bindEvents() {
+  dom.applyParticipantCountry?.addEventListener(
     "click",
     applyParticipantCountry,
   );
-}
-// ============================================================
-// FILTER OPTIONS
-// ============================================================
 
-function uniqueSortedValues(items, property) {
-  return [...new Set(items.map((item) => item[property]).filter(Boolean))].sort(
-    (a, b) => String(a).localeCompare(String(b)),
-  );
-}
-
-function populateFilters() {
-  const countries =
-    uniqueSortedValues(
-      activeOpportunities,
-      "country",
-    );
-
-  const types =
-    uniqueSortedValues(
-      activeOpportunities,
-      "activity_type",
-    );
-
-  const selectedCountry =
-    countryFilter.value;
-
-  const selectedType =
-    typeFilter.value;
-
-  countryFilter.innerHTML = "";
-
-  const allCountriesOption =
-    document.createElement("option");
-
-  allCountriesOption.value = "";
-
-  allCountriesOption.textContent =
-    t("allCountries");
-
-  countryFilter.appendChild(
-    allCountriesOption,
+  dom.clearFilters?.addEventListener(
+    "click",
+    clearFilters,
   );
 
-  countries.forEach((rawCode) => {
-    const code =
-      String(rawCode || "")
-        .trim()
-        .toUpperCase();
+  dom.searchInput?.addEventListener(
+    "input",
+    () => {
+      state.filters.search =
+        dom.searchInput.value;
 
-    if (!code) {
-      return;
-    }
-
-    const display =
-      getCountryDisplay(code);
-
-    const option =
-      document.createElement("option");
-
-    option.value = code;
-
-    option.textContent =
-      `${display.flag} ${display.name}`;
-
-    countryFilter.appendChild(
-      option,
-    );
-  });
-
-  typeFilter.innerHTML = "";
-
-  const allTypesOption =
-    document.createElement("option");
-
-  allTypesOption.value = "";
-
-  allTypesOption.textContent =
-    t("allTypes");
-
-  typeFilter.appendChild(
-    allTypesOption,
-  );
-
-  types.forEach((type) => {
-    const option =
-      document.createElement("option");
-
-    option.value = type;
-
-    option.textContent = type;
-
-    typeFilter.appendChild(option);
-  });
-
-  if (
-    countries.includes(
-      selectedCountry,
-    )
-  ) {
-    countryFilter.value =
-      selectedCountry;
-  } else {
-    countryFilter.value = "";
-  }
-
-  if (
-    types.includes(
-      selectedType,
-    )
-  ) {
-    typeFilter.value =
-      selectedType;
-  } else {
-    typeFilter.value = "";
-  }
-}
-
-// ============================================================
-// FILTERING
-// ============================================================
-
-function getFilteredActive() {
-  const search =
-    searchInput.value
-      .trim()
-      .toLowerCase();
-
-  const country =
-    countryFilter.value;
-
-  const type =
-    typeFilter.value;
-
-
-  return activeOpportunities.filter(
-    (opportunity) => {
-      const searchable = [
-        opportunity.title,
-        opportunity.location,
-        opportunity.town,
-        getCountryName(
-          opportunity.country,
-        ),
-        opportunity.activity_type,
-        ...(opportunity.topics || []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      if (
-        search &&
-        !searchable.includes(search)
-      ) {
-        return false;
-      }
-
-      if (
-        country &&
-        opportunity.country !== country
-      ) {
-        return false;
-      }
-
-
-      if (
-        type &&
-        opportunity.activity_type !==
-          type
-      ) {
-        return false;
-      }
-
-      return true;
+      renderAll();
     },
   );
-}
-// ============================================================
-// SORTING
-// ============================================================
-// ============================================================
-// SORTING
-// ============================================================
-// ============================================================
-// SORTING
-// ============================================================
 
-function sortOpportunities(items) {
-  const sorted = [...items];
+  dom.countryFilter?.addEventListener(
+    "change",
+    () => {
+      state.filters.country =
+        dom.countryFilter.value;
 
-  const sortType = sortSelect.value;
-
-  if (sortType === "start") {
-    sorted.sort((a, b) => {
-      const dateA = parseDate(a.start_date);
-
-      const dateB = parseDate(b.start_date);
-
-      if (!dateA && !dateB) {
-        return 0;
-      }
-
-      if (!dateA) {
-        return 1;
-      }
-
-      if (!dateB) {
-        return -1;
-      }
-
-      return dateA - dateB;
-    });
-
-    return sorted;
-  }
-
-  if (sortType === "created") {
-    sorted.sort((a, b) => {
-      const dateA = parseDateTime(a.created);
-
-      const dateB = parseDateTime(b.created);
-
-      if (!dateA && !dateB) {
-        return 0;
-      }
-
-      if (!dateA) {
-        return 1;
-      }
-
-      if (!dateB) {
-        return -1;
-      }
-
-      return dateB - dateA;
-    });
-
-    return sorted;
-  }
-
-  sorted.sort((a, b) => {
-    const dateA = parseDate(a.deadline);
-
-    const dateB = parseDate(b.deadline);
-
-    if (!dateA && !dateB) {
-      return a.title.localeCompare(b.title);
-    }
-
-    if (!dateA) {
-      return 1;
-    }
-
-    if (!dateB) {
-      return -1;
-    }
-
-    return dateA - dateB;
-  });
-
-  return sorted;
-}
-
-
-function resetParticipantSearchDisplay() {
-  opportunityCount.textContent = "—";
-  activeResultCount.textContent = "—";
-  lastUpdated.textContent = "—";
-
-  opportunitiesBody.innerHTML = "";
-  emptyMessage.classList.add("hidden");
-}
-
-function updateHeaderForParticipantSearch() {
-  const filtered = sortOpportunities(getFilteredActive());
-
-  const count = filtered.length;
-
-  opportunityCount.textContent =
-    count === 1
-      ? `1 ${t("result")}`
-      : `${count} ${t("results")}`;
-
-  activeResultCount.textContent =
-    count === 1
-      ? `1 ${t("result")}`
-      : `${count} ${t("results")}`;
-
-  if (currentActiveData?.generated_at) {
-    const date = parseDateTime(currentActiveData.generated_at);
-
-    if (date) {
-      lastUpdated.textContent = new Intl.DateTimeFormat(
-        currentLanguage === "ar"
-          ? "ar-MA"
-          : currentLanguage === "fr"
-            ? "fr-FR"
-            : "en-GB",
-        {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        },
-      ).format(date);
-
-      return;
-    }
-  }
-
-  lastUpdated.textContent = "—";
-}
-
-// ============================================================
-// ACTIVE TABLE
-// ============================================================
-
-function renderActive() {
-  if (!participantSearchApplied) {
-    resetParticipantSearchDisplay();
-    return;
-  }
-
-  const filtered = sortOpportunities(getFilteredActive());
-
-  opportunityCount.textContent =
-    filtered.length === 1
-      ? `1 ${t("result")}`
-      : `${filtered.length} ${t("results")}`;
-
-  activeResultCount.textContent =
-    `${filtered.length} ` +
-    (filtered.length === 1 ? t("result") : t("results"));
-
-  if (filtered.length === 0) {
-    opportunitiesBody.innerHTML = "";
-
-    emptyMessage.classList.remove("hidden");
-
-    return;
-  }
-
-  emptyMessage.classList.add("hidden");
-
-  opportunitiesBody.innerHTML = filtered
-    .map((opportunity) => {
-      const location =
-        opportunity.town || opportunity.location || t("noLocation");
-
-      const deadlineClassName = deadlineClass(opportunity.deadline);
-
-      const relative = deadlineRelative(opportunity.deadline);
-
-      const isNew = newOpportunityIds.has(String(opportunity.id));
-
-      const imageSrc = opportunity.image_url
-        ? new URL(
-            opportunity.image_url,
-            "https://youth.europa.eu",
-          ).href
-        : "";
-
-      return `
-                    <tr>
-
-                        <td class="title-cell">
-
-                            <div class="opportunity-title">
-
-                                ${
-                                  imageSrc
-                                    ? `
-                                            <img
-                                                class="opportunity-image"
-                                                src="${escapeHtml(imageSrc)}"
-                                                alt="${escapeHtml(opportunity.title)}"
-                                                loading="lazy"
-                                                onerror="this.style.display='none'"
-                                            />
-                                        `
-                                    : ""
-                                }
-
-                                ${
-                                  isNew
-                                    ? `
-                                            <span
-                                                class="new-badge"
-                                            >
-                                                ✨
-                                                ${escapeHtml(t("new"))}
-                                            </span>
-                                        `
-                                    : ""
-                                }
-
-                                <span>
-                                    ${escapeHtml(opportunity.title)}
-                                </span>
-
-                            </div>
-
-
-                            ${
-                              opportunity.topics?.length
-                                ? renderTopics(opportunity.topics)
-                                : ""
-                            }
-
-                        </td>
-
-
-                        <td class="location-cell">
-
-                            <div class="location-main">
-
-                                ${escapeHtml(location)}
-
-                            </div>
-
-                            <div class="location-country">
-
-                                ${renderCountry(opportunity.country)}
-
-                            </div>
-
-                        </td>
-
-
-                        <td class="activity-cell">
-
-${formatActivityDates(opportunity.start_date, opportunity.end_date)}
-
-                        </td>
-
-
-                        <td class="deadline-cell">
-
-                            <span
-                                class="deadline-date ${deadlineClassName}"
-                            >
-
-                                ${escapeHtml(
-                                  opportunity.deadline
-                                    ? formatDate(opportunity.deadline)
-                                    : t("noDeadline"),
-                                )}
-
-                            </span>
-
-
-                            ${
-                              relative
-                                ? `
-                                        <span
-                                            class="deadline-relative"
-                                        >
-                                            ${escapeHtml(relative)}
-                                        </span>
-                                    `
-                                : ""
-                            }
-
-                        </td>
-
-
-                        <td class="type-cell">
-
-                            ${renderActivityType(opportunity.activity_type)}
-
-                        </td>
-
-
-                        <td class="apply-cell">
-
-                            <a
-                                class="apply-button"
-                                href="${escapeHtml(opportunity.url)}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                ${escapeHtml(t("view"))}
-                            </a>
-
-                        </td>
-
-                    </tr>
-                `;
-    })
-    .join("");
-}
-
-// ============================================================
-// EXPIRED TABLE
-// ============================================================
-
-function getParticipantFilteredExpiredOpportunities() {
-  if (
-    !participantSearchApplied ||
-    !selectedParticipantCountry
-  ) {
-    return [];
-  }
-
-  const selectedCode =
-    getParticipantCountryCode(
-      selectedParticipantCountry,
-    );
-
-  if (!selectedCode) {
-    return [];
-  }
-
-  return expiredOpportunities.filter(
-    (opportunity) => {
-      const participantCountries =
-        Array.isArray(
-          opportunity?.participant_countries,
-        )
-          ? opportunity.participant_countries
-          : Array.isArray(
-                opportunity?.eligible_countries,
-              )
-            ? opportunity.eligible_countries
-            : [];
-
-      return participantCountries
-        .map(
-          (value) =>
-            String(value || "")
-              .trim()
-              .toUpperCase(),
-        )
-        .includes(selectedCode);
+      renderAll();
     },
   );
-}
 
-function getExpiredAgeLabel(deadline) {
-  if (!deadline) {
-    return "";
-  }
+  dom.typeFilter?.addEventListener(
+    "change",
+    () => {
+      state.filters.type =
+        dom.typeFilter.value;
 
-  const parsed =
-    parseDate(deadline);
+      renderAll();
+    },
+  );
 
-  if (!parsed) {
-    return "";
-  }
+  dom.sortSelect?.addEventListener(
+    "change",
+    () => {
+      state.filters.sort =
+        dom.sortSelect.value;
 
-  const today =
-    new Date();
+      renderAll();
+    },
+  );
 
-  const todayStart =
-    new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-
-  const expiredStart =
-    new Date(
-      parsed.getFullYear(),
-      parsed.getMonth(),
-      parsed.getDate(),
-    );
-
-  const millisecondsPerDay =
-    24 * 60 * 60 * 1000;
-
-  const daysAgo =
-    Math.floor(
-      (
-        todayStart.getTime() -
-        expiredStart.getTime()
-      ) / millisecondsPerDay,
-    );
-
-  if (daysAgo <= 0) {
-    return t("expiredToday");
-  }
-
-  return `${daysAgo} day(s) ago`;
-}
-
-function getExpiredAgeLabel(deadline) {
-  if (!deadline) {
-    return "";
-  }
-
-  const parsed =
-    parseDate(deadline);
-
-  if (!parsed) {
-    return "";
-  }
-
-  const today =
-    new Date();
-
-  const todayStart =
-    new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-
-  const expiredStart =
-    new Date(
-      parsed.getFullYear(),
-      parsed.getMonth(),
-      parsed.getDate(),
-    );
-
-  const millisecondsPerDay =
-    24 * 60 * 60 * 1000;
-
-  const daysAgo =
-    Math.floor(
-      (
-        todayStart.getTime() -
-        expiredStart.getTime()
-      ) / millisecondsPerDay,
-    );
-
-  if (daysAgo <= 0) {
-    return t("expiredToday");
-  }
-
-  return `${daysAgo} day(s) ago`;
-}
-
-function renderExpired() {
-  if (!participantSearchApplied) {
-    expiredSection.classList.add("hidden");
-    expiredBody.innerHTML = "";
-    expiredCount.textContent = "0";
-    return;
-  }
-
-  const selectedCode =
-    getParticipantCountryCode(
-      selectedParticipantCountry,
-    );
-
-  if (!selectedCode) {
-    expiredSection.classList.add("hidden");
-    expiredBody.innerHTML = "";
-    expiredCount.textContent = "0";
-    return;
-  }
-
-  const filteredExpired =
-    expiredOpportunities.filter(
-      (opportunity) => {
-        const eligibleCountries =
-          Array.isArray(
-            opportunity.eligible_countries,
-          )
-            ? opportunity.eligible_countries
-            : Array.isArray(
-                  opportunity.participant_countries,
-                )
-              ? opportunity.participant_countries
-              : [];
-
-        return eligibleCountries.some(
-          (value) =>
-            String(value || "")
-              .trim()
-              .toUpperCase() === selectedCode,
+  dom.expiredToggle?.addEventListener(
+    "click",
+    () => {
+      const hidden =
+        dom.expiredContent.classList.contains(
+          "hidden",
         );
-      },
-    );
 
-  filteredExpired.sort(
-    (a, b) => {
-      const dateA =
-        parseDate(a.deadline);
-
-      const dateB =
-        parseDate(b.deadline);
-
-      if (!dateA && !dateB) {
-        return 0;
-      }
-
-      if (!dateA) {
-        return 1;
-      }
-
-      if (!dateB) {
-        return -1;
-      }
-
-      return dateB - dateA;
-    },
-  );
-
-  if (!filteredExpired.length) {
-    expiredSection.classList.add("hidden");
-    expiredBody.innerHTML = "";
-    expiredCount.textContent = "0";
-    return;
-  }
-
-  expiredSection.classList.remove("hidden");
-
-  expiredCount.textContent =
-    String(filteredExpired.length);
-
-  expiredBody.innerHTML =
-    filteredExpired
-      .map((opportunity) => {
-        const location =
-          opportunity.town ||
-          opportunity.location ||
-          t("noLocation");
-
-        const deadlineClassName =
-          deadlineClass(
-            opportunity.deadline,
-          );
-
-        const expiredLabel =
-          getExpiredAgeLabel(
-            opportunity.deadline,
-          );
-
-        const imageSrc =
-          opportunity.image_url
-            ? new URL(
-                opportunity.image_url,
-                "https://youth.europa.eu",
-              ).href
-            : "";
-
-        return `
-                    <tr>
-
-                        <td class="title-cell">
-
-                            <div class="opportunity-title">
-
-                                ${
-                                  imageSrc
-                                    ? `
-                                            <img
-                                                class="opportunity-image"
-                                                src="${escapeHtml(imageSrc)}"
-                                                alt="${escapeHtml(
-                                                  opportunity.title || "",
-                                                )}"
-                                                loading="lazy"
-                                                onerror="this.style.display='none'"
-                                            />
-                                        `
-                                    : ""
-                                }
-
-                                <span>
-                                    ${escapeHtml(
-                                      opportunity.title || "",
-                                    )}
-                                </span>
-
-                            </div>
-
-                            ${
-                              opportunity.topics?.length
-                                ? renderTopics(
-                                    opportunity.topics,
-                                  )
-                                : ""
-                            }
-
-                        </td>
-
-
-                        <td class="location-cell">
-
-                            <div class="location-main">
-
-                                ${escapeHtml(location)}
-
-                            </div>
-
-                            <div class="location-country">
-
-                                ${renderCountry(
-                                  opportunity.country,
-                                )}
-
-                            </div>
-
-                        </td>
-
-
-                        <td class="activity-cell">
-
-                            ${formatActivityDates(
-                              opportunity.start_date,
-                              opportunity.end_date,
-                            )}
-
-                        </td>
-
-
-                        <td class="deadline-cell">
-
-                            <span
-                                class="deadline-date ${deadlineClassName}"
-                            >
-
-                                ${escapeHtml(
-                                  opportunity.deadline
-                                    ? formatDate(
-                                        opportunity.deadline,
-                                      )
-                                    : t("noDeadline"),
-                                )}
-
-                            </span>
-
-                        </td>
-
-
-                        <td class="type-cell">
-
-                            ${renderActivityType(
-                              opportunity.activity_type,
-                            )}
-
-                        </td>
-
-
-                        <td class="deadline-cell">
-
-                            ${escapeHtml(
-                              expiredLabel,
-                            )}
-
-                        </td>
-
-
-                        <td class="apply-cell">
-
-                            <a
-                                class="apply-button"
-                                href="${escapeHtml(
-                                  opportunity.url || "",
-                                )}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                ${escapeHtml(
-                                  t("view"),
-                                )}
-                            </a>
-
-                        </td>
-
-                    </tr>
-                `;
-      })
-      .join("");
-}
-
-// ============================================================
-// STATUS HEADER
-// ============================================================
-
-function updateHeader(data) {
-  if (!participantSearchApplied) {
-    resetParticipantSearchDisplay();
-    return;
-  }
-
-  const count = Number.isFinite(data?.count)
-    ? data.count
-    : activeOpportunities.length;
-
-  opportunityCount.textContent =
-    count === 1 ? `1 ${t("result")}` : `${count} ${t("results")}`;
-
-  if (data?.generated_at) {
-    const date = parseDateTime(data.generated_at);
-
-    if (date) {
-      lastUpdated.textContent = new Intl.DateTimeFormat(
-        currentLanguage === "ar"
-          ? "ar-MA"
-          : currentLanguage === "fr"
-            ? "fr-FR"
-            : "en-GB",
-        {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        },
-      ).format(date);
-    } else {
-      lastUpdated.textContent = "—";
-    }
-  } else {
-    lastUpdated.textContent = "—";
-  }
-}
-
-// ============================================================
-// OPPORTUNITY DATA COMPATIBILITY
-// ============================================================
-
-function normalizeLoadedOpportunity(opportunity) {
-  if (!opportunity || typeof opportunity !== "object") {
-    return opportunity;
-  }
-
-  const dates =
-    opportunity.activity_dates &&
-    typeof opportunity.activity_dates === "object"
-      ? opportunity.activity_dates
-      : {};
-
-  const startDate =
-    dates.start ||
-    opportunity.start_date ||
-    "";
-
-  const endDate =
-    dates.end ||
-    opportunity.end_date ||
-    "";
-
-  const deadline =
-    opportunity.application_deadline ||
-    opportunity.deadline ||
-    "";
-
-  const logo =
-    opportunity.logo_url ||
-    opportunity.image_url ||
-    "";
-
-  const rawLocation = String(
-    opportunity.location || ""
-  ).trim();
-
-  const existingCountry = String(
-    opportunity.country || ""
-  ).trim();
-
-  let city =
-    String(
-      opportunity.town ||
-      opportunity.city ||
-      ""
-    ).trim();
-
-  let inferredCountryName = "";
-
-  const locationParts = rawLocation
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (!city && locationParts.length >= 2) {
-    city = locationParts[locationParts.length - 2];
-  }
-
-  if (locationParts.length >= 2) {
-    inferredCountryName =
-      locationParts[locationParts.length - 1];
-  }
-
-  opportunity.image_url = logo;
-  opportunity.logoUrl = logo;
-
-  opportunity.start_date = startDate;
-  opportunity.end_date = endDate;
-  opportunity.startDate = startDate;
-  opportunity.endDate = endDate;
-
-  opportunity.deadline = deadline;
-  opportunity.applicationDeadline = deadline;
-
-  opportunity.town = city;
-  opportunity.city = city;
-
-  // Preserve a backend country code such as "TR", "FR", or "MA".
-  // The previous compatibility mapper incorrectly overwrote these
-  // codes with the human-readable country name parsed from location.
-  if (/^[A-Za-z]{2}$/.test(existingCountry)) {
-    opportunity.country =
-      existingCountry.toUpperCase();
-  } else if (!existingCountry && inferredCountryName) {
-    opportunity.country = inferredCountryName;
-  } else {
-    opportunity.country = existingCountry;
-  }
-
-  opportunity.location_full = rawLocation;
-
-  return opportunity;
-}
-
-function normalizeLoadedOpportunities(opportunities) {
-  if (!Array.isArray(opportunities)) {
-    return [];
-  }
-
-  return opportunities.map(normalizeLoadedOpportunity);
-}
-
-// ============================================================
-// DATA FETCHING
-// ============================================================
-
-// ============================================================
-// LOAD DATA
-// ============================================================
-
-
-
-function normalizeFilterCountryCode(value) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return "";
-  }
-
-  const text = String(value).trim();
-
-  if (!text) {
-    return "";
-  }
-
-  const upper = text.toUpperCase();
-
-  if (/^[A-Z]{2}$/.test(upper)) {
-    return upper;
-  }
-
-  const match = upper.match(
-    /\\b[A-Z]{2}\\b/,
-  );
-
-  return match ? match[0] : "";
-}
-
-function getFilterCountryFlag(code) {
-  const normalized =
-    normalizeFilterCountryCode(code);
-
-  if (
-    !/^[A-Z]{2}$/.test(normalized)
-  ) {
-    return "🌍";
-  }
-
-  return String.fromCodePoint(
-    ...normalized
-      .split("")
-      .map(
-        (letter) =>
-          127397 +
-          letter.charCodeAt(0),
-      ),
-  );
-}
-
-function getFilterCountryName(code) {
-
-  const countryNames = {
-    AD: "Andorra",
-    AL: "Albania",
-    AT: "Austria",
-    BE: "Belgium",
-    BG: "Bulgaria",
-    CH: "Switzerland",
-    CY: "Cyprus",
-    CZ: "Czechia",
-    DE: "Germany",
-    DK: "Denmark",
-    EE: "Estonia",
-    ES: "Spain",
-    FI: "Finland",
-    FR: "France",
-    GR: "Greece",
-    HR: "Croatia",
-    HU: "Hungary",
-    IE: "Ireland",
-    IS: "Iceland",
-    IT: "Italy",
-    LI: "Liechtenstein",
-    LT: "Lithuania",
-    LU: "Luxembourg",
-    LV: "Latvia",
-    MC: "Monaco",
-    ME: "Montenegro",
-    MK: "North Macedonia",
-    MT: "Malta",
-    NL: "Netherlands",
-    NO: "Norway",
-    PL: "Poland",
-    PT: "Portugal",
-    RO: "Romania",
-    RS: "Serbia",
-    SE: "Sweden",
-    SI: "Slovenia",
-    SK: "Slovakia",
-    SM: "San Marino",
-    TR: "Türkiye",
-    UA: "Ukraine",
-    VA: "Vatican City",
-    XK: "Kosovo",
-    MA: "Morocco",
-    TN: "Tunisia",
-    DZ: "Algeria",
-    EG: "Egypt",
-    JO: "Jordan",
-    LB: "Lebanon",
-    IL: "Israel",
-    PS: "Palestine",
-  };
-
-  const normalized =
-    normalizeFilterCountryCode(code);
-
-  return (
-    countryNames[normalized] ||
-    normalized
-  );
-}
-
-function populateCountryFilter(opportunities) {
-  if (
-    typeof countryFilter === "undefined" ||
-    !countryFilter
-  ) {
-    return;
-  }
-
-  const currentValue =
-    normalizeFilterCountryCode(
-      countryFilter.value || "",
-    );
-
-  const codes = new Set();
-
-  const records =
-    Array.isArray(opportunities)
-      ? opportunities
-      : [];
-
-  records.forEach((opportunity) => {
-    if (
-      !opportunity ||
-      typeof opportunity !== "object"
-    ) {
-      return;
-    }
-
-    const rawCountry =
-      opportunity.country ??
-      opportunity.country_code ??
-      opportunity.countryCode ??
-      opportunity.location_country ??
-      "";
-
-    const code =
-      normalizeFilterCountryCode(
-        rawCountry,
+      dom.expiredContent.classList.toggle(
+        "hidden",
+        !hidden,
       );
 
-    if (
-      /^[A-Z]{2}$/.test(code)
-    ) {
-      codes.add(code);
-    }
-  });
-
-  const sortedCodes =
-    Array.from(codes).sort(
-      (a, b) => {
-        const nameA =
-          getFilterCountryName(a);
-
-        const nameB =
-          getFilterCountryName(b);
-
-        return nameA.localeCompare(
-          nameB,
-        );
-      },
-    );
-
-  countryFilter.innerHTML = "";
-
-  const allOption =
-    document.createElement("option");
-
-  allOption.value = "";
-
-  allOption.textContent =
-    "All countries";
-
-  countryFilter.appendChild(
-    allOption,
+      dom.expiredArrow?.classList.toggle(
+        "open",
+        hidden,
+      );
+    },
   );
-
-  sortedCodes.forEach((code) => {
-    const option =
-      document.createElement("option");
-
-    option.value = code;
-
-    option.textContent =
-      `${getFilterCountryFlag(code)} ${getFilterCountryName(code)}`;
-
-    countryFilter.appendChild(
-      option,
-    );
-  });
-
-  if (
-    currentValue &&
-    sortedCodes.includes(currentValue)
-  ) {
-    countryFilter.value =
-      currentValue;
-  } else {
-    countryFilter.value = "";
-  }
 }
 
+async function initialize() {
+  show(
+    dom.loadingMessage,
+    true,
+  );
 
-function renderLastUpdated(value) {
-  if (!value) {
-    lastUpdated.textContent = "—";
-    return;
-  }
-
-  const parsed =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      parsed.getTime(),
-    )
-  ) {
-    lastUpdated.textContent =
-      String(value);
-    return;
-  }
+  show(
+    dom.errorMessage,
+    false,
+  );
 
   try {
-    lastUpdated.textContent =
-      new Intl.DateTimeFormat(
-        currentLanguage === "fr"
-          ? "fr-FR"
-          : currentLanguage === "ar"
-            ? "ar-MA"
-            : "en-GB",
-        {
-          dateStyle: "medium",
-          timeStyle: "short",
-        },
-      ).format(parsed);
-  } catch (error) {
-    lastUpdated.textContent =
-      parsed.toLocaleString();
-  }
-}
+    state.data =
+      await loadData();
 
-async function loadData() {
-  loadingMessage.classList.remove("hidden");
-  errorMessage.classList.add("hidden");
-
-  try {
-    const provider = window.ESC_DATA_PROVIDER;
-
-    if (!provider || provider.enabled !== true) {
-      activeOpportunities = [];
-      expiredOpportunities = [];
-      currentActiveData = null;
-
-      populateFilters();
-      populateParticipantCountries();
-
-      resetParticipantSearchDisplay();
-      renderExpired();
-
-      return;
-    }
-
-    const payload = await provider.load();
-
-    currentActiveData =
-      payload?.activeData || null;
-
-    renderLastUpdated(
-      currentActiveData?.generated_at
-      || currentActiveData?.last_updated
-      || null,
-    );
-
-
-    availableActiveOpportunities =
-      normalizeLoadedOpportunities(
-        Array.isArray(payload?.activeData?.opportunities)
-          ? payload.activeData.opportunities
-          : [],
-      );
-
-    activeOpportunities = [
-      ...availableActiveOpportunities,
-    ];
-
-    expiredOpportunities =
-      normalizeLoadedOpportunities(
-        Array.isArray(
-          payload?.expiredData?.opportunities,
-        )
-          ? payload.expiredData.opportunities
-          : [],
-      );
-
-    moveExpiredOpportunitiesToArchive();
-    pruneExpiredArchive();
-
-    calculateNewOpportunities(activeOpportunities, currentActiveData);
-
-    populateFilters();
     populateParticipantCountries();
 
-    resetParticipantSearchDisplay();
-    renderExpired();
+    const selected =
+      normalizeCountryCode(
+        state.selectedParticipantCountry,
+      );
+
+    const available =
+      collectParticipantCountries(
+        [
+          ...state.data.active,
+          ...state.data.archived,
+        ],
+      );
+
+    if (
+      selected &&
+      available.includes(
+        selected,
+      )
+    ) {
+
+      dom.
+
+      state.participantSearchApplied =
+        false;
+    } else {
+
+      state.participantSearchApplied =
+        false;
+    }
+
+    populateTableFilters();
+    renderAll();
   } catch (error) {
     console.error(
-      "Could not load opportunities:",
+      "Could not load frontend data:",
       error,
     );
 
-    activeOpportunities = [];
-    expiredOpportunities = [];
-    currentActiveData = null;
-
-    opportunityCount.textContent = "—";
-    activeResultCount.textContent = "—";
-    lastUpdated.textContent = "—";
-
-    errorMessage.classList.remove("hidden");
-  } finally {
-    loadingMessage.classList.add("hidden");
-  }
-}
-
-
-
-// ============================================================
-// REFRESH BUTTON
-// ============================================================
-// ============================================================
-// REFRESH BUTTON
-// ============================================================
-
-refreshButton.addEventListener("click", async () => {
-  refreshButton.disabled = true;
-
-  refreshButton.innerHTML = `↻ <span>${escapeHtml(t("loading"))}</span>`;
-
-  try {
-    // Refresh the cached dataset without clearing the current
-    // participant-country/search state.
-    await loadData();
-
-    // Re-apply the currently active participant-country search
-    // instead of resetting the table.
-    if (participantSearchApplied) {
-      await applyParticipantCountry();
-    } else {
-      renderActive();
-    }
-  } finally {
-    refreshButton.disabled = false;
-
-    refreshButton.innerHTML = `↻ <span>${escapeHtml(t("refresh"))}</span>`;
-  }
-});
-
-// ============================================================
-// FILTER EVENTS
-// ============================================================
-
-searchInput.addEventListener("input", renderActive);
-
-countryFilter.addEventListener("change", renderActive);
-
-typeFilter.addEventListener("change", renderActive);
-
-sortSelect.addEventListener("change", renderActive);
-
-// ============================================================
-// EXPIRED TOGGLE
-// ============================================================
-
-document.getElementById("expired-toggle").addEventListener("click", () => {
-  const isHidden = expiredContent.classList.contains("hidden");
-
-  expiredContent.classList.toggle("hidden");
-
-  expiredArrow.classList.toggle("open", isHidden);
-});
-
-// ============================================================
-// LIVE OPPORTUNITY ARCHIVE LIFECYCLE
-// ============================================================
-//
-// The data provider supplies the active and expired datasets.
-// This browser-side lifecycle additionally handles an opportunity
-// whose deadline passes while the page remains open.
-//
-// Active
-//   ↓ deadline passes
-// Recently expired
-//
-// Recently expired opportunities are retained for 30 days.
-// ============================================================
-
-const ARCHIVE_RETENTION_DAYS = 30;
-
-function getArchiveDeadline(value) {
-  if (!value) {
-    return null;
-  }
-
-  const raw = String(value).trim();
-
-  if (!raw) {
-    return null;
-  }
-
-  // Keep the archive transition consistent with the current
-  // frontend's date-only interpretation: a deadline date is
-  // considered expired once that calendar date has passed.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    const date = new Date(`${raw}T00:00:00`);
-
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-
-    return date;
-  }
-
-  const date = new Date(raw);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
-}
-
-function moveExpiredOpportunitiesToArchive() {
-  if (!Array.isArray(activeOpportunities)) {
-    return false;
-  }
-
-  const now = new Date();
-
-  const cutoff = new Date(now);
-  cutoff.setDate(
-    cutoff.getDate() - ARCHIVE_RETENTION_DAYS,
-  );
-
-  const stillActive = [];
-  const newlyExpired = [];
-
-  activeOpportunities.forEach((opportunity) => {
-    const deadline = getArchiveDeadline(
-      opportunity.deadline,
+    show(
+      dom.errorMessage,
+      true,
     );
 
-    // No usable deadline: leave the opportunity alone.
-    if (!deadline) {
-      stillActive.push(opportunity);
-      return;
+    if (dom.lastUpdated) {
+      dom.lastUpdated.textContent =
+        "—";
     }
 
-    if (deadline.getTime() > now.getTime()) {
-      stillActive.push(opportunity);
-      return;
-    }
-
-    // Deadline has passed. Only retain it in the archive
-    // while it is still inside the recent-expiry window.
-    if (deadline.getTime() >= cutoff.getTime()) {
-      newlyExpired.push(opportunity);
-    }
-  });
-
-  if (!newlyExpired.length) {
-    return false;
+    dom.opportunitiesBody.innerHTML =
+      "";
+  } finally {
+    show(
+      dom.loadingMessage,
+      false,
+    );
   }
-
-  const archivedIds = new Set(
-    expiredOpportunities.map(
-      (opportunity) => String(opportunity.id),
-    ),
-  );
-
-  newlyExpired.forEach((opportunity) => {
-    const id = String(opportunity.id);
-
-    if (!archivedIds.has(id)) {
-      expiredOpportunities.push(opportunity);
-      archivedIds.add(id);
-    }
-  });
-
-  activeOpportunities = stillActive;
-
-  // Also remove archive records that have become older than
-  // the retention window.
-  expiredOpportunities = expiredOpportunities.filter(
-    (opportunity) => {
-      const deadline = getArchiveDeadline(
-        opportunity.deadline,
-      );
-
-      if (!deadline) {
-        return true;
-      }
-
-      return (
-        deadline.getTime() >= cutoff.getTime()
-      );
-    },
-  );
-
-  return true;
 }
 
-function pruneExpiredArchive() {
-  if (!Array.isArray(expiredOpportunities)) {
-    expiredOpportunities = [];
-    return;
-  }
+initLanguage(
+  () => {
+    populateParticipantCountries();
+    populateTableFilters();
+    renderAll();
+    updateThemeControl(t);
+  },
+);
 
-  const now = new Date();
+initTheme(t);
 
-  const cutoff = new Date(now);
-  cutoff.setDate(
-    cutoff.getDate() - ARCHIVE_RETENTION_DAYS,
-  );
+bindEvents();
+initialize();
 
-  expiredOpportunities =
-    expiredOpportunities.filter(
-      (opportunity) => {
-        const deadline = getArchiveDeadline(
-          opportunity.deadline,
-        );
+/*
+ * ESC Opportunity Finder Clear control.
+ * Clear only resets table/search filters.
+ * Participant Country is intentionally preserved.
+ */
+(function () {
+    function clearTableFiltersOnly() {
+        var search = document.getElementById('search-input');
+        var countryFilter = document.getElementById('country-filter');
+        var typeFilter = document.getElementById('type-filter');
+        var sortSelect = document.getElementById('sort-select');
 
-        if (!deadline) {
-          return true;
+        if (search) {
+            search.value = '';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
-        return (
-          deadline.getTime() >= cutoff.getTime()
-        );
-      },
-    );
-}
+        if (countryFilter) {
+            countryFilter.value = '';
+            countryFilter.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
-function refreshOpportunityLifecycle() {
-  moveExpiredOpportunitiesToArchive();
-  pruneExpiredArchive();
+        if (typeFilter) {
+            typeFilter.value = '';
+            typeFilter.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
-  renderActive();
-  renderExpired();
-}
-// ============================================================
-// COUNTDOWN REFRESH
-// ============================================================
+        if (sortSelect) {
+            var selected = Array.prototype.find.call(
+                sortSelect.options || [],
+                function (option) {
+                    return option.defaultSelected;
+                }
+            );
 
-function startCountdownRefresh() {
-  // Re-evaluate both the deadline countdown and the
-  // active → recently-expired lifecycle every minute.
-  setInterval(() => {
-    refreshOpportunityLifecycle();
-  }, 60000);
-}
+            sortSelect.value = selected
+                ? selected.value
+                : ((sortSelect.options && sortSelect.options[0])
+                    ? sortSelect.options[0].value
+                    : '');
 
-// ============================================================
-// INITIAL LOAD
-// ============================================================
+            sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
-applyTranslations();
+        if (typeof window.renderActive === 'function') {
+            window.renderActive();
+        } else if (typeof window.render === 'function') {
+            window.render();
+        }
+    }
 
-loadData();
+    function installClearControl() {
+        var button = document.getElementById('clear-filters');
 
-startCountdownRefresh();
+        if (!button || button.dataset.escClearInstalled === 'true') {
+            return;
+        }
 
+        button.dataset.escClearInstalled = 'true';
 
-// ============================================================
-// PHASE FIVE — PARTICIPANT-COUNTRY INDEX INTEGRATION
-// ============================================================
-//
-// GitHub Pages is a static frontend.
-//
-// The browser reads:
-//
-//   1. opportunities.json
-//   2. participant_country_index.json
-//
-// The participant-country index maps a normalized country code
-// to opportunity IDs. The canonical opportunity cache remains
-// the authoritative source for the full opportunity objects.
-//
-// No Morocco-specific filtering is performed here.
-// ============================================================
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            clearTableFiltersOnly();
+        }, true);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', installClearControl);
+    } else {
+        installClearControl();
+    }
+})();

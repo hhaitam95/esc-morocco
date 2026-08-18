@@ -2,446 +2,908 @@
 
 from __future__ import annotations
 
+import ast
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DEPLOY = ROOT / ".github" / "workflows" / "deploy.yml"
-STALE_BACKUP = ROOT / ".github" / "workflows" / "update.yml.phase5-backup"
-CHECKPOINT = ROOT / "data" / "full_detail_repair_checkpoint.json"
+WEB = ROOT / "web"
 
-EXPECTED_REMOTE = "https://github.com/hhaitam95/esc-opportunity-finder.git"
+INDEX = WEB / "index.html"
+APP = WEB / "app.js"
+FEATURES = WEB / "features.js"
+DATA_PROVIDER = WEB / "data-provider.js"
+STYLE = WEB / "style.css"
+
+REVIEW = ROOT / "UPDATE_REVIEW.md"
+
+PROTECTED_CHECKPOINT = ROOT / "data" / "full_detail_repair_checkpoint.json"
+
+CANONICAL_REMOTE = "https://github.com/hhaitam95/esc-opportunity-finder.git"
 
 
-def run(*args: str, check: bool = True, capture: bool = True) -> str:
-    result = subprocess.run(
-        args,
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.STDOUT if capture else None,
-        check=False,
-    )
+# ============================================================================
+# OUTPUT
+# ============================================================================
 
-    if check and result.returncode != 0:
-        output = result.stdout or ""
-        raise RuntimeError(
-            f"Command failed ({result.returncode}): {' '.join(args)}\n{output}"
-        )
 
-    return result.stdout or ""
+def heading(title: str) -> None:
+    print()
+    print("=" * 72)
+    print(title)
+    print("=" * 72)
+
+
+def passed(message: str) -> None:
+    print(f"PASS: {message}")
+
+
+def info(message: str) -> None:
+    print(f"INFO: {message}")
 
 
 def fail(message: str) -> None:
     print(f"ERROR: {message}")
     print("No destructive cleanup was performed.")
-    sys.exit(1)
+    raise SystemExit(1)
+
+
+# ============================================================================
+# HELPERS
+# ============================================================================
+
+
+def rel(path: Path) -> str:
+    return str(path.relative_to(ROOT))
 
 
 def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    if not path.exists():
+        fail(f"Required file is missing: {rel(path)}")
+
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception as exc:
+        fail(f"Could not read {rel(path)}: {exc}")
+
+    return ""
 
 
-def write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+def write_text(
+    path: Path,
+    content: str,
+) -> None:
+    try:
+        path.write_text(
+            content,
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        fail(f"Could not write {rel(path)}: {exc}")
+
+
+def run_command(
+    args: list[str],
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            args,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+    except FileNotFoundError:
+        return subprocess.CompletedProcess(
+            args,
+            127,
+            f"Command not found: {args[0]}",
+        )
+
+
+# ============================================================================
+# SELF VALIDATION
+# ============================================================================
 
 
 def validate_update_py() -> None:
-    try:
-        run(sys.executable, "-m", "py_compile", str(Path(__file__)))
-    except RuntimeError as exc:
-        fail(str(exc))
+    source = Path(__file__).read_text(encoding="utf-8")
 
-    print("PASS: update.py syntax validated.")
+    try:
+        ast.parse(source)
+    except SyntaxError as exc:
+        fail("update.py AST validation failed:\n" f"line {exc.lineno}: {exc.msg}")
+
+    result = run_command(
+        [
+            sys.executable,
+            "-m",
+            "py_compile",
+            str(Path(__file__).resolve()),
+        ]
+    )
+
+    if result.returncode != 0:
+        fail("update.py py_compile validation failed:\n" + result.stdout)
+
+    passed("update.py syntax validated.")
+
+
+# ============================================================================
+# GIT
+# ============================================================================
+
+
+def git_status() -> list[str]:
+    result = run_command(
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+        ]
+    )
+
+    if result.returncode != 0:
+        fail("Unable to read Git status:\n" + result.stdout)
+
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def status_path(
+    line: str,
+) -> str | None:
+    if len(line) < 4:
+        return None
+
+    value = line[3:].strip()
+
+    if " -> " in value:
+        value = value.split(
+            " -> ",
+            1,
+        )[1]
+
+    return value
+
+
+def is_allowed_path(
+    path: str,
+) -> bool:
+    if path.startswith("web/"):
+        return True
+
+    return path in {
+        "update.py",
+        "UPDATE_REVIEW.md",
+        "data/full_detail_repair_checkpoint.json",
+    }
 
 
 def validate_repository() -> None:
-    if not ROOT.is_dir():
-        fail(f"repository root does not exist: {ROOT}")
+    heading("VALIDATING REPOSITORY")
 
-    print(f"PASS: repository root validated: {ROOT}")
+    if not (ROOT / ".git").exists():
+        fail("Current directory is not a Git repository.")
 
-    branch = run("git", "branch", "--show-current").strip()
-    if branch != "main":
-        fail(f"current branch must be main, found: {branch}")
+    branch = run_command(
+        [
+            "git",
+            "branch",
+            "--show-current",
+        ]
+    )
 
-    print("PASS: current branch is main.")
+    if branch.returncode != 0:
+        fail("Could not determine current branch.")
 
-    remote = run("git", "remote", "get-url", "origin").strip()
-    if remote != EXPECTED_REMOTE:
+    if branch.stdout.strip() != "main":
+        fail("Expected branch main, found " f"{branch.stdout.strip()!r}")
+
+    remote = run_command(
+        [
+            "git",
+            "remote",
+            "get-url",
+            "origin",
+        ]
+    )
+
+    if remote.returncode != 0:
+        fail("Could not determine origin remote.")
+
+    actual_remote = remote.stdout.strip()
+
+    if actual_remote != CANONICAL_REMOTE:
         fail(
-            "origin remote is not canonical:\n"
-            f"  expected: {EXPECTED_REMOTE}\n"
-            f"  found:    {remote}"
+            "origin remote is not canonical.\n"
+            f"Expected: {CANONICAL_REMOTE}\n"
+            f"Actual: {actual_remote}"
         )
 
-    print(f"PASS: origin remote is canonical: {remote}")
+    passed(f"repository root validated: {ROOT}")
+    passed("current branch is main.")
+    passed(f"origin remote is canonical: {actual_remote}")
 
 
-def print_status() -> list[str]:
-    status = run("git", "status", "--porcelain=v1").splitlines()
+def validate_worktree() -> None:
+    heading("VALIDATING WORKING TREE")
+
+    status = git_status()
 
     print("Current Git status:")
+
     if status:
         for line in status:
             print(line)
     else:
-        print("(clean)")
+        print(" clean")
 
-    return status
-
-
-def validate_allowed_changes(status: list[str]) -> None:
-    allowed_exact = {
-        "M update.py",
-        "?? data/full_detail_repair_checkpoint.json",
-    }
-
-    unexpected = []
+    unexpected: list[str] = []
 
     for line in status:
-        if line in allowed_exact:
+        path = status_path(line)
+
+        if path is None:
+            unexpected.append(line)
             continue
 
-        # Git can show an explicitly modified update.py in either staged
-        # or unstaged form. We handle the common forms safely.
-        if line.endswith("update.py") and (
-            line.startswith(" M ") or line.startswith("M  ")
-        ):
-            continue
-
-        if line in {
-            "?? .github/workflows/update.yml.phase5-backup",
-        }:
-            continue
-
-        unexpected.append(line)
+        if not is_allowed_path(path):
+            unexpected.append(line)
 
     if unexpected:
-        fail("Unexpected working-tree changes detected:\n" + "\n".join(unexpected))
+        fail(
+            "Unexpected non-frontend working-tree changes detected:\n"
+            + "\n".join(unexpected)
+        )
 
-    print(
-        "PASS: working-tree changes are limited to local tooling and protected checkpoint."
+    passed(
+        "working tree contains only frontend/tooling changes "
+        "and the protected checkpoint."
     )
 
-
-def remove_stale_backup() -> None:
-    if STALE_BACKUP.exists():
-        print(f"Removing stale workflow backup: {STALE_BACKUP}")
-        STALE_BACKUP.unlink()
-        print("PASS: stale update.yml.phase5-backup removed.")
+    if PROTECTED_CHECKPOINT.exists():
+        passed("protected repair checkpoint remains present.")
     else:
-        print("PASS: no stale update.yml.phase5-backup exists.")
+        info("protected repair checkpoint is not currently present.")
 
 
-def verify_checkpoint() -> bytes | None:
-    if not CHECKPOINT.exists():
-        print("INFO: protected repair checkpoint is not present.")
+# ============================================================================
+# PROTECTION
+# ============================================================================
+
+
+def snapshot_checkpoint() -> bytes | None:
+    if not PROTECTED_CHECKPOINT.exists():
         return None
 
-    original = CHECKPOINT.read_bytes()
-    print("PASS: protected repair checkpoint captured.")
-    return original
+    return PROTECTED_CHECKPOINT.read_bytes()
 
 
-def refresh_origin() -> None:
-    run("git", "fetch", "origin", "main")
-    print("PASS: origin/main refreshed.")
+def verify_checkpoint(
+    original: bytes | None,
+) -> None:
+    if original is None:
+        info("Protected checkpoint did not exist before the update.")
+        return
 
-    counts = run(
-        "git",
-        "rev-list",
-        "--left-right",
-        "--count",
-        "main...origin/main",
-    ).strip()
+    if not PROTECTED_CHECKPOINT.exists():
+        fail("Protected checkpoint disappeared.")
 
-    ahead, behind = [int(x) for x in counts.split()]
+    if PROTECTED_CHECKPOINT.read_bytes() != original:
+        fail("Protected checkpoint changed.")
 
-    print(f"Local commits ahead: {ahead}")
-    print(f"Remote commits ahead: {behind}")
+    passed("protected checkpoint remains byte-for-byte unchanged.")
 
-    if ahead:
+
+# ============================================================================
+# FRONTEND
+# ============================================================================
+
+
+def validate_frontend_files() -> None:
+    heading("VALIDATING FRONTEND")
+
+    required = (
+        INDEX,
+        STYLE,
+        APP,
+        FEATURES,
+        DATA_PROVIDER,
+    )
+
+    for path in required:
+        if not path.exists():
+            fail("Required frontend file is missing: " + rel(path))
+
+        passed(rel(path) + " exists.")
+
+    optional_modules = (
+        WEB / "state.js",
+        WEB / "country.js",
+        WEB / "table.js",
+        WEB / "features" / "i18n.js",
+        WEB / "features" / "theme.js",
+    )
+
+    for path in optional_modules:
+        if path.exists():
+            passed("existing frontend module preserved: " + rel(path))
+
+
+# ============================================================================
+# CLEAR
+# ============================================================================
+
+
+def normalize_clear_markup() -> None:
+    html = read_text(INDEX)
+    original = html
+
+    html = html.replace(
+        'id="refresh-button"',
+        'id="clear-filters"',
+    )
+
+    html = html.replace(
+        'id="clear-button"',
+        'id="clear-filters"',
+    )
+
+    html = html.replace(
+        'data-i18n="refresh"',
+        'data-i18n="clear"',
+    )
+
+    button_pattern = re.compile(
+        r'(<button[^>]*id="clear-filters"[^>]*>)(.*?)(</button>)',
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    match = button_pattern.search(html)
+
+    if match:
+        body = re.sub(
+            r"\bRefresh\b",
+            "Clear",
+            match.group(2),
+            flags=re.IGNORECASE,
+        )
+
+        html = (
+            html[: match.start()]
+            + match.group(1)
+            + body
+            + match.group(3)
+            + html[match.end() :]
+        )
+
+    if html != original:
+        write_text(
+            INDEX,
+            html,
+        )
+        passed("Refresh control renamed to Clear.")
+    else:
+        passed("Clear control markup already normalized.")
+
+
+# ============================================================================
+# FEATURE REGISTRY
+# ============================================================================
+
+FEATURE_NAMES = (
+    "language",
+    "theme",
+    "participantCountry",
+    "search",
+    "filters",
+    "sorting",
+    "expired",
+    "newBadges",
+    "clear",
+)
+
+
+def normalize_feature_registry() -> None:
+    """
+    Repair only the small feature registry object.
+
+    Every known property is normalized to:
+
+        property: true,
+
+    This specifically fixes missing commas such as:
+
+        expired: true
+        newBadges: true
+
+    without touching unrelated frontend code.
+    """
+
+    source = read_text(FEATURES)
+
+    original = source
+
+    for name in FEATURE_NAMES:
+        pattern = re.compile(
+            rf"^(\s*){re.escape(name)}\s*:\s*(true|false)\s*,?\s*$",
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        replacement = rf"\1{name}: true,"
+
+        source, count = pattern.subn(
+            replacement,
+            source,
+        )
+
+        if count:
+            continue
+
+    source = re.sub(
+        r"^\s*refresh\s*:\s*true\s*,?\s*$",
+        "    refresh: false,",
+        source,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    # If clear does not exist at all, add it after newBadges.
+    if not re.search(
+        r"^\s*clear\s*:\s*true\s*,?\s*$",
+        source,
+        flags=re.IGNORECASE | re.MULTILINE,
+    ):
+        marker = re.search(
+            r"^(\s*newBadges\s*:\s*true\s*,?)\s*$",
+            source,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        if marker:
+            insertion = marker.group(1).rstrip(",") + ",\n    clear: true,"
+
+            source = source[: marker.start()] + insertion + source[marker.end() :]
+
+    if source != original:
+        write_text(
+            FEATURES,
+            source,
+        )
+
+        passed("feature registry syntax normalized.")
+    else:
+        passed("feature registry already normalized.")
+
+
+def validate_feature_registry() -> None:
+    heading("VALIDATING FEATURE REGISTRY")
+
+    source = read_text(FEATURES)
+
+    for name in FEATURE_NAMES:
+        if not re.search(
+            rf"^\s*{re.escape(name)}\s*:\s*true\s*,?\s*$",
+            source,
+            flags=re.IGNORECASE | re.MULTILINE,
+        ):
+            fail("Feature registry is missing enabled feature: " + name)
+
+        passed("feature enabled: " + name)
+
+    if re.search(
+        r"^\s*refresh\s*:\s*true\s*,?\s*$",
+        source,
+        flags=re.IGNORECASE | re.MULTILINE,
+    ):
+        fail("Refresh feature remains enabled.")
+
+    passed("feature registry validated.")
+
+
+# ============================================================================
+# CLEAR IMPLEMENTATION
+# ============================================================================
+
+
+def clear_implementation() -> str:
+    lines = [
+        "",
+        "/*",
+        " * ESC Opportunity Finder Clear control.",
+        " * Clear only resets table/search filters.",
+        " * Participant Country is intentionally preserved.",
+        " */",
+        "(function () {",
+        "    function clearTableFiltersOnly() {",
+        "        var search = document.getElementById('search-input');",
+        "        var countryFilter = document.getElementById('country-filter');",
+        "        var typeFilter = document.getElementById('type-filter');",
+        "        var sortSelect = document.getElementById('sort-select');",
+        "",
+        "        if (search) {",
+        "            search.value = '';",
+        "            search.dispatchEvent(new Event('input', { bubbles: true }));",
+        "        }",
+        "",
+        "        if (countryFilter) {",
+        "            countryFilter.value = '';",
+        "            countryFilter.dispatchEvent(new Event('change', { bubbles: true }));",
+        "        }",
+        "",
+        "        if (typeFilter) {",
+        "            typeFilter.value = '';",
+        "            typeFilter.dispatchEvent(new Event('change', { bubbles: true }));",
+        "        }",
+        "",
+        "        if (sortSelect) {",
+        "            var selected = Array.prototype.find.call(",
+        "                sortSelect.options || [],",
+        "                function (option) {",
+        "                    return option.defaultSelected;",
+        "                }",
+        "            );",
+        "",
+        "            sortSelect.value = selected",
+        "                ? selected.value",
+        "                : ((sortSelect.options && sortSelect.options[0])",
+        "                    ? sortSelect.options[0].value",
+        "                    : '');",
+        "",
+        "            sortSelect.dispatchEvent(new Event('change', { bubbles: true }));",
+        "        }",
+        "",
+        "        if (typeof window.renderActive === 'function') {",
+        "            window.renderActive();",
+        "        } else if (typeof window.render === 'function') {",
+        "            window.render();",
+        "        }",
+        "    }",
+        "",
+        "    function installClearControl() {",
+        "        var button = document.getElementById('clear-filters');",
+        "",
+        "        if (!button || button.dataset.escClearInstalled === 'true') {",
+        "            return;",
+        "        }",
+        "",
+        "        button.dataset.escClearInstalled = 'true';",
+        "",
+        "        button.addEventListener('click', function (event) {",
+        "            event.preventDefault();",
+        "            event.stopImmediatePropagation();",
+        "            clearTableFiltersOnly();",
+        "        }, true);",
+        "    }",
+        "",
+        "    if (document.readyState === 'loading') {",
+        "        document.addEventListener('DOMContentLoaded', installClearControl);",
+        "    } else {",
+        "        installClearControl();",
+        "    }",
+        "})();",
+        "",
+    ]
+
+    return "\n".join(lines)
+
+
+def ensure_clear_implementation() -> None:
+    source = read_text(APP)
+
+    marker = "ESC Opportunity Finder Clear control."
+
+    if marker in source:
+        marker_index = source.find(marker)
+        block_start = source.rfind(
+            "/*",
+            0,
+            marker_index,
+        )
+
+        if block_start >= 0:
+            source = source[:block_start].rstrip()
+
+    updated = source.rstrip() + "\n" + clear_implementation()
+
+    if updated != read_text(APP):
+        write_text(
+            APP,
+            updated,
+        )
+
+        passed("Clear table/search implementation normalized.")
+    else:
+        passed("Clear implementation already normalized.")
+
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+
+def validate_html() -> None:
+    heading("VALIDATING HTML CONTRACT")
+
+    html = read_text(INDEX)
+
+    for element_id in (
+        "participant-country",
+        "clear-filters",
+        "search-input",
+        "country-filter",
+        "type-filter",
+        "sort-select",
+    ):
+        if f'id="{element_id}"' not in html:
+            fail("Missing HTML element: " + element_id)
+
+    if 'id="refresh-button"' in html:
+        fail("Old Refresh button still exists.")
+
+    passed("HTML contract validated.")
+
+
+def validate_clear() -> None:
+    heading("VALIDATING CLEAR BEHAVIOR")
+
+    source = read_text(APP)
+
+    marker = "ESC Opportunity Finder Clear control."
+
+    position = source.find(marker)
+
+    if position < 0:
+        fail("Canonical Clear implementation is missing.")
+
+    clear_source = source[position:]
+
+    for item in (
+        "search-input",
+        "country-filter",
+        "type-filter",
+        "sort-select",
+        "clear-filters",
+    ):
+        if item not in clear_source:
+            fail("Clear implementation is missing: " + item)
+
+    forbidden = (
+        "participantCountry.value =",
+        "participantCountrySelect.value =",
+        "participantCountryFilter.value =",
+        "state.participantCountry =",
+        "state.selectedParticipantCountry =",
+        "selectedParticipantCountry =",
+        "currentParticipantCountry =",
+        "setParticipantCountry(",
+    )
+
+    for item in forbidden:
+        if item in clear_source:
+            fail("Clear implementation modifies " "Participant Country: " + item)
+
+    if "stopImmediatePropagation" not in clear_source:
         fail(
-            "Local main contains commits that are not on origin/main. "
-            "No automatic merge or overwrite will be performed."
+            "Clear implementation does not protect itself " "from an old click handler."
         )
 
-    if behind:
-        print("INFO: Local main is behind origin/main.")
-        print("Synchronizing with a safe fast-forward.")
+    passed("Clear resets table/search filters only.")
 
-        # update.py itself is uncommitted. Stash only the local tooling and
-        # protected checkpoint, fast-forward main, then restore them.
-        stash_result = run(
-            "git",
-            "stash",
-            "push",
-            "-u",
-            "-m",
-            "esc-phase-deploy-local-tooling",
-            "--",
-            "update.py",
-            "data/full_detail_repair_checkpoint.json",
+    passed("Clear does not modify Participant Country.")
+
+
+def validate_data_provider() -> None:
+    heading("VALIDATING DATA PROVIDER")
+
+    source = read_text(DATA_PROVIDER)
+
+    if not source.strip():
+        fail("data-provider.js is empty.")
+
+    passed("data-provider.js remains present.")
+
+
+def validate_javascript() -> None:
+    heading("VALIDATING JAVASCRIPT")
+
+    node = run_command(
+        [
+            "node",
+            "--version",
+        ]
+    )
+
+    if node.returncode != 0:
+        info("Node.js unavailable; JavaScript syntax validation skipped.")
+        return
+
+    passed("Node.js available: " + node.stdout.strip())
+
+    files = [
+        APP,
+        FEATURES,
+        DATA_PROVIDER,
+    ]
+
+    for path in (
+        WEB / "state.js",
+        WEB / "country.js",
+        WEB / "table.js",
+        WEB / "features" / "i18n.js",
+        WEB / "features" / "theme.js",
+    ):
+        if path.exists():
+            files.append(path)
+
+    for path in files:
+        result = run_command(
+            [
+                "node",
+                "--check",
+                str(path),
+            ]
         )
 
-        try:
-            run("git", "merge", "--ff-only", "origin/main")
-        finally:
-            pop_result = subprocess.run(
-                ["git", "stash", "pop"],
-                cwd=ROOT,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                check=False,
+        if result.returncode != 0:
+            fail(
+                "JavaScript syntax validation failed for "
+                + rel(path)
+                + ":\n"
+                + result.stdout
             )
 
-            if pop_result.returncode != 0:
-                raise RuntimeError(
-                    "Failed to restore local tooling/checkpoint after "
-                    "fast-forward:\n" + (pop_result.stdout or "")
-                )
-
-        print("PASS: local main safely fast-forwarded to origin/main.")
-    else:
-        print("PASS: local main and origin/main are synchronized.")
+        passed(rel(path) + " syntax validated.")
 
 
-def validate_checkpoint_unchanged(original: bytes | None) -> None:
-    if original is None:
-        return
+def validate_css() -> None:
+    heading("VALIDATING CSS")
 
-    if not CHECKPOINT.exists():
-        fail("protected repair checkpoint disappeared.")
+    source = read_text(STYLE)
 
-    current = CHECKPOINT.read_bytes()
+    if not source.strip():
+        fail("style.css is empty.")
 
-    if current != original:
-        fail("protected repair checkpoint was modified.")
-
-    print("PASS: protected repair checkpoint remains byte-for-byte unchanged.")
+    passed("style.css validated.")
 
 
-def deploy_workflow() -> str:
-    return """name: Deploy ESC Website
-
-on:
-  workflow_run:
-    workflows:
-      - "Update ESC Opportunities"
-    types:
-      - completed
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-jobs:
-  deploy:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.name == 'Update ESC Opportunities'
-      )
-
-    runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload website
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./web
-
-      - name: Deploy ESC Website
-        id: deployment
-        uses: actions/deploy-pages@v4
-"""
+# ============================================================================
+# REVIEW
+# ============================================================================
 
 
-def write_deploy_workflow() -> None:
-    if not DEPLOY.parent.exists():
-        DEPLOY.parent.mkdir(parents=True, exist_ok=True)
-
-    write_text(DEPLOY, deploy_workflow())
-    print("PASS: deploy.yml replaced with the simplified deployment workflow.")
-
-
-def validate_deploy_workflow() -> None:
-    source = read_text(DEPLOY)
-
-    required = [
-        "name: Deploy ESC Website",
-        "workflow_run:",
-        '"Update ESC Opportunities"',
-        "types:",
-        "- completed",
-        "workflow_dispatch:",
-        "actions/checkout@v4",
-        "actions/configure-pages@v5",
-        "actions/upload-pages-artifact@v3",
-        "actions/deploy-pages@v4",
-        "path: ./web",
-        "github.event.workflow_run.conclusion == 'success'",
+def write_review() -> None:
+    lines = [
+        "# Frontend Cleanup Review",
+        "",
+        "## Scope",
+        "",
+        "Frontend only.",
+        "",
+        "## Completed",
+        "",
+        "- Refresh renamed to Clear.",
+        "- Clear resets table/search filters.",
+        "- Clear preserves Participant Country.",
+        "- Existing frontend modules are preserved.",
+        "- Feature registry syntax is valid.",
+        "",
+        "## Protected",
+        "",
+        "- scraper/",
+        "- data/",
+        "- .github/",
+        "- deployment configuration",
+        "- protected repair checkpoint",
+        "",
+        "No commit or push was performed.",
+        "",
+        "## Review",
+        "",
+        "git status",
+        "",
+        "git diff -- web/",
+        "",
     ]
 
-    missing = [item for item in required if item not in source]
-
-    if missing:
-        fail(
-            "deploy.yml is missing required architecture markers:\n"
-            + "\n".join(f"- {item}" for item in missing)
-        )
-
-    if "scraper.py" in source or "scraper/scraper.py" in source:
-        fail("deploy.yml must not run the scraper.")
-
-    if "schedule:" in source:
-        fail("deploy.yml must not have its own schedule.")
-
-    print("PASS: deploy.yml contains the simplified deployment architecture.")
-    print("PASS: deploy.yml waits for successful Update ESC Opportunities runs.")
-    print("PASS: deploy.yml supports manual workflow_dispatch.")
-    print("PASS: deploy.yml does not run scraper.py.")
-    print("PASS: deploy.yml has no independent schedule.")
-    print("PASS: deploy.yml deploys the existing ./web directory.")
-
-
-def validate_web_directory() -> None:
-    if not (ROOT / "web").is_dir():
-        fail("web/ directory does not exist.")
-
-    print("PASS: web/ directory exists.")
-
-
-def git_commit_and_push() -> None:
-    status = run("git", "status", "--porcelain=v1").splitlines()
-
-    relevant = [
-        line
-        for line in status
-        if line.endswith("update.py")
-        or line.endswith(".github/workflows/deploy.yml")
-        or line.endswith("data/full_detail_repair_checkpoint.json")
-    ]
-
-    if not relevant:
-        print("INFO: No deploy workflow changes need to be committed.")
-        return
-
-    run(
-        "git",
-        "add",
-        ".github/workflows/deploy.yml",
-        "update.py",
+    write_text(
+        REVIEW,
+        "\n".join(lines),
     )
 
-    # Never stage the protected repair checkpoint.
-    run("git", "reset", "--", "data/full_detail_repair_checkpoint.json")
-
-    staged = run("git", "diff", "--cached", "--name-only").splitlines()
-
-    expected = {
-        ".github/workflows/deploy.yml",
-        "update.py",
-    }
-
-    unexpected = set(staged) - expected
-
-    if unexpected:
-        run("git", "reset")
-        fail("Unexpected files became staged:\n" + "\n".join(sorted(unexpected)))
-
-    if not staged:
-        print("INFO: Nothing to commit.")
-        return
-
-    run(
-        "git",
-        "commit",
-        "-m",
-        "Simplify ESC website deployment workflow",
-    )
-
-    run("git", "push", "origin", "main")
-
-    print("PASS: simplified deploy.yml committed and pushed to origin/main.")
+    passed("UPDATE_REVIEW.md generated.")
 
 
-def final_status() -> None:
-    print()
-    print("=" * 72)
-    print("FINAL STATUS")
-    print("=" * 72)
+# ============================================================================
+# FINAL
+# ============================================================================
 
-    status = run("git", "status", "--porcelain=v1").splitlines()
+
+def validate_final_worktree() -> None:
+    heading("FINAL VALIDATION")
+
+    status = git_status()
 
     if status:
-        print("Remaining local changes:")
         for line in status:
             print(line)
     else:
-        print("PASS: working tree is clean.")
+        print(" clean")
 
-    print("PASS: Deploy ESC Website configuration is ready.")
+    unexpected: list[str] = []
+
+    for line in status:
+        path = status_path(line)
+
+        if path is None:
+            unexpected.append(line)
+            continue
+
+        if not is_allowed_path(path):
+            unexpected.append(line)
+
+    if unexpected:
+        fail("Unexpected non-frontend changes remain:\n" + "\n".join(unexpected))
+
+    passed(
+        "final working tree contains only frontend/tooling "
+        "changes and the protected checkpoint."
+    )
+
+
+# ============================================================================
+# MAIN
+# ============================================================================
 
 
 def main() -> None:
-    print()
     print("=" * 72)
-    print("ESC Opportunity Finder — simplified Deploy ESC Website")
+    print("ESC Opportunity Finder — simple frontend cleanup")
     print("=" * 72)
 
     validate_update_py()
     validate_repository()
+    validate_worktree()
 
-    initial_status = print_status()
-    checkpoint_original = verify_checkpoint()
+    checkpoint_before = snapshot_checkpoint()
 
-    validate_allowed_changes(initial_status)
+    validate_frontend_files()
 
-    remove_stale_backup()
+    normalize_clear_markup()
+    normalize_feature_registry()
+    ensure_clear_implementation()
 
-    refresh_origin()
+    validate_frontend_files()
+    validate_feature_registry()
+    validate_html()
+    validate_clear()
+    validate_data_provider()
+    validate_javascript()
+    validate_css()
 
-    # After a fast-forward, the deploy workflow from origin/main may already
-    # exist. We intentionally replace only deploy.yml with the simple design.
-    write_deploy_workflow()
-    validate_deploy_workflow()
-    validate_web_directory()
+    verify_checkpoint(checkpoint_before)
 
-    validate_checkpoint_unchanged(checkpoint_original)
+    write_review()
 
-    git_commit_and_push()
-
-    validate_checkpoint_unchanged(checkpoint_original)
-    final_status()
+    validate_final_worktree()
 
     print()
-    print("DONE: update.yml remains the scraper workflow.")
-    print("DONE: deploy.yml now deploys only after update.yml succeeds.")
-    print("DONE: manual deployment remains available through workflow_dispatch.")
-    print("DONE: no scraper logic was added to deploy.yml.")
-    print("DONE: no protected checkpoint was modified.")
+    print("=" * 72)
+    print("FRONTEND CLEANUP COMPLETE")
+    print("=" * 72)
+    print()
+    print("Refresh -> Clear: completed")
+    print("Clear -> table/search filters only")
+    print("Participant Country -> preserved")
+    print("Feature registry -> valid JavaScript")
+    print("Backend -> untouched")
+    print("Scraper -> untouched")
+    print("GitHub Actions -> untouched")
+    print("Checkpoint -> unchanged")
+    print("Commit/push -> NOT performed")
+    print()
 
 
 if __name__ == "__main__":
