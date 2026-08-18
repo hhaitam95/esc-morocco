@@ -1,9 +1,11 @@
-name: Deploy ESC Morocco Website
+name: Deploy ESC Website
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - "Update ESC Opportunities"
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -17,6 +19,13 @@ concurrency:
 
 jobs:
   deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.name == 'Update ESC Opportunities'
+      )
+
     runs-on: ubuntu-latest
 
     environment:
@@ -24,18 +33,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure GitHub Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload website
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./web
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy ESC Website
         id: deployment
         uses: actions/deploy-pages@v4
