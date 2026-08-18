@@ -1,16 +1,11 @@
-# Frontend Cleanup Review
+# Frontend Production Fix
 
-## Scope
+## Changes
 
-Frontend only.
-
-## Completed
-
-- Refresh renamed to Clear.
-- Clear resets table/search filters.
-- Clear preserves Participant Country.
-- Existing frontend modules are preserved.
-- Feature registry syntax is valid.
+- repaired malformed standalone `dom.` lines in `web/app.js`;
+- repaired `web/features.js` comma formatting;
+- preserved Clear behavior;
+- preserved Participant Country;
 
 ## Protected
 
@@ -21,9 +16,3 @@ Frontend only.
 - protected repair checkpoint
 
 No commit or push was performed.
-
-## Review
-
-git status
-
-git diff -- web/

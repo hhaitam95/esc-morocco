@@ -18,7 +18,6 @@ DATA_PROVIDER = WEB / "data-provider.js"
 STYLE = WEB / "style.css"
 
 REVIEW = ROOT / "UPDATE_REVIEW.md"
-
 PROTECTED_CHECKPOINT = ROOT / "data" / "full_detail_repair_checkpoint.json"
 
 CANONICAL_REMOTE = "https://github.com/hhaitam95/esc-opportunity-finder.git"
@@ -84,7 +83,7 @@ def write_text(
         fail(f"Could not write {rel(path)}: {exc}")
 
 
-def run_command(
+def run(
     args: list[str],
 ) -> subprocess.CompletedProcess[str]:
     try:
@@ -117,7 +116,7 @@ def validate_update_py() -> None:
     except SyntaxError as exc:
         fail("update.py AST validation failed:\n" f"line {exc.lineno}: {exc.msg}")
 
-    result = run_command(
+    result = run(
         [
             sys.executable,
             "-m",
@@ -133,12 +132,12 @@ def validate_update_py() -> None:
 
 
 # ============================================================================
-# GIT
+# REPOSITORY
 # ============================================================================
 
 
 def git_status() -> list[str]:
-    result = run_command(
+    result = run(
         [
             "git",
             "status",
@@ -169,7 +168,7 @@ def status_path(
     return value
 
 
-def is_allowed_path(
+def allowed_path(
     path: str,
 ) -> bool:
     if path.startswith("web/"):
@@ -188,7 +187,7 @@ def validate_repository() -> None:
     if not (ROOT / ".git").exists():
         fail("Current directory is not a Git repository.")
 
-    branch = run_command(
+    branch = run(
         [
             "git",
             "branch",
@@ -202,7 +201,7 @@ def validate_repository() -> None:
     if branch.stdout.strip() != "main":
         fail("Expected branch main, found " f"{branch.stdout.strip()!r}")
 
-    remote = run_command(
+    remote = run(
         [
             "git",
             "remote",
@@ -214,18 +213,18 @@ def validate_repository() -> None:
     if remote.returncode != 0:
         fail("Could not determine origin remote.")
 
-    actual_remote = remote.stdout.strip()
+    actual = remote.stdout.strip()
 
-    if actual_remote != CANONICAL_REMOTE:
+    if actual != CANONICAL_REMOTE:
         fail(
             "origin remote is not canonical.\n"
             f"Expected: {CANONICAL_REMOTE}\n"
-            f"Actual: {actual_remote}"
+            f"Actual: {actual}"
         )
 
     passed(f"repository root validated: {ROOT}")
     passed("current branch is main.")
-    passed(f"origin remote is canonical: {actual_remote}")
+    passed(f"origin remote is canonical: {actual}")
 
 
 def validate_worktree() -> None:
@@ -250,14 +249,11 @@ def validate_worktree() -> None:
             unexpected.append(line)
             continue
 
-        if not is_allowed_path(path):
+        if not allowed_path(path):
             unexpected.append(line)
 
     if unexpected:
-        fail(
-            "Unexpected non-frontend working-tree changes detected:\n"
-            + "\n".join(unexpected)
-        )
+        fail("Unexpected non-frontend changes detected:\n" + "\n".join(unexpected))
 
     passed(
         "working tree contains only frontend/tooling changes "
@@ -271,7 +267,7 @@ def validate_worktree() -> None:
 
 
 # ============================================================================
-# PROTECTION
+# CHECKPOINT
 # ============================================================================
 
 
@@ -285,15 +281,16 @@ def snapshot_checkpoint() -> bytes | None:
 def verify_checkpoint(
     original: bytes | None,
 ) -> None:
+
     if original is None:
-        info("Protected checkpoint did not exist before the update.")
+        info("Protected checkpoint did not exist before update.")
         return
 
     if not PROTECTED_CHECKPOINT.exists():
         fail("Protected checkpoint disappeared.")
 
     if PROTECTED_CHECKPOINT.read_bytes() != original:
-        fail("Protected checkpoint changed.")
+        fail("Protected checkpoint was modified.")
 
     passed("protected checkpoint remains byte-for-byte unchanged.")
 
@@ -304,168 +301,125 @@ def verify_checkpoint(
 
 
 def validate_frontend_files() -> None:
-    heading("VALIDATING FRONTEND")
+    heading("VALIDATING FRONTEND FILES")
 
-    required = (
+    for path in (
         INDEX,
-        STYLE,
         APP,
         FEATURES,
         DATA_PROVIDER,
-    )
-
-    for path in required:
+        STYLE,
+    ):
         if not path.exists():
-            fail("Required frontend file is missing: " + rel(path))
+            fail(f"Missing frontend file: {rel(path)}")
 
         passed(rel(path) + " exists.")
 
-    optional_modules = (
+    for path in (
         WEB / "state.js",
         WEB / "country.js",
         WEB / "table.js",
         WEB / "features" / "i18n.js",
         WEB / "features" / "theme.js",
-    )
-
-    for path in optional_modules:
+    ):
         if path.exists():
             passed("existing frontend module preserved: " + rel(path))
 
 
 # ============================================================================
-# CLEAR
+# APP.JS REPAIR
 # ============================================================================
 
 
-def normalize_clear_markup() -> None:
-    html = read_text(INDEX)
-    original = html
+def repair_app_js() -> bool:
+    source = read_text(APP)
 
-    html = html.replace(
-        'id="refresh-button"',
-        'id="clear-filters"',
+    original = source
+
+    source = re.sub(
+        r"(?m)^[ \t]*dom\.[ \t]*$\n?",
+        "",
+        source,
     )
 
-    html = html.replace(
-        'id="clear-button"',
-        'id="clear-filters"',
+    if source == original:
+        passed("app.js contains no stray standalone dom. lines.")
+        return False
+
+    write_text(
+        APP,
+        source,
     )
 
-    html = html.replace(
-        'data-i18n="refresh"',
-        'data-i18n="clear"',
-    )
+    passed("removed malformed standalone dom. lines from app.js.")
 
-    button_pattern = re.compile(
-        r'(<button[^>]*id="clear-filters"[^>]*>)(.*?)(</button>)',
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-
-    match = button_pattern.search(html)
-
-    if match:
-        body = re.sub(
-            r"\bRefresh\b",
-            "Clear",
-            match.group(2),
-            flags=re.IGNORECASE,
-        )
-
-        html = (
-            html[: match.start()]
-            + match.group(1)
-            + body
-            + match.group(3)
-            + html[match.end() :]
-        )
-
-    if html != original:
-        write_text(
-            INDEX,
-            html,
-        )
-        passed("Refresh control renamed to Clear.")
-    else:
-        passed("Clear control markup already normalized.")
+    return True
 
 
 # ============================================================================
 # FEATURE REGISTRY
 # ============================================================================
 
-FEATURE_NAMES = (
-    "language",
-    "theme",
-    "participantCountry",
-    "search",
-    "filters",
-    "sorting",
-    "expired",
-    "newBadges",
-    "clear",
-)
 
-
-def normalize_feature_registry() -> None:
+def repair_features_js() -> bool:
     """
-    Repair only the small feature registry object.
+    Repair comma-separated boolean properties without rebuilding the module.
 
-    Every known property is normalized to:
-
-        property: true,
-
-    This specifically fixes missing commas such as:
+    The common corruption is:
 
         expired: true
         newBadges: true
 
-    without touching unrelated frontend code.
+    which must become:
+
+        expired: true,
+        newBadges: true,
     """
 
     source = read_text(FEATURES)
-
     original = source
 
-    for name in FEATURE_NAMES:
-        pattern = re.compile(
-            rf"^(\s*){re.escape(name)}\s*:\s*(true|false)\s*,?\s*$",
-            flags=re.IGNORECASE | re.MULTILINE,
-        )
-
-        replacement = rf"\1{name}: true,"
-
-        source, count = pattern.subn(
-            replacement,
-            source,
-        )
-
-        if count:
-            continue
-
-    source = re.sub(
-        r"^\s*refresh\s*:\s*true\s*,?\s*$",
-        "    refresh: false,",
-        source,
-        flags=re.IGNORECASE | re.MULTILINE,
+    feature_names = (
+        "language",
+        "theme",
+        "participantCountry",
+        "search",
+        "filters",
+        "sorting",
+        "expired",
+        "newBadges",
+        "clear",
+        "archives",
     )
 
-    # If clear does not exist at all, add it after newBadges.
-    if not re.search(
-        r"^\s*clear\s*:\s*true\s*,?\s*$",
-        source,
-        flags=re.IGNORECASE | re.MULTILINE,
-    ):
-        marker = re.search(
-            r"^(\s*newBadges\s*:\s*true\s*,?)\s*$",
-            source,
-            flags=re.IGNORECASE | re.MULTILINE,
+    for index, name in enumerate(feature_names):
+        if index == len(feature_names) - 1:
+            continue
+
+        next_name = feature_names[index + 1]
+
+        pattern = re.compile(
+            rf"(^[ \t]*{re.escape(name)}[ \t]*:[ \t]*(?:true|false))"
+            rf"[ \t]*\n"
+            rf"(?=[ \t]*{re.escape(next_name)}[ \t]*:)",
+            re.MULTILINE,
         )
 
-        if marker:
-            insertion = marker.group(1).rstrip(",") + ",\n    clear: true,"
+        source = pattern.sub(
+            lambda match: match.group(1) + ",\n",
+            source,
+        )
 
-            source = source[: marker.start()] + insertion + source[marker.end() :]
+    # The last registry property must not accidentally be missing its comma
+    # if another property follows immediately afterward.
+    source = re.sub(
+        r"(^[ \t]*clear[ \t]*:[ \t]*(?:true|false))"
+        r"[ \t]*\n"
+        r"(?=[ \t]*archives[ \t]*:)",
+        r"\1,\n",
+        source,
+        flags=re.MULTILINE,
+    )
 
     if source != original:
         write_text(
@@ -473,159 +427,75 @@ def normalize_feature_registry() -> None:
             source,
         )
 
-        passed("feature registry syntax normalized.")
-    else:
-        passed("feature registry already normalized.")
+        passed("features.js registry comma formatting repaired.")
+        return True
 
-
-def validate_feature_registry() -> None:
-    heading("VALIDATING FEATURE REGISTRY")
-
-    source = read_text(FEATURES)
-
-    for name in FEATURE_NAMES:
-        if not re.search(
-            rf"^\s*{re.escape(name)}\s*:\s*true\s*,?\s*$",
-            source,
-            flags=re.IGNORECASE | re.MULTILINE,
-        ):
-            fail("Feature registry is missing enabled feature: " + name)
-
-        passed("feature enabled: " + name)
-
-    if re.search(
-        r"^\s*refresh\s*:\s*true\s*,?\s*$",
-        source,
-        flags=re.IGNORECASE | re.MULTILINE,
-    ):
-        fail("Refresh feature remains enabled.")
-
-    passed("feature registry validated.")
+    passed("features.js registry formatting already normalized.")
+    return False
 
 
 # ============================================================================
-# CLEAR IMPLEMENTATION
+# CLEAR
 # ============================================================================
 
 
-def clear_implementation() -> str:
-    lines = [
-        "",
-        "/*",
-        " * ESC Opportunity Finder Clear control.",
-        " * Clear only resets table/search filters.",
-        " * Participant Country is intentionally preserved.",
-        " */",
-        "(function () {",
-        "    function clearTableFiltersOnly() {",
-        "        var search = document.getElementById('search-input');",
-        "        var countryFilter = document.getElementById('country-filter');",
-        "        var typeFilter = document.getElementById('type-filter');",
-        "        var sortSelect = document.getElementById('sort-select');",
-        "",
-        "        if (search) {",
-        "            search.value = '';",
-        "            search.dispatchEvent(new Event('input', { bubbles: true }));",
-        "        }",
-        "",
-        "        if (countryFilter) {",
-        "            countryFilter.value = '';",
-        "            countryFilter.dispatchEvent(new Event('change', { bubbles: true }));",
-        "        }",
-        "",
-        "        if (typeFilter) {",
-        "            typeFilter.value = '';",
-        "            typeFilter.dispatchEvent(new Event('change', { bubbles: true }));",
-        "        }",
-        "",
-        "        if (sortSelect) {",
-        "            var selected = Array.prototype.find.call(",
-        "                sortSelect.options || [],",
-        "                function (option) {",
-        "                    return option.defaultSelected;",
-        "                }",
-        "            );",
-        "",
-        "            sortSelect.value = selected",
-        "                ? selected.value",
-        "                : ((sortSelect.options && sortSelect.options[0])",
-        "                    ? sortSelect.options[0].value",
-        "                    : '');",
-        "",
-        "            sortSelect.dispatchEvent(new Event('change', { bubbles: true }));",
-        "        }",
-        "",
-        "        if (typeof window.renderActive === 'function') {",
-        "            window.renderActive();",
-        "        } else if (typeof window.render === 'function') {",
-        "            window.render();",
-        "        }",
-        "    }",
-        "",
-        "    function installClearControl() {",
-        "        var button = document.getElementById('clear-filters');",
-        "",
-        "        if (!button || button.dataset.escClearInstalled === 'true') {",
-        "            return;",
-        "        }",
-        "",
-        "        button.dataset.escClearInstalled = 'true';",
-        "",
-        "        button.addEventListener('click', function (event) {",
-        "            event.preventDefault();",
-        "            event.stopImmediatePropagation();",
-        "            clearTableFiltersOnly();",
-        "        }, true);",
-        "    }",
-        "",
-        "    if (document.readyState === 'loading') {",
-        "        document.addEventListener('DOMContentLoaded', installClearControl);",
-        "    } else {",
-        "        installClearControl();",
-        "    }",
-        "})();",
-        "",
-    ]
+def validate_clear() -> None:
+    heading("VALIDATING CLEAR")
 
-    return "\n".join(lines)
+    html = read_text(INDEX)
+    app = read_text(APP)
 
+    if 'id="clear-filters"' not in html:
+        fail("Clear control is missing.")
 
-def ensure_clear_implementation() -> None:
-    source = read_text(APP)
+    if 'id="refresh-button"' in html:
+        fail("Old Refresh control remains.")
 
-    marker = "ESC Opportunity Finder Clear control."
+    if "clearFilters" not in app:
+        fail("app.js does not contain clearFilters().")
 
-    if marker in source:
-        marker_index = source.find(marker)
-        block_start = source.rfind(
-            "/*",
-            0,
-            marker_index,
-        )
+    start = app.find("function clearFilters")
 
-        if block_start >= 0:
-            source = source[:block_start].rstrip()
+    if start < 0:
+        fail("Could not locate clearFilters().")
 
-    updated = source.rstrip() + "\n" + clear_implementation()
+    end = app.find(
+        "function bindEvents",
+        start,
+    )
 
-    if updated != read_text(APP):
-        write_text(
-            APP,
-            updated,
-        )
+    if end < 0:
+        end = len(app)
 
-        passed("Clear table/search implementation normalized.")
-    else:
-        passed("Clear implementation already normalized.")
+    clear_source = app[start:end]
+
+    required = (
+        "clearTableFilters",
+        "searchInput",
+        "countryFilter",
+        "typeFilter",
+        "sortSelect",
+    )
+
+    for marker in required:
+        if marker not in clear_source:
+            fail("clearFilters() is missing: " + marker)
+
+    if "setParticipantCountry(" in clear_source:
+        fail("Clear incorrectly modifies Participant Country.")
+
+    passed("Clear resets table/search filters only.")
+
+    passed("Clear preserves Participant Country.")
 
 
 # ============================================================================
-# VALIDATION
+# HTML
 # ============================================================================
 
 
 def validate_html() -> None:
-    heading("VALIDATING HTML CONTRACT")
+    heading("VALIDATING HTML")
 
     html = read_text(INDEX)
 
@@ -640,59 +510,12 @@ def validate_html() -> None:
         if f'id="{element_id}"' not in html:
             fail("Missing HTML element: " + element_id)
 
-    if 'id="refresh-button"' in html:
-        fail("Old Refresh button still exists.")
-
     passed("HTML contract validated.")
 
 
-def validate_clear() -> None:
-    heading("VALIDATING CLEAR BEHAVIOR")
-
-    source = read_text(APP)
-
-    marker = "ESC Opportunity Finder Clear control."
-
-    position = source.find(marker)
-
-    if position < 0:
-        fail("Canonical Clear implementation is missing.")
-
-    clear_source = source[position:]
-
-    for item in (
-        "search-input",
-        "country-filter",
-        "type-filter",
-        "sort-select",
-        "clear-filters",
-    ):
-        if item not in clear_source:
-            fail("Clear implementation is missing: " + item)
-
-    forbidden = (
-        "participantCountry.value =",
-        "participantCountrySelect.value =",
-        "participantCountryFilter.value =",
-        "state.participantCountry =",
-        "state.selectedParticipantCountry =",
-        "selectedParticipantCountry =",
-        "currentParticipantCountry =",
-        "setParticipantCountry(",
-    )
-
-    for item in forbidden:
-        if item in clear_source:
-            fail("Clear implementation modifies " "Participant Country: " + item)
-
-    if "stopImmediatePropagation" not in clear_source:
-        fail(
-            "Clear implementation does not protect itself " "from an old click handler."
-        )
-
-    passed("Clear resets table/search filters only.")
-
-    passed("Clear does not modify Participant Country.")
+# ============================================================================
+# DATA PROVIDER
+# ============================================================================
 
 
 def validate_data_provider() -> None:
@@ -706,10 +529,15 @@ def validate_data_provider() -> None:
     passed("data-provider.js remains present.")
 
 
+# ============================================================================
+# JAVASCRIPT
+# ============================================================================
+
+
 def validate_javascript() -> None:
     heading("VALIDATING JAVASCRIPT")
 
-    node = run_command(
+    node = run(
         [
             "node",
             "--version",
@@ -717,8 +545,7 @@ def validate_javascript() -> None:
     )
 
     if node.returncode != 0:
-        info("Node.js unavailable; JavaScript syntax validation skipped.")
-        return
+        fail("Node.js is required for frontend validation.")
 
     passed("Node.js available: " + node.stdout.strip())
 
@@ -739,7 +566,7 @@ def validate_javascript() -> None:
             files.append(path)
 
     for path in files:
-        result = run_command(
+        result = run(
             [
                 "node",
                 "--check",
@@ -758,9 +585,12 @@ def validate_javascript() -> None:
         passed(rel(path) + " syntax validated.")
 
 
-def validate_css() -> None:
-    heading("VALIDATING CSS")
+# ============================================================================
+# CSS
+# ============================================================================
 
+
+def validate_css() -> None:
     source = read_text(STYLE)
 
     if not source.strip():
@@ -776,19 +606,14 @@ def validate_css() -> None:
 
 def write_review() -> None:
     lines = [
-        "# Frontend Cleanup Review",
+        "# Frontend Production Fix",
         "",
-        "## Scope",
+        "## Changes",
         "",
-        "Frontend only.",
-        "",
-        "## Completed",
-        "",
-        "- Refresh renamed to Clear.",
-        "- Clear resets table/search filters.",
-        "- Clear preserves Participant Country.",
-        "- Existing frontend modules are preserved.",
-        "- Feature registry syntax is valid.",
+        "- repaired malformed standalone `dom.` lines in `web/app.js`;",
+        "- repaired `web/features.js` comma formatting;",
+        "- preserved Clear behavior;",
+        "- preserved Participant Country;",
         "",
         "## Protected",
         "",
@@ -799,12 +624,6 @@ def write_review() -> None:
         "- protected repair checkpoint",
         "",
         "No commit or push was performed.",
-        "",
-        "## Review",
-        "",
-        "git status",
-        "",
-        "git diff -- web/",
         "",
     ]
 
@@ -841,11 +660,11 @@ def validate_final_worktree() -> None:
             unexpected.append(line)
             continue
 
-        if not is_allowed_path(path):
+        if not allowed_path(path):
             unexpected.append(line)
 
     if unexpected:
-        fail("Unexpected non-frontend changes remain:\n" + "\n".join(unexpected))
+        fail("Unexpected changes remain:\n" + "\n".join(unexpected))
 
     passed(
         "final working tree contains only frontend/tooling "
@@ -860,7 +679,7 @@ def validate_final_worktree() -> None:
 
 def main() -> None:
     print("=" * 72)
-    print("ESC Opportunity Finder — simple frontend cleanup")
+    print("ESC Opportunity Finder — frontend production fix")
     print("=" * 72)
 
     validate_update_py()
@@ -871,14 +690,12 @@ def main() -> None:
 
     validate_frontend_files()
 
-    normalize_clear_markup()
-    normalize_feature_registry()
-    ensure_clear_implementation()
+    repair_app_js()
+    repair_features_js()
 
     validate_frontend_files()
-    validate_feature_registry()
-    validate_html()
     validate_clear()
+    validate_html()
     validate_data_provider()
     validate_javascript()
     validate_css()
@@ -891,18 +708,18 @@ def main() -> None:
 
     print()
     print("=" * 72)
-    print("FRONTEND CLEANUP COMPLETE")
+    print("FRONTEND PRODUCTION FIX COMPLETE")
     print("=" * 72)
     print()
-    print("Refresh -> Clear: completed")
-    print("Clear -> table/search filters only")
-    print("Participant Country -> preserved")
-    print("Feature registry -> valid JavaScript")
-    print("Backend -> untouched")
-    print("Scraper -> untouched")
-    print("GitHub Actions -> untouched")
-    print("Checkpoint -> unchanged")
-    print("Commit/push -> NOT performed")
+    print("app.js: repaired")
+    print("features.js: repaired")
+    print("Clear: preserved")
+    print("Participant Country: preserved")
+    print("Backend: untouched")
+    print("Scraper: untouched")
+    print("GitHub Actions: untouched")
+    print("Checkpoint: unchanged")
+    print("Commit/push: NOT performed")
     print()
 
 

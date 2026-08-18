@@ -316,7 +316,6 @@ function populateParticipantCountries() {
       selected,
     )
   ) {
-    dom.
   }
 }
 
@@ -742,7 +741,6 @@ async function initialize() {
       )
     ) {
 
-      dom.
 
       state.participantSearchApplied =
         false;
