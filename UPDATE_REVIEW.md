@@ -1,41 +1,34 @@
-# ESC Opportunity Finder — Phase 2 Production Review
+# Phase 5 — Simplified ESC Update Architecture
 
-## Objective
+## Architecture
 
-Simplify the backend architecture so there is one scraper workflow and one canonical opportunity dataset.
+1. `update.yml` runs every 30 minutes.
+2. `update.yml` runs `scraper/scraper.py`.
+3. The scraper saves the canonical JSON data under `data/`.
+4. `update.yml` commits and pushes changed data to `main`.
+5. That push triggers `deploy.yml`.
+6. `deploy.yml` deploys the existing `web/` directory to GitHub Pages.
 
-## Baseline
+## Important boundary
 
-- Canonical opportunities before migration: **1111**
-- Expired opportunities: **30**
-- generated_at: `2026-08-17T10:21:03.741260`
+`update.yml` does not build or deploy the website.
 
-## Architecture after migration
+`deploy.yml` is responsible for GitHub Pages deployment.
 
-- `.github/workflows/update.yml` = only scraper/update workflow
-- `.github/workflows/deploy.yml` = only Pages deployment workflow
-- `data/opportunities.json` = canonical opportunity dataset
-- `data/expired.json` = canonical expired dataset
-- `data/checkpoint.json` = scraper progress
-- `web/data-provider.js` = frontend data access
+## Validation
 
-## Changes
+- update.yml: validated
+- deploy.yml: validated
+- scraper.py: validated
+- canonical JSON: validated
+- protected repair checkpoint: preserved
 
-- `.github/workflows/update.yml`
-- `.github/workflows/deploy.yml`
-- `web/data-provider.js`
+## Current Git status
 
-## Removed
-
-- `.github/workflows/scrape.yml`
-- `web/opportunities.json`
-- `web/expired.json`
-
-## Safety
-
-- `data/opportunities.json` was not rebuilt.
-- `data/checkpoint.json` was not rebuilt.
-- `data/expired.json` was preserved.
-- `data/full_detail_repair_checkpoint.json` was preserved.
-- No scraper execution was performed.
-- No Git history rewrite was performed.
+```text
+ M .github/workflows/update.yml
+ M UPDATE_REVIEW.md
+ M update.py
+?? .github/workflows/update.yml.phase5-backup
+?? data/full_detail_repair_checkpoint.json
+```

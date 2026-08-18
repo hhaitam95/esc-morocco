@@ -1,284 +1,112 @@
 name: Update ESC Opportunities
 
 on:
-  # Run automatically every 30 minutes.
-  # Offset from the top of the hour to reduce GitHub Actions scheduling
-  # contention during high-load periods.
   schedule:
-    - cron: "17,47 * * * *"
-
-  # Allow manual runs from GitHub Actions.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# The scraper and checkpoint/cache files are repository state.
-# Never allow two background scraper runs to modify them simultaneously.
 concurrency:
-  group: esc-opportunity-cache-writer
+  group: esc-opportunity-update
   cancel-in-progress: false
 
 jobs:
-  update-opportunities:
+  update:
+    name: Scrape and save ESC opportunities
     runs-on: ubuntu-latest
 
-    # A single invocation processes up to 40 detail pages.
-    # Multiple invocations are used during one workflow run so the
-    # incremental queue can make meaningful progress while remaining
-    # bounded and resumable.
-    timeout-minutes: 90
-
     steps:
-      # ==============================================================
-      # CHECKOUT
-      # ==============================================================
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ==============================================================
-      # PYTHON
-      # ==============================================================
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
-      # ==============================================================
-      # DEPENDENCIES
-      #
-      # scraper.py currently requires:
-      #   requests
-      #   beautifulsoup4
-      #   pycountry
-      #
-      # Keep installation explicit for now because the repository does
-      # not currently have a dependency lock/requirements file.
-      # ==============================================================
+          python-version: "3.11"
 
       - name: Install scraper dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4 pycountry
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f scraper/requirements.txt ]; then
+            pip install -r scraper/requirements.txt
+          fi
 
-      # ==============================================================
-      # GIT CONFIGURATION
-      # ==============================================================
-
-      - name: Configure Git
+      - name: Run ESC scraper
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python scraper/scraper.py
 
-      # ==============================================================
-      # VALIDATE SCRAPER BEFORE STARTING
-      # ==============================================================
-
-      - name: Validate scraper syntax
+      - name: Validate saved data
         run: |
-          python -m py_compile scraper/scraper.py
-
-      # ==============================================================
-      # RUN INCREMENTAL SCRAPER BATCHES
-      #
-      # scraper.py itself is responsible for:
-      #
-      #   - retrieving the authoritative ESC opportunity list
-      #   - loading checkpoint.json
-      #   - building the incremental work queue
-      #   - processing at most 40 detail pages
-      #   - waiting between detail requests
-      #   - retrying HTTP failures
-      #   - stopping safely on HTTP 429
-      #   - saving checkpoint progress after each opportunity
-      #   - publishing the canonical JSON cache
-      #
-      # One invocation therefore remains deliberately small.
-      #
-      # Three invocations provide up to 120 detail-page scans per 30-minute
-      # workflow while keeping each invocation bounded and resumable.
-      #
-      # Exit codes:
-      #   0 = successful / normal incremental progress
-      #   1 = genuine scraper failure
-      #   2 = rate-limited or safely interrupted
-      # ==============================================================
-
-      - name: Run incremental scraper batches
-        id: scraper
-        continue-on-error: true
-        run: |
-          set +e
-
-          MAX_BATCHES=3
-          BATCH=1
-          OVERALL_EXIT_CODE=0
-
-          while [ "$BATCH" -le "$MAX_BATCHES" ]; do
-            echo ""
-            echo "================================================================"
-            echo "ESC BACKGROUND SCRAPER — BATCH $BATCH / $MAX_BATCHES"
-            echo "================================================================"
-            echo ""
-
-            python scraper/scraper.py
-            EXIT_CODE=$?
-
-            echo ""
-            echo "Batch $BATCH exit code: $EXIT_CODE"
-            echo ""
-
-            # --------------------------------------------------------
-            # Publish the latest canonical cache to the website.
-            #
-            # The scraper writes data/opportunities.json and
-            # data/expired.json. The website consumes read-only copies.
-            #
-            # Never publish an empty or structurally invalid cache.
-            # --------------------------------------------------------
-
-            if [ -f data/opportunities.json ]; then
-              python - <<'PY'
+          python - <<'PY'
           import json
           from pathlib import Path
 
-          path = Path("data/opportunities.json")
-          data = json.loads(path.read_text(encoding="utf-8"))
+          opportunities_path = Path("data/opportunities.json")
+          expired_path = Path("data/expired.json")
+
+          if not opportunities_path.exists():
+              raise SystemExit("ERROR: data/opportunities.json was not created.")
+
+          data = json.loads(
+              opportunities_path.read_text(encoding="utf-8")
+          )
+
+          if not isinstance(data, dict):
+              raise SystemExit(
+                  "ERROR: data/opportunities.json must contain an object."
+              )
 
           opportunities = data.get("opportunities")
 
           if not isinstance(opportunities, list):
               raise SystemExit(
-                  "Canonical cache does not contain an opportunities list."
+                  "ERROR: data/opportunities.json has no opportunities list."
               )
 
           if not opportunities:
               raise SystemExit(
-                  "Canonical cache is empty; refusing to publish it."
+                  "ERROR: scraper produced an empty opportunities list."
               )
 
+          if expired_path.exists():
+              expired = json.loads(
+                  expired_path.read_text(encoding="utf-8")
+              )
+              if not isinstance(expired, dict):
+                  raise SystemExit(
+                      "ERROR: data/expired.json must contain an object."
+                  )
+
           print(
-              f"Validated canonical cache: {len(opportunities)} opportunities."
+              f"PASS: saved {len(opportunities)} current opportunities."
           )
+          print("PASS: canonical JSON data is valid.")
           PY
 
-              if [ $? -eq 0 ]; then
-                echo "Published canonical opportunity cache to web/."
-              else
-                echo "Canonical cache validation failed; keeping published cache."
-              fi
-            fi
-
-
-            # --------------------------------------------------------
-            # Commit only the files produced by the scraper.
-            #
-            # This protects unrelated repository changes.
-            # --------------------------------------------------------
-
-            git reset
-
-            git add -- data/opportunities.json
-            git add -- data/checkpoint.json
-            git add -- data/expired.json
-
-            STAGED="$(git diff --cached --name-only)"
-
-            if [ -n "$STAGED" ]; then
-              echo "Changes detected:"
-              printf '%s\n' "$STAGED"
-
-              git diff --cached --check
-              if [ $? -ne 0 ]; then
-                echo "Whitespace errors detected in staged cache changes."
-                OVERALL_EXIT_CODE=1
-                break
-              fi
-
-              git commit -m "chore: update ESC opportunity cache"
-
-              if [ $? -ne 0 ]; then
-                echo "Git commit failed."
-                OVERALL_EXIT_CODE=1
-                break
-              fi
-
-              git push origin main
-
-              if [ $? -ne 0 ]; then
-                echo "Git push failed."
-                OVERALL_EXIT_CODE=1
-                break
-              fi
-
-              echo "Cache changes committed and pushed."
-            else
-              echo "No cache changes after this batch."
-            fi
-
-            # --------------------------------------------------------
-            # Genuine scraper failure.
-            # --------------------------------------------------------
-
-            if [ "$EXIT_CODE" -eq 1 ]; then
-              echo ""
-              echo "Genuine scraper failure detected."
-              echo "Stopping the workflow."
-              echo ""
-
-              OVERALL_EXIT_CODE=1
-              break
-            fi
-
-            # --------------------------------------------------------
-            # Rate limiting is expected to be resumable.
-            #
-            # scraper.py saves its checkpoint before returning 2.
-            # The completed progress has already been committed above.
-            # Stop rather than increasing pressure on ESC.
-            # --------------------------------------------------------
-
-            if [ "$EXIT_CODE" -eq 2 ]; then
-              echo ""
-              echo "Rate limit or safe interruption detected."
-              echo "Stopping remaining batches."
-              echo "Checkpoint progress has been preserved."
-              echo ""
-
-              OVERALL_EXIT_CODE=2
-              break
-            fi
-
-            BATCH=$((BATCH + 1))
-          done
-
-          echo "exit_code=$OVERALL_EXIT_CODE" >> "$GITHUB_OUTPUT"
-
-          exit "$OVERALL_EXIT_CODE"
-
-      # ==============================================================
-      # FINAL STATUS
-      # ==============================================================
-
-      - name: Report scraper result
-        if: always()
+      - name: Commit updated data
         run: |
-          EXIT_CODE="${{ steps.scraper.outputs.exit_code }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ "$EXIT_CODE" = "1" ]; then
-            echo "ESC background scraper encountered a genuine failure."
-            exit 1
+          git add -- data/opportunities.json
+          git add -- data/expired.json
+          git add -- data/checkpoint.json
 
-          elif [ "$EXIT_CODE" = "2" ]; then
-            echo "ESC background scraper stopped safely after rate limiting."
-            echo "Saved checkpoint progress will be resumed by a future run."
-            exit 0
-
-          else
-            echo "ESC background scraper completed normally."
+          if git diff --cached --quiet; then
+            echo "No data changes detected."
             exit 0
           fi
+
+          git diff --cached --check
+
+          git commit -m "chore: update ESC opportunities"
+          git push origin main
+
+          echo "ESC data updated and pushed."
+          echo "The push to main triggers deploy.yml."
