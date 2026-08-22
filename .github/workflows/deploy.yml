@@ -1,6 +1,10 @@
 name: Deploy ESC Website
 
 on:
+  push:
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy.yml"
   workflow_run:
     workflows:
       - "Update ESC Opportunities"
@@ -21,6 +25,7 @@ jobs:
   deploy:
     if: >
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       (
         github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.name == 'Update ESC Opportunities'
