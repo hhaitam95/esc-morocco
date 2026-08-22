@@ -31,11 +31,19 @@ jobs:
       - name: Install scraper dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          elif [ -f scraper/requirements.txt ]; then
-            pip install -r scraper/requirements.txt
-          fi
+          python -m pip install pycountry requests beautifulsoup4
+
+      - name: Verify scraper dependencies
+        run: |
+          python - <<'PY'
+          import pycountry
+          import requests
+          from bs4 import BeautifulSoup
+
+          print(f"PASS: pycountry {getattr(pycountry, '__version__', 'installed')}")
+          print(f"PASS: requests {requests.__version__}")
+          print(f"PASS: beautifulsoup4 import available ({BeautifulSoup.__name__})")
+          PY
 
       - name: Run ESC scraper
         run: |
