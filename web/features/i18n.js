@@ -20,7 +20,7 @@ export const translations = {
     sortDeadline: "Application deadline",
     sortStart: "Activity start date",
     sortCreated: "Recently added",
-    clear: "Refresh",
+    clear: "Clear",
     loading: "Loading opportunities...",
     errorTitle: "We couldn't load the opportunities.",
     errorText: "Please try again later.",
@@ -75,7 +75,7 @@ export const translations = {
     sortDeadline: "Date limite de candidature",
     sortStart: "Date de début",
     sortCreated: "Ajoutées récemment",
-    clear: "Actualiser",
+    clear: "Effacer",
     loading: "Chargement des opportunités...",
     errorTitle: "Impossible de charger les opportunités.",
     errorText: "Veuillez réessayer plus tard.",
@@ -130,7 +130,7 @@ export const translations = {
     sortDeadline: "آخر موعد للتقديم",
     sortStart: "تاريخ بداية النشاط",
     sortCreated: "الأحدث",
-    clear: "تحديث",
+    clear: "مسح",
     loading: "جارٍ تحميل الفرص...",
     errorTitle: "تعذر تحميل الفرص.",
     errorText: "يرجى المحاولة مرة أخرى لاحقاً.",
@@ -221,8 +221,6 @@ function applyTranslations() {
   updateLanguageControl();
   changeHandler();
 
-  // The language callback rebuilds the participant-country options so their
-  // labels can be translated. Restore the selected country afterwards.
   if (participantCountry && participantCountryValue) {
     const normalized = participantCountryValue.toUpperCase();
     if ([...participantCountry.options].some((option) => option.value === normalized)) {
@@ -233,21 +231,16 @@ function applyTranslations() {
 
 function setLanguage(next) {
   if (!translations[next]) return;
-
   activeLanguage = next;
-
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage);
   } catch {
     // Optional persistence.
   }
-
   const menu = document.getElementById("language-dropdown-menu");
   const toggle = document.getElementById("language-dropdown-toggle");
-
   if (menu) menu.hidden = true;
   if (toggle) toggle.setAttribute("aria-expanded", "false");
-
   applyTranslations();
 }
 
@@ -257,14 +250,12 @@ function bindControls() {
 
   if (toggle && menu && toggle.dataset.languageBound !== "true") {
     toggle.dataset.languageBound = "true";
-
     toggle.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
       menu.hidden = !menu.hidden;
       toggle.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
     });
-
     document.addEventListener("click", (event) => {
       if (!event.target.closest(".language-dropdown")) {
         menu.hidden = true;
