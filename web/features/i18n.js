@@ -173,9 +173,8 @@ const LANGUAGE_META = Object.freeze({
   ar: { flag: "🇸🇦", short: "AR" },
 });
 
-let currentLanguage = "en";
+let activeLanguage = "en";
 let changeHandler = () => {};
-let initialized = false;
 
 function readLanguage() {
   try {
@@ -187,17 +186,17 @@ function readLanguage() {
 }
 
 export function locale() {
-  if (currentLanguage === "fr") return "fr-FR";
-  if (currentLanguage === "ar") return "ar-MA";
+  if (activeLanguage === "fr") return "fr-FR";
+  if (activeLanguage === "ar") return "ar-MA";
   return "en-GB";
 }
 
 export function t(key) {
-  return translations[currentLanguage]?.[key] ?? translations.en?.[key] ?? key;
+  return translations[activeLanguage]?.[key] ?? translations.en?.[key] ?? key;
 }
 
 function updateLanguageControl() {
-  const meta = LANGUAGE_META[currentLanguage] || LANGUAGE_META.en;
+  const meta = LANGUAGE_META[activeLanguage] || LANGUAGE_META.en;
   const flag = document.getElementById("language-dropdown-flag");
   const label = document.getElementById("language-dropdown-label");
   if (flag) flag.textContent = meta.flag;
@@ -205,8 +204,8 @@ function updateLanguageControl() {
 }
 
 function applyTranslations() {
-  document.documentElement.lang = currentLanguage;
-  document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
+  document.documentElement.lang = activeLanguage;
+  document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
 
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     element.textContent = t(element.dataset.i18n);
@@ -223,10 +222,10 @@ function applyTranslations() {
 function setLanguage(next) {
   if (!translations[next]) return;
 
-  currentLanguage = next;
+  activeLanguage = next;
 
   try {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage);
   } catch {
     // Optional persistence.
   }
@@ -248,6 +247,7 @@ function bindControls() {
     toggle.dataset.languageBound = "true";
 
     toggle.addEventListener("click", (event) => {
+      event.preventDefault();
       event.stopPropagation();
       menu.hidden = !menu.hidden;
       toggle.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
@@ -264,7 +264,9 @@ function bindControls() {
   document.querySelectorAll(".language-option").forEach((button) => {
     if (button.dataset.languageBound === "true") return;
     button.dataset.languageBound = "true";
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       setLanguage(button.dataset.language);
     });
   });
@@ -272,13 +274,11 @@ function bindControls() {
 
 export function initLanguage(onChange = () => {}) {
   changeHandler = onChange;
-  currentLanguage = readLanguage();
-
+  activeLanguage = readLanguage();
   bindControls();
   applyTranslations();
-  initialized = true;
 }
 
 export function currentLanguage() {
-  return currentLanguage;
+  return activeLanguage;
 }
