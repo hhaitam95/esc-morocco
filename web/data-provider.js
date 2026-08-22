@@ -88,8 +88,8 @@ function normalizeOpportunity(
 
   // A date-only deadline means the opportunity is open through the
   // entire calendar day. Normalize it to the end of that day so the
-  // table countdown, sorting, and display use the same semantics as
-  // the active/expired classification below.
+  // table countdown and active/expired classification share the same
+  // semantics.
   const deadlineRaw = String(item.deadline).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(deadlineRaw)) {
     item.deadline = `${deadlineRaw}T23:59:59`;
@@ -142,24 +142,68 @@ function normalizeList(payload) {
     );
 }
 
+function parseDateOnlyOrValue(value, endOfDay = false) {
+  if (!value) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(
+        `${raw}T${endOfDay ? "23:59:59" : "00:00:00"}`,
+      )
+    : new Date(raw);
+
+  return Number.isNaN(date.getTime())
+    ? null
+    : date;
+}
+
 function deadlineHasPassed(opportunity) {
   if (!opportunity.deadline) {
     return false;
   }
 
-  const raw =
-    String(opportunity.deadline).trim();
+  const deadline = parseDateOnlyOrValue(
+    opportunity.deadline,
+    true,
+  );
 
-  const deadline =
-    /^\d{4}-\d{2}-\d{2}$/.test(raw)
-      ? new Date(`${raw}T23:59:59`)
-      : new Date(raw);
+  return Boolean(
+    deadline &&
+    deadline.getTime() < Date.now(),
+  );
+}
 
-  if (Number.isNaN(deadline.getTime())) {
+function activityHasEnded(opportunity) {
+  if (!opportunity.end_date) {
     return false;
   }
 
-  return deadline.getTime() < Date.now();
+  const endDate = parseDateOnlyOrValue(
+    opportunity.end_date,
+    true,
+  );
+
+  return Boolean(
+    endDate &&
+    endDate.getTime() < Date.now(),
+  );
+}
+
+function shouldArchive(opportunity) {
+  // An application deadline is decisive when one exists.
+  // For no-deadline opportunities, the activity itself must have ended
+  // before the opportunity can move to the expired section.
+  if (deadlineHasPassed(opportunity)) {
+    return true;
+  }
+
+  if (!opportunity.deadline) {
+    return activityHasEnded(opportunity);
+  }
+
+  return false;
 }
 
 function mergeArchived(
@@ -220,15 +264,15 @@ export async function loadData() {
     );
   }
 
-  // The backend dataset can contain an opportunity whose application
-  // deadline has passed before the next scraper/archive cycle moves it.
-  // Keep the UI truthful by moving those records into the expired table
-  // immediately rather than displaying them among active opportunities.
+  // Keep the UI truthful when the backend dataset has not yet moved a
+  // record to the archive. Deadline-based opportunities expire when the
+  // deadline passes. No-deadline opportunities expire only after the
+  // activity itself has ended.
   const active = [];
   const expiredFromActive = [];
 
   for (const opportunity of rawActive) {
-    if (deadlineHasPassed(opportunity)) {
+    if (shouldArchive(opportunity)) {
       expiredFromActive.push(opportunity);
     } else {
       active.push(opportunity);
