@@ -1,0 +1,173 @@
+/* Current UI controls compatibility layer. */
+
+.language-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.language-dropdown-toggle,
+.theme-toggle,
+.clear-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.language-dropdown-toggle {
+  padding: 0 10px;
+}
+
+.theme-toggle {
+  width: 42px;
+  padding: 0;
+}
+
+.clear-button {
+  padding: 0 15px;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.language-dropdown-toggle:hover,
+.theme-toggle:hover {
+  background: var(--surface-soft);
+  border-color: var(--primary);
+}
+
+.clear-button:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.language-dropdown-toggle:focus-visible,
+.theme-toggle:focus-visible,
+.clear-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.language-dropdown-arrow {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.language-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.language-dropdown-menu[hidden] {
+  display: none;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.language-option:hover {
+  background: var(--surface-soft);
+}
+
+.language-flag {
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.participant-selector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.participant-selector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.participant-selector-field label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.participant-selector-field select {
+  width: 100%;
+  height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.participant-selector-field select:focus {
+  outline: 2px solid rgba(40, 85, 217, 0.2);
+  outline-offset: 2px;
+  border-color: var(--primary);
+}
+
+@media (max-width: 700px) {
+  .participant-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .participant-selector .clear-button {
+    width: 100%;
+  }
+}
+
+html[dir="rtl"] .language-dropdown-menu {
+  right: auto;
+  left: 0;
+}
+
+html[dir="rtl"] .language-option {
+  text-align: right;
+}
