@@ -21,7 +21,7 @@ export const TOPIC_TRANSLATIONS = {
   "Physical education and sport": { en: "Physical education and sport", fr: "Éducation physique et sport", ar: "التربية البدنية والرياضة" },
   "Working against discrimination (including gender discrimination)": { en: "Working against discrimination (including gender discrimination)", fr: "Lutte contre les discriminations (y compris les discriminations fondées sur le genre)", ar: "مكافحة التمييز (بما في ذلك التمييز على أساس النوع الاجتماعي)" },
   "Reception and integration of refugees and migrants": { en: "Reception and integration of refugees and migrants", fr: "Accueil et intégration des réfugiés et des migrants", ar: "استقبال وإدماج اللاجئين والمهاجرين" },
-  "Support to local Small and Medium Enterprises": { en: "Support to local Small and Medium Enterprises", fr: "Soutien aux petites والمتوسطة entreprises locales", ar: "دعم المؤسسات الصغيرة والمتوسطة المحلية" },
+  "Support to local Small and Medium Enterprises": { en: "Support to local Small and Medium Enterprises", fr: "Soutien aux petites et moyennes entreprises locales", ar: "دعم المؤسسات الصغيرة والمتوسطة المحلية" },
   "Nutrition and subsistence agriculture": { en: "Nutrition and subsistence agriculture", fr: "Nutrition et agriculture de subsistance", ar: "التغذية والزراعة المعيشية" },
   "Shelter": { en: "Shelter", fr: "Hébergement", ar: "المأوى" },
   "Disaster prevention and recovery": { en: "Disaster prevention and recovery", fr: "Prévention et relèvement après les catastrophes", ar: "الوقاية من الكوارث والتعافي منها" },
@@ -40,7 +40,19 @@ export function t(key) { return translations[activeLanguage]?.[key] ?? translati
 export function translateTopic(topic) { return TOPIC_TRANSLATIONS[topic]?.[activeLanguage] ?? topic; }
 export function currentLanguage() { return activeLanguage; }
 function updateLanguageControl() { const meta = LANGUAGE_META[activeLanguage] || LANGUAGE_META.en; const flag = document.getElementById("language-dropdown-flag"); const label = document.getElementById("language-dropdown-label"); if (flag) flag.textContent = meta.flag; if (label) label.textContent = meta.short; }
-function applyTranslations() { const participantCountry = document.getElementById("participant-country"); const participantCountryValue = participantCountry?.value || ""; document.documentElement.lang = activeLanguage; document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr"; document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); }); document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => { element.placeholder = t(element.dataset.i18nPlaceholder); }); updateLanguageControl(); changeHandler(); if (participantCountry && participantCountryValue) { const normalized = participantCountryValue.toUpperCase(); if ([...participantCountry.options].some((option) => option.value === normalized)) participantCountry.value = normalized; } }
+function translateRenderedTopics() {
+  document.querySelectorAll(".topic-tag").forEach((tag) => {
+    const labelElement = tag.querySelector(":scope > span:last-child");
+    if (!labelElement) return;
+    const current = labelElement.textContent.trim();
+    const key = Object.keys(TOPIC_TRANSLATIONS).find((topic) => Object.values(TOPIC_TRANSLATIONS[topic]).includes(current));
+    if (!key) return;
+    const translated = TOPIC_TRANSLATIONS[key][activeLanguage] || key;
+    labelElement.textContent = translated;
+    tag.title = translated;
+  });
+}
+function applyTranslations() { const participantCountry = document.getElementById("participant-country"); const participantCountryValue = participantCountry?.value || ""; document.documentElement.lang = activeLanguage; document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr"; document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); }); document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => { element.placeholder = t(element.dataset.i18nPlaceholder); }); updateLanguageControl(); changeHandler(); translateRenderedTopics(); if (participantCountry && participantCountryValue) { const normalized = participantCountryValue.toUpperCase(); if ([...participantCountry.options].some((option) => option.value === normalized)) participantCountry.value = normalized; } }
 function setLanguage(next) { if (!translations[next]) return; activeLanguage = next; try { localStorage.setItem(LANGUAGE_STORAGE_KEY, activeLanguage); } catch {} const menu = document.getElementById("language-dropdown-menu"); const toggle = document.getElementById("language-dropdown-toggle"); if (menu) menu.hidden = true; if (toggle) toggle.setAttribute("aria-expanded", "false"); applyTranslations(); }
 function bindControls() { const toggle = document.getElementById("language-dropdown-toggle"); const menu = document.getElementById("language-dropdown-menu"); if (toggle && menu && toggle.dataset.languageBound !== "true") { toggle.dataset.languageBound = "true"; toggle.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); menu.hidden = !menu.hidden; toggle.setAttribute("aria-expanded", menu.hidden ? "false" : "true"); }); document.addEventListener("click", (event) => { if (!event.target.closest(".language-dropdown")) { menu.hidden = true; toggle.setAttribute("aria-expanded", "false"); } }); } document.querySelectorAll(".language-option").forEach((button) => { if (button.dataset.languageBound === "true") return; button.dataset.languageBound = "true"; button.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); setLanguage(button.dataset.language); }); }); }
 export function initLanguage(onChange = () => {}) { changeHandler = onChange; activeLanguage = readLanguage(); bindControls(); applyTranslations(); }
