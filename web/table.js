@@ -136,50 +136,105 @@ function renderTopics(topics) {
   `).join("")}</div>`;
 }
 
+function calendarDuration(startValue, endValue, locale) {
+  const start = parseDate(startValue);
+  const end = parseDate(endValue);
+  if (!start || !end || end < start) return "";
+
+  let cursor = new Date(start.getTime());
+  let months = 0;
+  while (true) {
+    const next = new Date(cursor.getFullYear(), cursor.getMonth() + 1, cursor.getDate());
+    if (next > end) break;
+    cursor = next;
+    months += 1;
+  }
+
+  const days = Math.round((end - cursor) / 86400000);
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  const parts = [];
+
+  const units = locale.startsWith("fr")
+    ? { year: ["an", "ans"], month: ["mois", "mois"], day: ["jour", "jours"] }
+    : locale.startsWith("ar")
+      ? { year: ["سنة", "سنوات"], month: ["شهر", "أشهر"], day: ["يوم", "أيام"] }
+      : { year: ["year", "years"], month: ["month", "months"], day: ["day", "days"] };
+
+  if (years) parts.push(`${years} ${years === 1 ? units.year[0] : units.year[1]}`);
+  if (remainingMonths) parts.push(`${remainingMonths} ${remainingMonths === 1 ? units.month[0] : units.month[1]}`);
+  if (!parts.length && days) parts.push(`${days} ${days === 1 ? units.day[0] : units.day[1]}`);
+  if (!parts.length) parts.push(`0 ${units.day[1]}`);
+
+  return parts.slice(0, 2).join(" ");
+}
+
 function renderActivityDates(opportunity, locale, t) {
   const activity = [
     opportunity.start_date ? formatDate(opportunity.start_date, locale, "") : "",
     opportunity.end_date ? formatDate(opportunity.end_date, locale, "") : "",
   ].filter(Boolean).join(" → ");
 
-  if (!activity) return `<span class="date-display">📅 ${escapeHtml(t("noDates"))}</span>`;
-  return `<span class="date-display"><span class="date-icon" aria-hidden="true">📅</span><span>${escapeHtml(activity)}</span></span>`;
+  if (!activity) return `<span class="date-display"><span class="date-icon" aria-hidden="true">📅</span><span>${escapeHtml(t("noDates"))}</span></span>`;
+
+  const duration = calendarDuration(opportunity.start_date, opportunity.end_date, locale);
+  return `<span class="date-display"><span class="date-icon" aria-hidden="true">📅</span><span><span class="activity-dates">${escapeHtml(activity)}</span>${duration ? `<span class="activity-duration">${escapeHtml(duration)}</span>` : ""}</span></span>`;
+}
+
+function formatLiveRemaining(deadlineValue, locale, t) {
+  const deadline = parseDate(deadlineValue);
+  if (!deadline) return "";
+
+  const remaining = deadline.getTime() - Date.now();
+  if (remaining <= 0) return t("deadlineToday");
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return locale.startsWith("fr")
+      ? `${days} j ${hours} h ${minutes} min restantes`
+      : locale.startsWith("ar")
+        ? `${days} يوم ${hours} ساعة ${minutes} دقيقة متبقية`
+        : `${days}d ${hours}h ${minutes}m remaining`;
+  }
+
+  return locale.startsWith("fr")
+    ? `${hours} h ${minutes} min ${seconds} s restantes`
+    : locale.startsWith("ar")
+      ? `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية متبقية`
+      : `${hours}h ${minutes}m ${seconds}s remaining`;
 }
 
 function renderDeadline(opportunity, locale, t) {
-  const formatted = formatDate(opportunity.deadline, locale, t("noDeadline"));
   if (!opportunity.deadline) {
-    return `<span class="deadline-display"><span class="deadline-icon" aria-hidden="true">⏰</span><span>${escapeHtml(formatted)}</span></span>`;
+    return `<span class="deadline-none"><span class="deadline-icon" aria-hidden="true">⏰</span><span class="deadline-date">${escapeHtml(t("noDeadline"))}</span></span>`;
   }
 
   const deadline = parseDate(opportunity.deadline);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
-  const days = Math.round((target - today) / 86400000);
-
-  let statusClass = "";
-  let statusText = "";
-  if (days < 0) {
-    statusClass = "deadline-expired";
-  } else if (days === 0) {
-    statusClass = "deadline-today";
-    statusText = t("deadlineToday");
-  } else if (days === 1) {
-    statusClass = "deadline-soon";
-    statusText = `1 ${t("dayLeft")}`;
-  } else if (days <= 7) {
-    statusClass = "deadline-soon";
-    statusText = `${days} ${t("daysLeft")}`;
+  if (!deadline) {
+    return `<span class="deadline-normal"><span class="deadline-icon" aria-hidden="true">⏰</span><span class="deadline-date">${escapeHtml(t("noDeadline"))}</span></span>`;
   }
 
-  return `<span class="deadline-display ${statusClass}"><span class="deadline-icon" aria-hidden="true">⏰</span><span><span class="deadline-date">${escapeHtml(formatted)}</span>${statusText ? `<span class="deadline-countdown">${escapeHtml(statusText)}</span>` : ""}</span></span>`;
+  const remaining = deadline.getTime() - Date.now();
+  const days = remaining / 86400000;
+  let statusClass = "deadline-normal";
+  if (remaining <= 86400000 && remaining > 0) statusClass = "deadline-urgent";
+  else if (remaining <= 7 * 86400000 && remaining > 0) statusClass = "deadline-soon";
+  else if (remaining <= 0) statusClass = "deadline-urgent";
+
+  const formatted = formatDate(opportunity.deadline, locale, t("noDeadline"));
+  const countdown = formatLiveRemaining(opportunity.deadline, locale, t);
+  return `<span class="${statusClass} live-deadline" data-deadline-timestamp="${deadline.getTime()}" data-deadline-locale="${escapeHtml(locale)}"><span class="deadline-icon" aria-hidden="true">⏰</span><span><span class="deadline-date">${escapeHtml(formatted)}</span><span class="deadline-relative">${escapeHtml(countdown)}</span></span></span>`;
 }
 
 function renderActivityType(opportunity, t) {
   const type = opportunity.activity_type || t("noType");
   const icon = ACTIVITY_TYPE_ICONS[type] || "🤝";
-  return `<span class="activity-type-display"><span class="activity-type-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(type)}</span></span>`;
+  return `<span class="type-label"><span class="type-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(type)}</span></span>`;
 }
 
 function renderRow(opportunity, options) {
@@ -213,4 +268,43 @@ function renderRow(opportunity, options) {
 
 export function renderRows(opportunities, options) {
   return opportunities.map((opportunity) => renderRow(opportunity, options)).join("");
+}
+
+function updateLiveDeadlines() {
+  document.querySelectorAll("[data-deadline-timestamp]").forEach((element) => {
+    const timestamp = Number(element.dataset.deadlineTimestamp);
+    if (!Number.isFinite(timestamp)) return;
+    const remaining = timestamp - Date.now();
+    const locale = element.dataset.deadlineLocale || "en-GB";
+    const seconds = Math.max(0, Math.floor(remaining / 1000));
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    const countdown = element.querySelector(".deadline-relative");
+
+    if (countdown) {
+      if (remaining <= 0) {
+        countdown.textContent = locale.startsWith("fr") ? "Date limite dépassée" : locale.startsWith("ar") ? "انتهى الموعد النهائي" : "Deadline passed";
+      } else if (days > 0) {
+        countdown.textContent = locale.startsWith("fr") ? `${days} j ${hours} h ${minutes} min restantes` : locale.startsWith("ar") ? `${days} يوم ${hours} ساعة ${minutes} دقيقة متبقية` : `${days}d ${hours}h ${minutes}m remaining`;
+      } else {
+        countdown.textContent = locale.startsWith("fr") ? `${hours} h ${minutes} min ${secs} s restantes` : locale.startsWith("ar") ? `${hours} ساعة ${minutes} دقيقة ${secs} ثانية متبقية` : `${hours}h ${minutes}m ${secs}s remaining`;
+      }
+    }
+
+    element.classList.remove("deadline-normal", "deadline-soon", "deadline-urgent", "deadline-none");
+    if (remaining <= 0 || remaining <= 86400000) element.classList.add("deadline-urgent");
+    else if (remaining <= 7 * 86400000) element.classList.add("deadline-soon");
+    else element.classList.add("deadline-normal");
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.setInterval(updateLiveDeadlines, 1000);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", updateLiveDeadlines, { once: true });
+  } else {
+    updateLiveDeadlines();
+  }
 }
