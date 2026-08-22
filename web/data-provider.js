@@ -86,6 +86,15 @@ function normalizeOpportunity(
     item.deadline ||
     "";
 
+  // A date-only deadline means the opportunity is open through the
+  // entire calendar day. Normalize it to the end of that day so the
+  // table countdown, sorting, and display use the same semantics as
+  // the active/expired classification below.
+  const deadlineRaw = String(item.deadline).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(deadlineRaw)) {
+    item.deadline = `${deadlineRaw}T23:59:59`;
+  }
+
   item.town =
     item.town ||
     item.city ||
