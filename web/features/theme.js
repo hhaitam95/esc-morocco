@@ -84,6 +84,17 @@ export function initTheme(t) {
     return;
   }
 
+  if (
+    toggle.dataset.themeHandlerBound ===
+    "true"
+  ) {
+    updateThemeControl(t);
+    return;
+  }
+
+  toggle.dataset.themeHandlerBound =
+    "true";
+
   toggle.addEventListener(
     "click",
     () => {
