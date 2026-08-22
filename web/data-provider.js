@@ -133,6 +133,55 @@ function normalizeList(payload) {
     );
 }
 
+function deadlineHasPassed(opportunity) {
+  if (!opportunity.deadline) {
+    return false;
+  }
+
+  const raw =
+    String(opportunity.deadline).trim();
+
+  const deadline =
+    /^\d{4}-\d{2}-\d{2}$/.test(raw)
+      ? new Date(`${raw}T23:59:59`)
+      : new Date(raw);
+
+  if (Number.isNaN(deadline.getTime())) {
+    return false;
+  }
+
+  return deadline.getTime() < Date.now();
+}
+
+function mergeArchived(
+  archived,
+  expiredFromActive,
+) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const opportunity of [
+    ...archived,
+    ...expiredFromActive,
+  ]) {
+    const id = String(
+      opportunity.id || "",
+    ).trim();
+
+    if (id && seen.has(id)) {
+      continue;
+    }
+
+    if (id) {
+      seen.add(id);
+    }
+
+    merged.push(opportunity);
+  }
+
+  return merged;
+}
+
 export async function loadData() {
   const [
     activePayload,
@@ -146,7 +195,7 @@ export async function loadData() {
     ),
   ]);
 
-  const active =
+  const rawActive =
     normalizeList(
       activePayload,
     );
@@ -156,10 +205,25 @@ export async function loadData() {
       expiredPayload,
     );
 
-  if (!active.length) {
+  if (!rawActive.length) {
     throw new Error(
       "Active opportunity dataset is empty.",
     );
+  }
+
+  // The backend dataset can contain an opportunity whose application
+  // deadline has passed before the next scraper/archive cycle moves it.
+  // Keep the UI truthful by moving those records into the expired table
+  // immediately rather than displaying them among active opportunities.
+  const active = [];
+  const expiredFromActive = [];
+
+  for (const opportunity of rawActive) {
+    if (deadlineHasPassed(opportunity)) {
+      expiredFromActive.push(opportunity);
+    } else {
+      active.push(opportunity);
+    }
   }
 
   const newIds =
@@ -176,7 +240,10 @@ export async function loadData() {
 
   return {
     active,
-    archived,
+    archived: mergeArchived(
+      archived,
+      expiredFromActive,
+    ),
     newIds,
     generatedAt:
       activePayload.generated_at ||
