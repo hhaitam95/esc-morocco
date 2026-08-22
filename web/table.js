@@ -141,6 +141,66 @@ function renderCountry(opportunity, locale) {
   return `<span class="country-display"><span class="country-flag" aria-hidden="true">${flag}</span><span>${escapeHtml(name)}</span></span>`;
 }
 
+const CITY_NAME_CORRECTIONS = {
+  "SK|BANSKA BYSTRICA": "Banská Bystrica",
+  "SK|BRATISLAVA": "Bratislava",
+  "SK|KOSICE": "Košice",
+  "SK|NITRA": "Nitra",
+  "SK|PRESOV": "Prešov",
+  "SK|ZILINA": "Žilina",
+  "PL|BIALYSTOK": "Białystok",
+  "PL|JELENIA GORA": "Jelenia Góra",
+  "PL|LODZ": "Łódź",
+  "PL|POZNAN": "Poznań",
+  "PL|WROCLAW": "Wrocław",
+  "PL|KRAKOW": "Kraków",
+  "PL|GDANSK": "Gdańsk",
+  "PL|WARSAW": "Warsaw",
+  "RO|TIMISOARA": "Timișoara",
+  "RO|BUCHAREST": "Bucharest",
+  "RO|CLUJ-NAPOCA": "Cluj-Napoca",
+  "CZ|PRAGUE": "Prague",
+  "CZ|PRAHA": "Praha",
+  "HU|BUDAPEST": "Budapest",
+  "HR|ZAGREB": "Zagreb",
+  "SI|LJUBLJANA": "Ljubljana",
+  "LT|VILNIUS": "Vilnius",
+  "LV|RIGA": "Riga",
+  "EE|TALLINN": "Tallinn",
+  "PT|LISBON": "Lisbon",
+  "PT|PORTO": "Porto",
+  "ES|MADRID": "Madrid",
+  "ES|BARCELONA": "Barcelona",
+  "IT|ROME": "Rome",
+  "IT|GENOA": "Genoa",
+  "IT|GENOVA": "Genova",
+  "FR|PARIS": "Paris",
+  "DE|BERLIN": "Berlin",
+  "BE|BRUSSELS": "Brussels",
+  "NL|AMSTERDAM": "Amsterdam",
+};
+
+function titleCaseCity(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/(^|[\s'’\-])([\p{L}])/gu, (_, prefix, letter) => `${prefix}${letter.toLocaleUpperCase()}`);
+}
+
+function formatCity(opportunity) {
+  const raw = String(opportunity.town || opportunity.location || "").trim();
+  if (!raw) return "";
+
+  const country = String(opportunity.country || "").trim().toUpperCase();
+  const key = `${country}|${raw.toUpperCase()}`;
+  if (CITY_NAME_CORRECTIONS[key]) return CITY_NAME_CORRECTIONS[key];
+
+  // Only normalize values that are entirely uppercase. Mixed-case source values
+  // may intentionally contain official casing or names that should not be altered.
+  if (raw === raw.toLocaleUpperCase() && /\p{L}/u.test(raw)) return titleCaseCity(raw);
+  return raw;
+}
+
 function topicLabel(topic, locale) {
   const language = locale.startsWith("fr") ? "fr" : locale.startsWith("ar") ? "ar" : "en";
   return TOPIC_TRANSLATIONS[topic]?.[language] || topic;
@@ -265,7 +325,7 @@ function renderRow(opportunity, options) {
   const image = safeUrl(opportunity.image_url);
   const link = safeUrl(opportunity.url);
   const title = String(opportunity.title || "");
-  const location = opportunity.town || opportunity.location || t("noLocation");
+  const location = formatCity(opportunity) || t("noLocation");
   const isNew = !archived && newIds.has(id);
 
   return `<tr>
