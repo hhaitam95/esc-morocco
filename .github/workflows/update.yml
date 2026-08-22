@@ -47,7 +47,7 @@ jobs:
 
       - name: Run ESC scraper
         run: |
-          python scraper/scraper.py
+          python scraper/run.py
 
       - name: Validate saved data
         run: |
