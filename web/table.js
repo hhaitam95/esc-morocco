@@ -18,6 +18,21 @@ const TOPIC_ICONS = {
   "WASH (Water, sanitation and hygiene)": "🚿",
 };
 
+const TOPIC_TRANSLATIONS = {
+  "Citizenship and democratic participation": {
+    fr: "Citoyenneté et participation démocratique",
+    ar: "المواطنة والمشاركة الديمقراطية",
+  },
+  "Environment and natural protection": {
+    fr: "Environnement et protection de la nature",
+    ar: "البيئة وحماية الطبيعة",
+  },
+  "Creativity and culture": {
+    fr: "Créativité et culture",
+    ar: "الإبداع والثقافة",
+  },
+};
+
 const ACTIVITY_TYPE_ICONS = {
   "Individual volunteering": "👤",
   "Team volunteering": "👥",
@@ -126,14 +141,22 @@ function renderCountry(opportunity, locale) {
   return `<span class="country-display"><span class="country-flag" aria-hidden="true">${flag}</span><span>${escapeHtml(name)}</span></span>`;
 }
 
-function renderTopics(topics) {
+function topicLabel(topic, locale) {
+  const language = locale.startsWith("fr") ? "fr" : locale.startsWith("ar") ? "ar" : "en";
+  return TOPIC_TRANSLATIONS[topic]?.[language] || topic;
+}
+
+function renderTopics(topics, locale) {
   if (!Array.isArray(topics) || !topics.length) return "";
-  return `<div class="topic-tags">${topics.map((topic) => `
-    <span class="topic-tag" title="${escapeHtml(topic)}">
+  return `<div class="topic-tags">${topics.map((topic) => {
+    const label = topicLabel(topic, locale);
+    return `
+    <span class="topic-tag" title="${escapeHtml(label)}">
       ${TOPIC_ICONS[topic] ? `<span class="topic-icon">${TOPIC_ICONS[topic]}</span>` : ""}
-      <span>${escapeHtml(topic)}</span>
+      <span>${escapeHtml(label)}</span>
     </span>
-  `).join("")}</div>`;
+  `;
+  }).join("")}</div>`;
 }
 
 function calendarDuration(startValue, endValue, locale) {
@@ -220,7 +243,6 @@ function renderDeadline(opportunity, locale, t) {
   }
 
   const remaining = deadline.getTime() - Date.now();
-  const days = remaining / 86400000;
   let statusClass = "deadline-normal";
   if (remaining <= 86400000 && remaining > 0) statusClass = "deadline-urgent";
   else if (remaining <= 7 * 86400000 && remaining > 0) statusClass = "deadline-soon";
@@ -253,7 +275,7 @@ function renderRow(opportunity, options) {
         ${isNew ? `<span class="new-badge">✨ ${escapeHtml(t("new"))}</span>` : ""}
         <span>${escapeHtml(title)}</span>
       </div>
-      ${renderTopics(opportunity.topics)}
+      ${renderTopics(opportunity.topics, locale)}
     </td>
     <td class="location-cell">
       <div class="location-main">${escapeHtml(location)}</div>
