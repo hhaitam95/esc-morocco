@@ -10,7 +10,7 @@
     />
 
     <link rel="stylesheet" href="style.css?v=10" />
-    <link rel="stylesheet" href="ui-fixes.css?v=1" />
+    <link rel="stylesheet" href="ui-fixes.css?v=2" />
 
     <script>
       (() => {
@@ -250,6 +250,61 @@
         </p>
       </footer>
     </main>
+
+    <script>
+      (() => {
+        const toggle = document.getElementById("theme-toggle");
+        const icon = document.getElementById("theme-icon");
+
+        if (!toggle) {
+          return;
+        }
+
+        const update = () => {
+          const dark =
+            document.documentElement.dataset.theme === "dark";
+
+          if (icon) {
+            icon.textContent = dark ? "☀️" : "🌙";
+          }
+
+          toggle.setAttribute(
+            "aria-label",
+            dark ? "Light mode" : "Dark mode",
+          );
+
+          toggle.setAttribute(
+            "title",
+            dark ? "Light mode" : "Dark mode",
+          );
+        };
+
+        if (
+          toggle.dataset.themeHandlerBound !== "true"
+        ) {
+          toggle.dataset.themeHandlerBound = "true";
+
+          toggle.addEventListener("click", () => {
+            const next =
+              document.documentElement.dataset.theme === "dark"
+                ? "light"
+                : "dark";
+
+            document.documentElement.dataset.theme = next;
+
+            try {
+              localStorage.setItem("esc_theme", next);
+            } catch {
+              // Theme persistence is optional.
+            }
+
+            update();
+          });
+        }
+
+        update();
+      })();
+    </script>
 
     <script type="module" src="app.js?v=24"></script>
   </body>
