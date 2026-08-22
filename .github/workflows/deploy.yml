@@ -35,6 +35,68 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Validate published data
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          opportunities_path = Path("data/opportunities.json")
+          expired_path = Path("data/expired.json")
+
+          if not opportunities_path.exists():
+              raise SystemExit("ERROR: data/opportunities.json is missing.")
+
+          if not expired_path.exists():
+              raise SystemExit("ERROR: data/expired.json is missing.")
+
+          opportunities = json.loads(
+              opportunities_path.read_text(encoding="utf-8")
+          )
+          expired = json.loads(
+              expired_path.read_text(encoding="utf-8")
+          )
+
+          if not isinstance(opportunities, dict):
+              raise SystemExit("ERROR: data/opportunities.json must be an object.")
+
+          if not isinstance(expired, dict):
+              raise SystemExit("ERROR: data/expired.json must be an object.")
+
+          active = opportunities.get("opportunities")
+          archived = expired.get("opportunities")
+          generated_at = opportunities.get("generated_at")
+
+          if not isinstance(active, list) or not active:
+              raise SystemExit("ERROR: active opportunity dataset is empty or invalid.")
+
+          if not isinstance(archived, list):
+              raise SystemExit("ERROR: expired opportunity dataset is invalid.")
+
+          if not generated_at:
+              raise SystemExit("ERROR: active dataset has no generated_at timestamp.")
+
+          declared_active = opportunities.get("count")
+          declared_expired = expired.get("count")
+
+          if declared_active != len(active):
+              raise SystemExit(
+                  f"ERROR: active count mismatch: metadata={declared_active}, records={len(active)}."
+              )
+
+          if declared_expired != len(archived):
+              raise SystemExit(
+                  f"ERROR: expired count mismatch: metadata={declared_expired}, records={len(archived)}."
+              )
+
+          print(f"PASS: active opportunities: {len(active)}")
+          print(f"PASS: expired opportunities: {len(archived)}")
+          print(f"PASS: last updated: {generated_at}")
+          print("PASS: published data is valid.")
+          PY
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
