@@ -204,6 +204,9 @@ function updateLanguageControl() {
 }
 
 function applyTranslations() {
+  const participantCountry = document.getElementById("participant-country");
+  const participantCountryValue = participantCountry?.value || "";
+
   document.documentElement.lang = activeLanguage;
   document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
 
@@ -217,6 +220,15 @@ function applyTranslations() {
 
   updateLanguageControl();
   changeHandler();
+
+  // The language callback rebuilds the participant-country options so their
+  // labels can be translated. Restore the selected country afterwards.
+  if (participantCountry && participantCountryValue) {
+    const normalized = participantCountryValue.toUpperCase();
+    if ([...participantCountry.options].some((option) => option.value === normalized)) {
+      participantCountry.value = normalized;
+    }
+  }
 }
 
 function setLanguage(next) {
